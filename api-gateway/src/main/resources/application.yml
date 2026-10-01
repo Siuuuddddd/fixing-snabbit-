@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: users
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates: [Path=/api/v1/users/**]
+        - id: bookings
+          uri: ${BOOKING_SERVICE_URL:http://localhost:8082}
+          predicates: [Path=/api/v1/bookings/**]
+        - id: workers
+          uri: ${WORKER_SERVICE_URL:http://localhost:8083}
+          predicates: [Path=/api/v1/workers/**]
+        - id: wallets
+          uri: ${WALLET_SERVICE_URL:http://localhost:8084}
+          predicates: [Path=/api/v1/wallets/**]
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
