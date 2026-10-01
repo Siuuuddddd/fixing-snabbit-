@@ -30,7 +30,7 @@ Service health is available at `/actuator/health`. Local credentials in `compose
 
 ## Current milestone
 
-The Booking Service now supports atomic single-day and multi-day holds, worker offer acceptance/rejection, payment-side confirmation, cancellation and scheduled expiry. Capacity is locked in deterministic order and every lifecycle fact is written to the transactional outbox.
+The Booking Service supports atomic single-day and multi-day holds, worker offer acceptance/rejection, payment-side confirmation, cancellation and scheduled expiry. The Wallet Service uses an append-only ledger for top-ups, reservations, split wallet/online payments, signed Razorpay webhooks and full refunds. Capacity and wallet accounts are locked only for short local transactions, and provider network calls run after those transactions commit.
 
 Payment confirmation is exposed only below `/internal/v1`; it is not routed by the customer API Gateway. Authentication and service-to-service authorization will be added before any real provider integration.
 
