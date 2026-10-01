@@ -5,6 +5,7 @@ import com.snabbit.prototype.booking.domain.Booking
 import com.snabbit.prototype.booking.domain.BookingStatus
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
+import com.snabbit.prototype.booking.domain.JobStatus
 import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.SlotHoldStatus
 import com.snabbit.prototype.booking.domain.WorkerDayCapacity
@@ -25,6 +26,10 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @Service
 class BookingLifecycleService(
@@ -59,6 +64,8 @@ class BookingLifecycleService(
                 status = BookingStatus.AWAITING_WORKER,
                 durationMinutes = command.duration.toMinutes().toInt(),
                 quotedTotalMinor = command.quotedTotalMinor,
+                serviceLatitude = command.serviceLatitude,
+                serviceLongitude = command.serviceLongitude,
                 requirements = command.requirements,
                 createdAt = now,
                 updatedAt = now,
@@ -249,14 +256,77 @@ class BookingLifecycleService(
             throw com.snabbit.prototype.booking.support.CustomerAccessDenied()
         }
         if (booking.status == BookingStatus.CANCELLED) return currentSnapshot(booking)
-        if (booking.status == BookingStatus.CONFIRMED) {
-            throw InvalidBookingState("Confirmed bookings require the cancellation and refund workflow")
+        if (booking.status == BookingStatus.CONFIRMED || booking.status == BookingStatus.COMPLETED) {
+            throw InvalidBookingState("Confirmed or completed bookings require the cancellation and refund workflow")
         }
         booking.cancel(now)
         requireHolds(bookingId).forEach(SlotHold::release)
         closeRemainingOffers(bookingId, now)
         outboxWriter.append(bookingId, "BookingCancelled", mapOf("bookingId" to bookingId), now)
         return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun workerArrive(
+        bookingId: UUID,
+        visitIndex: Int,
+        workerId: UUID,
+        location: WorkerLocationCommand,
+    ): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        val hold = requireWorkerVisit(booking, visitIndex, workerId)
+        if (booking.status == BookingStatus.COMPLETED && hold.jobStatus == JobStatus.COMPLETED) {
+            return currentSnapshot(booking)
+        }
+        if (hold.jobStatus?.name == "ARRIVED") return currentSnapshot(booking)
+        validateArrivalLocation(booking, location)
+        try {
+            hold.arrive(location.latitude, location.longitude, location.accuracyMeters, now)
+        } catch (error: IllegalStateException) {
+            throw InvalidBookingState(error.message.orEmpty())
+        }
+        outboxWriter.append(
+            bookingId,
+            "WorkerArrived",
+            mapOf("bookingId" to bookingId, "visitIndex" to visitIndex, "workerId" to workerId, "arrivedAt" to now),
+            now,
+        )
+        return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun workerStart(bookingId: UUID, visitIndex: Int, workerId: UUID): BookingSnapshot =
+        transitionWorkerVisit(bookingId, visitIndex, workerId, "ServiceStarted") { hold, now -> hold.start(now) }
+
+    @Transactional
+    fun workerComplete(bookingId: UUID, visitIndex: Int, workerId: UUID): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        val hold = requireWorkerVisit(booking, visitIndex, workerId)
+        if (booking.status == BookingStatus.COMPLETED && hold.jobStatus == JobStatus.COMPLETED) {
+            return currentSnapshot(booking)
+        }
+        val before = hold.jobStatus
+        try {
+            hold.complete(now)
+        } catch (error: IllegalStateException) {
+            throw InvalidBookingState(error.message.orEmpty())
+        }
+        if (hold.jobStatus != before) {
+            outboxWriter.append(
+                bookingId,
+                "ServiceCompleted",
+                mapOf("bookingId" to bookingId, "visitIndex" to visitIndex, "workerId" to workerId, "occurredAt" to now),
+                now,
+            )
+        }
+        val holds = requireHolds(bookingId)
+        if (booking.status == BookingStatus.CONFIRMED && holds.all { it.jobStatus == JobStatus.COMPLETED }) {
+            booking.complete(now)
+            outboxWriter.append(bookingId, "BookingCompleted", mapOf("bookingId" to bookingId, "completedAt" to now), now)
+        }
+        return snapshot(booking, holds, offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId))
     }
 
     private fun validateVisitCollection(command: CreateBookingCommand) {
@@ -322,6 +392,76 @@ class BookingLifecycleService(
         slotHoldRepository.findAllByBookingIdOrderByVisitIndex(bookingId)
             .ifEmpty { throw InvalidBookingState("Booking has no slot holds") }
 
+    private fun requireWorkerVisit(booking: Booking, visitIndex: Int, workerId: UUID): SlotHold {
+        if (booking.status != BookingStatus.CONFIRMED && booking.status != BookingStatus.COMPLETED) {
+            throw InvalidBookingState("Booking is not confirmed")
+        }
+        val hold = slotHoldRepository.findVisitForUpdate(booking.id, visitIndex)
+            ?: throw InvalidBookingState("Booking visit does not exist")
+        if (hold.workerId != workerId) throw OfferUnavailable("Booking visit belongs to a different worker")
+        return hold
+    }
+
+    private fun transitionWorkerVisit(
+        bookingId: UUID,
+        visitIndex: Int,
+        workerId: UUID,
+        eventType: String,
+        transition: (SlotHold, Instant) -> Unit,
+    ): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        val hold = requireWorkerVisit(booking, visitIndex, workerId)
+        val before = hold.jobStatus
+        try {
+            transition(hold, now)
+        } catch (error: IllegalStateException) {
+            throw InvalidBookingState(error.message.orEmpty())
+        }
+        if (hold.jobStatus != before) {
+            outboxWriter.append(
+                bookingId,
+                eventType,
+                mapOf("bookingId" to bookingId, "visitIndex" to visitIndex, "workerId" to workerId, "occurredAt" to now),
+                now,
+            )
+        }
+        return currentSnapshot(booking)
+    }
+
+    private fun validateArrivalLocation(booking: Booking, location: WorkerLocationCommand) {
+        if (location.latitude.toDouble() !in -90.0..90.0 || location.longitude.toDouble() !in -180.0..180.0) {
+            throw BookingRuleViolation("Valid worker coordinates are required")
+        }
+        if (location.accuracyMeters <= java.math.BigDecimal.ZERO ||
+            location.accuracyMeters.toDouble() > properties.arrivalAccuracyMeters
+        ) {
+            throw BookingRuleViolation("Location accuracy must be within ${properties.arrivalAccuracyMeters.toInt()} metres")
+        }
+        val serviceLatitude = booking.serviceLatitude
+            ?: throw InvalidBookingState("Booking has no verified service location")
+        val serviceLongitude = booking.serviceLongitude
+            ?: throw InvalidBookingState("Booking has no verified service location")
+        val distanceMeters = distanceMeters(
+            serviceLatitude.toDouble(),
+            serviceLongitude.toDouble(),
+            location.latitude.toDouble(),
+            location.longitude.toDouble(),
+        )
+        if (distanceMeters > properties.arrivalRadiusMeters) {
+            throw BookingRuleViolation("Worker must be within ${properties.arrivalRadiusMeters.toInt()} metres of the service address")
+        }
+    }
+
+    private fun distanceMeters(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Double {
+        val latitudeDistance = Math.toRadians(toLat - fromLat)
+        val longitudeDistance = Math.toRadians(toLon - fromLon)
+        val a = sin(latitudeDistance / 2) * sin(latitudeDistance / 2) +
+            cos(Math.toRadians(fromLat)) * cos(Math.toRadians(toLat)) *
+            sin(longitudeDistance / 2) * sin(longitudeDistance / 2)
+        return 6_371_000.0 * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+
     private fun currentSnapshot(booking: Booking): BookingSnapshot = snapshot(
         booking,
         requireHolds(booking.id),
@@ -357,6 +497,10 @@ class BookingLifecycleService(
                     offerId = offer.id,
                     offerStatus = offer.status.name,
                     offerExpiresAt = offer.expiresAt,
+                    jobStatus = hold.jobStatus?.name,
+                    arrivedAt = hold.arrivedAt,
+                    startedAt = hold.startedAt,
+                    completedAt = hold.completedAt,
                 )
             },
         )

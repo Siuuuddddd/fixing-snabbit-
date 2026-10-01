@@ -9,6 +9,8 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
+import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.cloud.gateway.filter.GatewayFilterChain
 import org.springframework.cloud.gateway.filter.GlobalFilter
@@ -39,16 +41,36 @@ class GatewaySecurityConfiguration {
             .macAlgorithm(MacAlgorithm.HS256)
             .build()
         decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(properties.issuer))
+        val authorities = JwtGrantedAuthoritiesConverter().apply {
+            setAuthoritiesClaimName("roles")
+            setAuthorityPrefix("ROLE_")
+        }
+        val authenticationConverter = ReactiveJwtAuthenticationConverter().apply {
+            setJwtGrantedAuthoritiesConverter { jwt ->
+                reactor.core.publisher.Flux.fromIterable(authorities.convert(jwt).orEmpty())
+            }
+        }
 
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange { exchanges ->
                 exchanges
-                    .pathMatchers("/api/v1/auth/**", "/actuator/health/**", "/webhooks/razorpay").permitAll()
-                    .pathMatchers("/api/v1/**").authenticated()
+                    .pathMatchers(
+                        "/api/v1/auth/**",
+                        "/api/v1/worker-auth/**",
+                        "/actuator/health/**",
+                        "/webhooks/razorpay",
+                    ).permitAll()
+                    .pathMatchers("/api/v1/worker/**", "/api/v1/workers/**").hasRole("WORKER")
+                    .pathMatchers("/api/v1/**").hasRole("CUSTOMER")
                     .anyExchange().permitAll()
             }
-            .oauth2ResourceServer { resourceServer -> resourceServer.jwt { jwt -> jwt.jwtDecoder(decoder) } }
+            .oauth2ResourceServer { resourceServer ->
+                resourceServer.jwt { jwt ->
+                    jwt.jwtDecoder(decoder)
+                    jwt.jwtAuthenticationConverter(authenticationConverter)
+                }
+            }
             .build()
     }
 }
@@ -57,15 +79,18 @@ class GatewaySecurityConfiguration {
 class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
     override fun filter(exchange: ServerWebExchange, chain: GatewayFilterChain): Mono<Void> =
         exchange.getPrincipal<JwtAuthenticationToken>()
-            .map { authentication -> mutate(exchange, authentication.token.subject) }
+            .map { authentication -> mutate(exchange, authentication) }
             .defaultIfEmpty(mutate(exchange, null))
             .flatMap(chain::filter)
 
-    private fun mutate(exchange: ServerWebExchange, userId: String?): ServerWebExchange = exchange.mutate()
+    private fun mutate(exchange: ServerWebExchange, authentication: JwtAuthenticationToken?): ServerWebExchange = exchange.mutate()
         .request { request ->
             request.headers { headers ->
                 headers.remove(AUTHENTICATED_USER_HEADER)
-                if (userId != null) headers.set(AUTHENTICATED_USER_HEADER, userId)
+                headers.remove(AUTHENTICATED_WORKER_HEADER)
+                val roles = authentication?.token?.getClaimAsStringList("roles").orEmpty()
+                if ("CUSTOMER" in roles) headers.set(AUTHENTICATED_USER_HEADER, authentication!!.token.subject)
+                if ("WORKER" in roles) headers.set(AUTHENTICATED_WORKER_HEADER, authentication!!.token.subject)
             }
         }
         .build()
@@ -74,5 +99,6 @@ class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
 
     companion object {
         const val AUTHENTICATED_USER_HEADER = "X-Authenticated-User-Id"
+        const val AUTHENTICATED_WORKER_HEADER = "X-Authenticated-Worker-Id"
     }
 }

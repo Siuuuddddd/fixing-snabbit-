@@ -13,6 +13,7 @@ import kotlinx.coroutines.coroutineScope
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.time.Instant
+import java.math.BigDecimal
 import java.util.UUID
 
 data class MatchAndHoldCommand(
@@ -90,6 +91,8 @@ class MatchAndHoldService(
                     requiredEquipment = household.requiredEquipment,
                 ),
                 quotedTotalMinor = quotedTotalMinor,
+                serviceLatitude = BigDecimal.valueOf(command.latitude),
+                serviceLongitude = BigDecimal.valueOf(command.longitude),
             ),
         )
     }

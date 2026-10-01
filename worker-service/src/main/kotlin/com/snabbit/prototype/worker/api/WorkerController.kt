@@ -4,19 +4,30 @@ import com.snabbit.prototype.worker.application.InvalidMatchRequest
 import com.snabbit.prototype.worker.application.MatchWorkersCommand
 import com.snabbit.prototype.worker.application.WorkerMatch
 import com.snabbit.prototype.worker.application.WorkerMatchingService
+import com.snabbit.prototype.worker.application.InvalidWorkerLocation
+import com.snabbit.prototype.worker.application.WorkerLocationCommand
+import com.snabbit.prototype.worker.application.WorkerLocationService
+import com.snabbit.prototype.worker.application.WorkerLocationSnapshot
+import com.snabbit.prototype.worker.auth.InvalidWorkerOtp
+import com.snabbit.prototype.worker.auth.WorkerOtpRateLimited
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.DecimalMax
+import jakarta.validation.constraints.DecimalMin
+import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.time.Instant
+import java.math.BigDecimal
 import java.util.UUID
 
 data class MatchWorkersRequest(
@@ -39,6 +50,16 @@ data class MatchWorkersRequest(
     val accessibilityNeeds: List<String> = emptyList(),
     val favouriteWorkerIds: List<UUID> = emptyList(),
     val plusActive: Boolean = false,
+)
+
+data class WorkerLocationRequest(
+    @field:DecimalMin("-90.0") @field:DecimalMax("90.0")
+    val latitude: BigDecimal,
+    @field:DecimalMin("-180.0") @field:DecimalMax("180.0")
+    val longitude: BigDecimal,
+    @field:Positive
+    val accuracyMeters: BigDecimal,
+    val capturedAt: Instant,
 )
 
 @RestController
@@ -68,9 +89,34 @@ class InternalWorkerController(private val matchingService: WorkerMatchingServic
     )
 }
 
+@RestController
+@RequestMapping("/api/v1/workers/me")
+class WorkerLocationController(private val locations: WorkerLocationService) {
+    @PostMapping("/location")
+    fun updateLocation(
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+        @Valid @RequestBody request: WorkerLocationRequest,
+    ): WorkerLocationSnapshot = locations.update(
+        workerId,
+        WorkerLocationCommand(request.latitude, request.longitude, request.accuracyMeters, request.capturedAt),
+    )
+}
+
 @RestControllerAdvice
 class WorkerExceptionHandler {
     @ExceptionHandler(InvalidMatchRequest::class)
     fun invalidRequest(error: InvalidMatchRequest): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
+
+    @ExceptionHandler(InvalidWorkerOtp::class)
+    fun invalidOtp(error: InvalidWorkerOtp): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, error.message.orEmpty())
+
+    @ExceptionHandler(WorkerOtpRateLimited::class)
+    fun otpRateLimited(error: WorkerOtpRateLimited): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, error.message.orEmpty())
+
+    @ExceptionHandler(InvalidWorkerLocation::class)
+    fun invalidLocation(error: InvalidWorkerLocation): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
 }

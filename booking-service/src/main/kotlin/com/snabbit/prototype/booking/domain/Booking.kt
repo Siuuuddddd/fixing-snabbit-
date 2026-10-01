@@ -10,6 +10,7 @@ import jakarta.persistence.Version
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import java.time.Instant
+import java.math.BigDecimal
 import java.util.UUID
 
 enum class BookingStatus {
@@ -19,6 +20,7 @@ enum class BookingStatus {
     WORKER_UNAVAILABLE,
     EXPIRED,
     CANCELLED,
+    COMPLETED,
 }
 
 @Entity
@@ -42,6 +44,10 @@ class Booking(
     val durationMinutes: Int,
     @Column(name = "quoted_total_minor", nullable = false)
     val quotedTotalMinor: Long = 0,
+    @Column(name = "service_latitude")
+    val serviceLatitude: BigDecimal? = null,
+    @Column(name = "service_longitude")
+    val serviceLongitude: BigDecimal? = null,
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     val requirements: BookingRequirements = BookingRequirements(),
@@ -82,10 +88,18 @@ class Booking(
     }
 
     fun cancel(now: Instant) {
-        check(status != BookingStatus.CONFIRMED) { "Confirmed bookings require the cancellation/refund workflow" }
+        check(status != BookingStatus.CONFIRMED && status != BookingStatus.COMPLETED) {
+            "Confirmed or completed bookings require the cancellation/refund workflow"
+        }
         if (status != BookingStatus.CANCELLED) {
             status = BookingStatus.CANCELLED
             updatedAt = now
         }
+    }
+
+    fun complete(now: Instant) {
+        check(status == BookingStatus.CONFIRMED) { "Only a confirmed booking can be completed" }
+        status = BookingStatus.COMPLETED
+        updatedAt = now
     }
 }

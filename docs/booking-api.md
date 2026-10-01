@@ -30,10 +30,8 @@ The match-and-hold route is the intended customer path. The preselected-worker c
 - `POST /internal/v1/bookings/{bookingId}/payment-confirmation` — idempotently confirm all visits with a verified provider payment reference.
 - `GET /internal/v1/bookings/{bookingId}/payment-quote` — expose the authoritative customer, state, hold expiry and quote to Wallet Service.
 - `POST /internal/v1/bookings` — preselected-worker creation for trusted prototype/integration workflows; customer apps cannot bypass matching through this route.
-- `POST /internal/v1/bookings/{bookingId}/worker-offers/{offerId}/accept` — worker accepts one visit.
-- `POST /internal/v1/bookings/{bookingId}/worker-offers/{offerId}/reject` — worker rejects and releases the atomic booking.
 
-Internal routes must later require service or worker identity. They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions will move behind authenticated worker-app APIs when worker authentication is implemented.
+Internal routes must later require service identity. They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions are exposed separately through role-protected worker APIs documented in [worker-api.md](worker-api.md).
 
 ## Example multi-day request
 

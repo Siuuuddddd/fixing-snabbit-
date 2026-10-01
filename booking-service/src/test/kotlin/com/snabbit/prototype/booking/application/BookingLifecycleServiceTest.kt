@@ -12,6 +12,7 @@ import com.snabbit.prototype.booking.domain.SlotHoldStatus
 import com.snabbit.prototype.booking.domain.WorkerDayCapacity
 import com.snabbit.prototype.booking.domain.WorkerOffer
 import com.snabbit.prototype.booking.domain.WorkerOfferStatus
+import com.snabbit.prototype.booking.domain.JobStatus
 import com.snabbit.prototype.booking.persistence.BookingRepository
 import com.snabbit.prototype.booking.persistence.OutboxEventRepository
 import com.snabbit.prototype.booking.persistence.SlotHoldRepository
@@ -34,6 +35,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
 import java.util.Optional
+import java.math.BigDecimal
 
 class BookingLifecycleServiceTest {
     private val bookingRepository = mockk<BookingRepository>()
@@ -191,6 +193,63 @@ class BookingLifecycleServiceTest {
         verify(exactly = 0) { holdRepository.findAllByBookingIdOrderByVisitIndex(any()) }
     }
 
+    @Test
+    fun `assigned worker arrives starts and completes confirmed visit`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_worker_flow", clock.instant())
+        }
+        val workerId = UUID.randomUUID()
+        val hold = hold(booking.id, workerId).apply { confirm() }
+        val offer = offer(booking.id, workerId, hold.id).apply { accept(clock.instant()) }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findVisitForUpdate(booking.id, 0) } returns hold
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
+        every { offerRepository.findAllByBookingIdOrderByCreatedAt(booking.id) } returns listOf(offer)
+        every { outboxRepository.save(any()) } answers { firstArg() }
+
+        service.workerArrive(
+            booking.id,
+            0,
+            workerId,
+            WorkerLocationCommand(BigDecimal("19.076090"), BigDecimal("72.877426"), BigDecimal("20")),
+        )
+        service.workerStart(booking.id, 0, workerId)
+        val completed = service.workerComplete(booking.id, 0, workerId)
+
+        assertEquals(JobStatus.COMPLETED, hold.jobStatus)
+        assertEquals(BookingStatus.COMPLETED.name, completed.status)
+        assertEquals(JobStatus.COMPLETED.name, completed.visits.single().jobStatus)
+        assertEquals(clock.instant(), hold.arrivedAt)
+        assertEquals(clock.instant(), hold.startedAt)
+        assertEquals(clock.instant(), hold.completedAt)
+        verify(exactly = 4) { outboxRepository.save(any()) }
+    }
+
+    @Test
+    fun `arrival requires accurate location near service address`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_bad_location", clock.instant())
+        }
+        val workerId = UUID.randomUUID()
+        val hold = hold(booking.id, workerId).apply { confirm() }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findVisitForUpdate(booking.id, 0) } returns hold
+
+        assertThrows(com.snabbit.prototype.booking.support.BookingRuleViolation::class.java) {
+            service.workerArrive(
+                booking.id,
+                0,
+                workerId,
+                WorkerLocationCommand(BigDecimal("19.100000"), BigDecimal("72.900000"), BigDecimal("10")),
+            )
+        }
+
+        assertEquals(JobStatus.ASSIGNED, hold.jobStatus)
+        verify(exactly = 0) { outboxRepository.save(any()) }
+    }
+
     private fun multiDayCommand(workerId: UUID) = CreateBookingCommand(
         customerId = UUID.randomUUID(),
         serviceId = UUID.randomUUID(),
@@ -225,6 +284,8 @@ class BookingLifecycleServiceTest {
         status = BookingStatus.AWAITING_WORKER,
         durationMinutes = 120,
         quotedTotalMinor = 42_000,
+        serviceLatitude = BigDecimal("19.076090"),
+        serviceLongitude = BigDecimal("72.877426"),
         createdAt = clock.instant(),
         updatedAt = clock.instant(),
     )

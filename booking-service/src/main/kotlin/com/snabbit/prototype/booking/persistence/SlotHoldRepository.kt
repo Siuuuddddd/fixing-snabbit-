@@ -16,6 +16,13 @@ interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
     @Query("select hold from SlotHold hold where hold.id = :id")
     fun findForUpdate(@Param("id") id: UUID): SlotHold?
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select hold from SlotHold hold where hold.bookingId = :bookingId and hold.visitIndex = :visitIndex")
+    fun findVisitForUpdate(
+        @Param("bookingId") bookingId: UUID,
+        @Param("visitIndex") visitIndex: Int,
+    ): SlotHold?
+
     @Query(
         value = """
             SELECT EXISTS (

@@ -34,6 +34,8 @@ booking:
   worker-offer-duration: PT1M
   expiry-scan-delay: PT30S
   expiry-batch-size: 100
+  arrival-accuracy-meters: 100
+  arrival-radius-meters: 250
 
 eventing:
   outbox-enabled: true

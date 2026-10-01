@@ -37,10 +37,24 @@ class AuthenticatedIdentityHeaderFilterTest {
         val exchange = MockServerWebExchange.from(
             MockServerHttpRequest.get("/api/v1/auth/otp/request")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER, "spoofed")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER, "spoofed-worker")
                 .build(),
         )
         val forwarded = invoke(exchange)
 
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER))
+    }
+
+    @Test
+    fun `worker token creates only the trusted worker identity header`() {
+        val workerId = UUID.randomUUID().toString()
+        val exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/worker/bookings"))
+            .mutate().principal(Mono.just(authentication(workerId, "WORKER"))).build()
+
+        val forwarded = invoke(exchange)
+
+        assertEquals(workerId, forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER))
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
     }
 
@@ -52,13 +66,14 @@ class AuthenticatedIdentityHeaderFilterTest {
         return forwarded.captured
     }
 
-    private fun authentication(subject: String): JwtAuthenticationToken {
+    private fun authentication(subject: String, role: String = "CUSTOMER"): JwtAuthenticationToken {
         val now = Instant.parse("2026-10-02T04:00:00Z")
         val jwt = Jwt.withTokenValue("token")
             .header("alg", "HS256")
             .subject(subject)
             .issuedAt(now)
             .expiresAt(now.plusSeconds(900))
+            .claim("roles", listOf(role))
             .build()
         return JwtAuthenticationToken(jwt)
     }

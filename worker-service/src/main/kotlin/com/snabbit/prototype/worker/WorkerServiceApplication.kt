@@ -1,9 +1,11 @@
 package com.snabbit.prototype.worker
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 class WorkerServiceApplication
 
 fun main(args: Array<String>) {

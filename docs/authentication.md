@@ -24,4 +24,4 @@ User, Booking and Wallet customer routes compare that trusted subject with the r
 
 User Service and API Gateway must use the same `JWT_SECRET`, which must be at least 32 bytes. Set a unique `OTP_PEPPER` as well. The checked-in defaults are local-development values and must never be used outside a local prototype.
 
-The seeded registered customer is `+919876543210`. Until worker authentication is implemented, worker-offer decisions remain internal-only rather than being exposed to customer JWTs. Worker authentication and production SMS delivery are separate upcoming capabilities.
+The seeded registered customer is `+919876543210`. Workers use the equivalent role-separated flow documented in [worker-api.md](worker-api.md). Production SMS delivery remains an upcoming capability.

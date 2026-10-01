@@ -67,8 +67,6 @@ data class MatchAndHoldRequest(
     val startsAt: List<Instant>,
 )
 
-data class WorkerDecisionRequest(val workerId: UUID)
-
 data class StartPaymentRequest(
     val walletId: UUID,
     val useWallet: Boolean = true,
@@ -160,20 +158,6 @@ class InternalBookingController(private val service: BookingLifecycleService) {
                 requirements = request.requirements,
             ),
         )
-
-    @PostMapping("/{bookingId}/worker-offers/{offerId}/accept")
-    fun acceptOffer(
-        @PathVariable bookingId: UUID,
-        @PathVariable offerId: UUID,
-        @Valid @RequestBody request: WorkerDecisionRequest,
-    ): BookingSnapshot = service.acceptOffer(bookingId, offerId, request.workerId)
-
-    @PostMapping("/{bookingId}/worker-offers/{offerId}/reject")
-    fun rejectOffer(
-        @PathVariable bookingId: UUID,
-        @PathVariable offerId: UUID,
-        @Valid @RequestBody request: WorkerDecisionRequest,
-    ): BookingSnapshot = service.rejectOffer(bookingId, offerId, request.workerId)
 
     @GetMapping("/{bookingId}/payment-quote")
     fun paymentQuote(@PathVariable bookingId: UUID): PaymentQuoteSnapshot = service.paymentQuote(bookingId)

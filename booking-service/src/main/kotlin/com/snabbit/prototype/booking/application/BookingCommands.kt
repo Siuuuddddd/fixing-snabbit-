@@ -4,6 +4,7 @@ import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import java.time.Duration
 import java.time.Instant
+import java.math.BigDecimal
 import java.util.UUID
 
 data class CreateBookingCommand(
@@ -14,6 +15,8 @@ data class CreateBookingCommand(
     val visits: List<VisitCommand>,
     val requirements: BookingRequirements = BookingRequirements(),
     val quotedTotalMinor: Long = 0,
+    val serviceLatitude: BigDecimal? = null,
+    val serviceLongitude: BigDecimal? = null,
 )
 
 data class VisitCommand(
@@ -39,6 +42,12 @@ data class PaymentQuoteSnapshot(
     val holdExpiresAt: Instant,
 )
 
+data class WorkerLocationCommand(
+    val latitude: BigDecimal,
+    val longitude: BigDecimal,
+    val accuracyMeters: BigDecimal,
+)
+
 data class VisitSnapshot(
     val visitIndex: Int,
     val workerId: UUID,
@@ -48,4 +57,8 @@ data class VisitSnapshot(
     val offerId: UUID,
     val offerStatus: String,
     val offerExpiresAt: Instant,
+    val jobStatus: String?,
+    val arrivedAt: Instant?,
+    val startedAt: Instant?,
+    val completedAt: Instant?,
 )

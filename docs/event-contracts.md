@@ -11,6 +11,10 @@ Milestone 2 writes these facts to `outbox_event` in the same PostgreSQL transact
 | `WorkerOfferRejected` | A worker rejected an offer and the atomic booking was released | Matching, customer notification |
 | `WorkerOfferExpired` | An offer timed out and the atomic booking was released | Matching, customer notification |
 | `BookingConfirmed` | Verified payment confirmed every visit | Worker, wallet, notification |
+| `WorkerArrived` | Assigned worker passed the service-location check | Customer tracking, support |
+| `ServiceStarted` | Worker started an arrived visit | Customer tracking, support |
+| `ServiceCompleted` | Worker completed one visit | Customer tracking, ratings |
+| `BookingCompleted` | Every visit in the booking completed | Ratings, notification, analytics |
 | `BookingExpired` | Capacity expired before confirmation | Payment/refund, notification |
 | `BookingCancelled` | A pre-confirmation booking was cancelled | Worker, notification |
 

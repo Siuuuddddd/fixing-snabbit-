@@ -14,4 +14,6 @@ data class BookingProperties(
     val workerOfferDuration: Duration,
     val expiryScanDelay: Duration,
     val expiryBatchSize: Int,
+    val arrivalAccuracyMeters: Double = 100.0,
+    val arrivalRadiusMeters: Double = 250.0,
 )
