@@ -44,3 +44,6 @@ eventing:
   outbox-poll-delay: PT1S
   outbox-claim-duration: PT30S
   outbox-batch-size: 50
+
+integrations:
+  booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}

@@ -134,6 +134,7 @@ class WalletTransactionService(
     fun prepareBookingPayment(
         walletId: UUID,
         bookingId: UUID,
+        customerId: UUID,
         totalAmountMinor: Long,
         useWallet: Boolean,
         idempotencyKey: String,
@@ -141,6 +142,9 @@ class WalletTransactionService(
         validateAmount(totalAmountMinor)
         validateIdempotencyKey(idempotencyKey)
         val wallet = walletRepository.findForUpdate(walletId) ?: throw WalletNotFound(walletId)
+        if (wallet.customerId != customerId) {
+            throw PaymentConflict("Wallet does not belong to the booking customer")
+        }
         paymentRepository.findByIdempotencyKey(idempotencyKey)?.let { existing ->
             if (existing.walletId != walletId || existing.bookingId != bookingId ||
                 existing.totalAmountMinor != totalAmountMinor
@@ -192,6 +196,20 @@ class WalletTransactionService(
             paymentSucceeded(payment, now)
         }
         return paymentSnapshot(payment)
+    }
+
+    @Transactional(readOnly = true)
+    fun existingBookingPayment(
+        walletId: UUID,
+        bookingId: UUID,
+        idempotencyKey: String,
+    ): BookingPaymentSnapshot? {
+        validateIdempotencyKey(idempotencyKey)
+        val existing = paymentRepository.findByIdempotencyKey(idempotencyKey) ?: return null
+        if (existing.walletId != walletId || existing.bookingId != bookingId) {
+            throw PaymentConflict("Idempotency key was used with different booking payment details")
+        }
+        return paymentSnapshot(existing)
     }
 
     @Transactional

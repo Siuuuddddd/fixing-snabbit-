@@ -1,6 +1,7 @@
 package com.snabbit.prototype.booking.support
 
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -11,6 +12,8 @@ class SlotUnavailable(message: String) : RuntimeException(message)
 class BookingNotFound(id: UUID) : RuntimeException("Booking $id was not found")
 class OfferUnavailable(message: String) : RuntimeException(message)
 class InvalidBookingState(message: String) : RuntimeException(message)
+class PaymentRequestRejected(val status: HttpStatusCode, message: String) : RuntimeException(message)
+class PaymentServiceUnavailable(message: String, cause: Throwable) : RuntimeException(message, cause)
 
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -29,4 +32,12 @@ class ApiExceptionHandler {
     @ExceptionHandler(OfferUnavailable::class, InvalidBookingState::class)
     fun lifecycleConflict(error: RuntimeException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
+
+    @ExceptionHandler(PaymentRequestRejected::class)
+    fun paymentRejected(error: PaymentRequestRejected): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(error.status, error.message.orEmpty())
+
+    @ExceptionHandler(PaymentServiceUnavailable::class)
+    fun paymentUnavailable(error: PaymentServiceUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
 }

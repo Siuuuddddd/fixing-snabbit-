@@ -27,4 +27,8 @@ class WalletExceptionHandler {
     @ExceptionHandler(PaymentProviderException::class)
     fun providerFailure(error: PaymentProviderException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
+
+    @ExceptionHandler(BookingQuoteUnavailable::class)
+    fun quoteUnavailable(error: BookingQuoteUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
 }

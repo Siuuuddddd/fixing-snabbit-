@@ -15,16 +15,20 @@ There is no mutable balance column. Ledger entries are append-only and carry a u
 
 - `GET /api/v1/wallets/{walletId}` — ledger, reserved, available and total-spent amounts.
 - `POST /api/v1/wallets/{walletId}/top-ups` — create a server-side Razorpay order. Requires `Idempotency-Key`.
+- `POST /api/v1/bookings/{bookingId}/payments` — Booking verifies the active hold and delegates split payment to Wallet. The body contains only `walletId` and `useWallet`; no client-supplied amount is accepted.
 
 Creating a top-up does not credit the wallet. Credit occurs only after `/webhooks/razorpay` receives an HMAC-valid `payment.captured` event whose order and amount match the pending top-up.
 
 ## Internal routes
 
-- `POST /internal/v1/wallets/{walletId}/booking-payments` — atomically reserve available wallet funds and create a Razorpay order for the remainder.
+- `GET /internal/v1/bookings/{bookingId}/payment-quote` — authoritative customer, lifecycle state, hold expiry and server-calculated total.
+- `POST /internal/v1/wallets/{walletId}/booking-payments` — re-read the authoritative Booking quote, verify wallet ownership, atomically reserve available wallet funds and create a Razorpay order for the remainder.
 - `POST /internal/v1/wallets/booking-payments/{paymentId}/cancel` — release a pending reservation. A later provider capture is automatically queued for a compensating refund.
 - `POST /internal/v1/wallets/booking-payments/{paymentId}/refunds` — full refund with an idempotency key.
 
 These routes must receive service identity before production. They are intentionally absent from customer API Gateway routes.
+
+The Wallet request contains `bookingId` and `useWallet`, never an amount. Wallet accepts only an `AWAITING_PAYMENT` booking with an unexpired hold, a positive INR quote and a wallet owned by the booking customer. Booking and Wallet both check these rules so neither an Android payload nor a mistaken internal caller can choose the charged total.
 
 ## Split payment behavior
 

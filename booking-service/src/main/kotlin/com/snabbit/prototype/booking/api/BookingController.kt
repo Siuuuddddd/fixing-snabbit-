@@ -2,12 +2,16 @@ package com.snabbit.prototype.booking.api
 
 import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.BookingSnapshot
+import com.snabbit.prototype.booking.application.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.matching.MatchAndHoldCommand
 import com.snabbit.prototype.booking.matching.MatchAndHoldService
+import com.snabbit.prototype.booking.payment.BookingPaymentSnapshot
+import com.snabbit.prototype.booking.payment.BookingPaymentService
+import com.snabbit.prototype.booking.payment.StartBookingPaymentCommand
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.DecimalMax
@@ -22,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
@@ -62,6 +67,11 @@ data class MatchAndHoldRequest(
 )
 
 data class WorkerDecisionRequest(val workerId: UUID)
+
+data class StartPaymentRequest(
+    val walletId: UUID,
+    val useWallet: Boolean = true,
+)
 
 @RestController
 @RequestMapping("/api/v1/bookings")
@@ -121,6 +131,24 @@ class MatchAndHoldController(private val service: MatchAndHoldService) {
         )
 }
 
+@RestController
+@RequestMapping("/api/v1/bookings")
+class BookingPaymentController(private val paymentService: BookingPaymentService) {
+    @PostMapping("/{bookingId}/payments")
+    fun startPayment(
+        @PathVariable bookingId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @Valid @RequestBody request: StartPaymentRequest,
+    ): BookingPaymentSnapshot = paymentService.start(
+        StartBookingPaymentCommand(
+            walletId = request.walletId,
+            bookingId = bookingId,
+            useWallet = request.useWallet,
+            idempotencyKey = idempotencyKey,
+        ),
+    )
+}
+
 data class ConfirmPaymentRequest(
     @field:NotBlank
     val paymentReference: String,
@@ -129,6 +157,9 @@ data class ConfirmPaymentRequest(
 @RestController
 @RequestMapping("/internal/v1/bookings")
 class InternalBookingController(private val service: BookingLifecycleService) {
+    @GetMapping("/{bookingId}/payment-quote")
+    fun paymentQuote(@PathVariable bookingId: UUID): PaymentQuoteSnapshot = service.paymentQuote(bookingId)
+
     // This route is intentionally absent from API Gateway customer routes.
     @PostMapping("/{bookingId}/payment-confirmation")
     fun confirmPayment(

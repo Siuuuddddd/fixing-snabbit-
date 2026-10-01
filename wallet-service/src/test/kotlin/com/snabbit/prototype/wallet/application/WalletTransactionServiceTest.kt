@@ -19,11 +19,13 @@ import com.snabbit.prototype.wallet.persistence.WalletAccountRepository
 import com.snabbit.prototype.wallet.persistence.WalletLedgerRepository
 import com.snabbit.prototype.wallet.persistence.WalletOutboxRepository
 import com.snabbit.prototype.wallet.persistence.WalletReservationRepository
+import com.snabbit.prototype.wallet.support.PaymentConflict
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Duration
@@ -80,6 +82,7 @@ class WalletTransactionServiceTest {
         val result = service.prepareBookingPayment(
             wallet.id,
             UUID.randomUUID(),
+            wallet.customerId,
             8_000,
             useWallet = true,
             idempotencyKey = "pay-once",
@@ -91,6 +94,26 @@ class WalletTransactionServiceTest {
         verify(exactly = 1) {
             ledgerRepository.save(match<WalletLedgerEntry> { it.amountMinor == 8_000L && it.entryType.name == "DEBIT" })
         }
+    }
+
+    @Test
+    fun `wallet must belong to the booking customer`() {
+        val wallet = wallet()
+        every { walletRepository.findForUpdate(wallet.id) } returns wallet
+
+        assertThrows(PaymentConflict::class.java) {
+            service.prepareBookingPayment(
+                wallet.id,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                8_000,
+                useWallet = true,
+                idempotencyKey = "wrong-owner",
+            )
+        }
+
+        verify(exactly = 0) { paymentRepository.save(any()) }
+        verify(exactly = 0) { reservationRepository.save(any()) }
     }
 
     @Test

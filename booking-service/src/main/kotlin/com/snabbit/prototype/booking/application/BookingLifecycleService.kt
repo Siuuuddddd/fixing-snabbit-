@@ -136,6 +136,20 @@ class BookingLifecycleService(
         )
     }
 
+    @Transactional(readOnly = true)
+    fun paymentQuote(bookingId: UUID): PaymentQuoteSnapshot {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        val holds = requireHolds(bookingId)
+        return PaymentQuoteSnapshot(
+            bookingId = booking.id,
+            customerId = booking.customerId,
+            status = booking.status.name,
+            quotedTotalMinor = booking.quotedTotalMinor,
+            currency = "INR",
+            holdExpiresAt = holds.minOf(SlotHold::expiresAt),
+        )
+    }
+
     @Transactional
     fun acceptOffer(bookingId: UUID, offerId: UUID, workerId: UUID): BookingSnapshot {
         val now = clock.instant()

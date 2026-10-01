@@ -29,6 +29,15 @@ data class BookingSnapshot(
     val visits: List<VisitSnapshot>,
 )
 
+data class PaymentQuoteSnapshot(
+    val bookingId: UUID,
+    val customerId: UUID,
+    val status: String,
+    val quotedTotalMinor: Long,
+    val currency: String,
+    val holdExpiresAt: Instant,
+)
+
 data class VisitSnapshot(
     val visitIndex: Int,
     val workerId: UUID,

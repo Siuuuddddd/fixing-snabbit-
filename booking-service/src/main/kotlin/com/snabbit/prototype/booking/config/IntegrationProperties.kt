@@ -1,9 +1,10 @@
-package com.snabbit.prototype.booking.matching
+package com.snabbit.prototype.booking.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("integrations")
-data class MatchingProperties(
+data class IntegrationProperties(
     val userServiceUrl: String,
     val workerServiceUrl: String,
+    val walletServiceUrl: String,
 )

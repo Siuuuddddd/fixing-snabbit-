@@ -47,3 +47,4 @@ eventing:
 integrations:
   user-service-url: ${USER_SERVICE_URL:http://localhost:8081}
   worker-service-url: ${WORKER_SERVICE_URL:http://localhost:8083}
+  wallet-service-url: ${WALLET_SERVICE_URL:http://localhost:8084}

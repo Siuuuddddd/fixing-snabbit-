@@ -2,6 +2,8 @@ package com.snabbit.prototype.wallet.integration
 
 import com.snabbit.prototype.wallet.application.RazorpayWebhookService
 import com.snabbit.prototype.wallet.application.WalletService
+import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
+import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.support.InvalidWebhook
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -12,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -21,6 +24,8 @@ import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -44,11 +49,25 @@ class WalletLedgerIntegrationTest {
     @Autowired
     private lateinit var jdbc: JdbcTemplate
 
+    @MockitoBean
+    private lateinit var bookingQuotes: BookingQuoteClient
+
     private val walletId = UUID.fromString("50000000-0000-0000-0000-000000000099")
     private val customerId = UUID.fromString("40000000-0000-0000-0000-000000000099")
+    private var quoteAmountMinor: Long = 1
 
     @BeforeEach
     fun resetDatabase() {
+        Mockito.`when`(bookingQuotes.get(ArgumentMatchers.any(UUID::class.java))).thenAnswer { invocation ->
+            BookingPaymentQuote(
+                bookingId = invocation.getArgument(0),
+                customerId = customerId,
+                status = "AWAITING_PAYMENT",
+                quotedTotalMinor = quoteAmountMinor,
+                currency = "INR",
+                holdExpiresAt = Instant.now().plusSeconds(300),
+            )
+        }
         jdbc.execute(
             """
             TRUNCATE payment_refund, booking_payment, wallet_reservation, top_up_order,
@@ -83,10 +102,10 @@ class WalletLedgerIntegrationTest {
     fun `split payment captures reservation and full refund restores wallet portion`() {
         creditWallet(10_000)
         val bookingId = UUID.randomUUID()
+        quoteAmountMinor = 15_000
         val payment = walletService.createBookingPayment(
             walletId,
             bookingId,
-            15_000,
             useWallet = true,
             idempotencyKey = "booking-split",
         )
@@ -111,6 +130,7 @@ class WalletLedgerIntegrationTest {
     @Test
     fun `concurrent payments cannot reserve more than available balance`() {
         creditWallet(10_000)
+        quoteAmountMinor = 8_000
         val ready = CountDownLatch(2)
         val start = CountDownLatch(1)
         val executor = Executors.newFixedThreadPool(2)
@@ -121,7 +141,6 @@ class WalletLedgerIntegrationTest {
                 walletService.createBookingPayment(
                     walletId,
                     UUID.randomUUID(),
-                    8_000,
                     useWallet = true,
                     idempotencyKey = "concurrent-$index",
                 )
@@ -151,10 +170,10 @@ class WalletLedgerIntegrationTest {
 
     @Test
     fun `capture after cancellation is refunded instead of completing payment`() {
+        quoteAmountMinor = 5_000
         val payment = walletService.createBookingPayment(
             walletId,
             UUID.randomUUID(),
-            5_000,
             useWallet = false,
             idempotencyKey = "late-capture",
         )

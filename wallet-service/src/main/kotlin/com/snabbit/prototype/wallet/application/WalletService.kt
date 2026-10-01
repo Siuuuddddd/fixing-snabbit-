@@ -1,15 +1,19 @@
 package com.snabbit.prototype.wallet.application
 
+import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.payment.PaymentProvider
 import com.snabbit.prototype.wallet.payment.PaymentProviderException
 import com.snabbit.prototype.wallet.support.PaymentConflict
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.util.UUID
 
 @Service
 class WalletService(
     private val transactions: WalletTransactionService,
     private val provider: PaymentProvider,
+    private val bookingQuotes: BookingQuoteClient,
+    private val clock: Clock,
 ) {
     fun balance(walletId: UUID): WalletBalance = transactions.balance(walletId)
 
@@ -28,14 +32,25 @@ class WalletService(
     fun createBookingPayment(
         walletId: UUID,
         bookingId: UUID,
-        totalAmountMinor: Long,
         useWallet: Boolean,
         idempotencyKey: String,
     ): BookingPaymentSnapshot {
+        transactions.existingBookingPayment(walletId, bookingId, idempotencyKey)?.let { return it }
+        val quote = bookingQuotes.get(bookingId)
+        if (quote.status != "AWAITING_PAYMENT") {
+            throw PaymentConflict("Booking is not awaiting payment")
+        }
+        if (!quote.holdExpiresAt.isAfter(clock.instant())) {
+            throw PaymentConflict("Booking slot hold has expired")
+        }
+        if (quote.currency != "INR" || quote.quotedTotalMinor <= 0) {
+            throw PaymentConflict("Booking has no valid INR payment quote")
+        }
         val prepared = transactions.prepareBookingPayment(
             walletId,
             bookingId,
-            totalAmountMinor,
+            quote.customerId,
+            quote.quotedTotalMinor,
             useWallet,
             idempotencyKey,
         )

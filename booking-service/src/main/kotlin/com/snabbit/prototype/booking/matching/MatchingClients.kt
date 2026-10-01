@@ -1,5 +1,6 @@
 package com.snabbit.prototype.booking.matching
 
+import com.snabbit.prototype.booking.config.IntegrationProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.core.ParameterizedTypeReference
@@ -58,7 +59,7 @@ data class WorkerMatchResponse(
 )
 
 @Component
-class MatchingClients(builder: RestClient.Builder, properties: MatchingProperties) {
+class MatchingClients(builder: RestClient.Builder, properties: IntegrationProperties) {
     private val userClient = builder.clone().baseUrl(properties.userServiceUrl).build()
     private val workerClient = builder.clone().baseUrl(properties.workerServiceUrl).build()
 

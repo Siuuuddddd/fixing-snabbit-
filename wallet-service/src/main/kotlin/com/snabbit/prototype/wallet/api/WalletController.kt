@@ -23,8 +23,6 @@ data class AddMoneyRequest(@field:Min(100) val amountMinor: Long)
 
 data class CreateBookingPaymentRequest(
     val bookingId: UUID,
-    @field:Min(1)
-    val totalAmountMinor: Long,
     val useWallet: Boolean = true,
 )
 
@@ -54,7 +52,6 @@ class InternalWalletController(private val service: WalletService) {
     ): BookingPaymentSnapshot = service.createBookingPayment(
         walletId = walletId,
         bookingId = request.bookingId,
-        totalAmountMinor = request.totalAmountMinor,
         useWallet = request.useWallet,
         idempotencyKey = idempotencyKey,
     )

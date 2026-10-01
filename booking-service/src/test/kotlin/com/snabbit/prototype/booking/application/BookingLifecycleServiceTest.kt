@@ -32,6 +32,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.Optional
 
 class BookingLifecycleServiceTest {
     private val bookingRepository = mockk<BookingRepository>()
@@ -159,6 +160,24 @@ class BookingLifecycleServiceTest {
         assertEquals(null, booking.paymentReference)
     }
 
+    @Test
+    fun `payment quote exposes authoritative customer amount state and expiry`() {
+        val bookingId = UUID.randomUUID()
+        val workerId = UUID.randomUUID()
+        val booking = booking(bookingId).apply { awaitPayment(clock.instant()) }
+        val hold = hold(bookingId, workerId)
+        every { bookingRepository.findById(bookingId) } returns Optional.of(booking)
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(bookingId) } returns listOf(hold)
+
+        val quote = service.paymentQuote(bookingId)
+
+        assertEquals(booking.customerId, quote.customerId)
+        assertEquals(booking.quotedTotalMinor, quote.quotedTotalMinor)
+        assertEquals(BookingStatus.AWAITING_PAYMENT.name, quote.status)
+        assertEquals(hold.expiresAt, quote.holdExpiresAt)
+        assertEquals("INR", quote.currency)
+    }
+
     private fun multiDayCommand(workerId: UUID) = CreateBookingCommand(
         customerId = UUID.randomUUID(),
         serviceId = UUID.randomUUID(),
@@ -192,6 +211,7 @@ class BookingLifecycleServiceTest {
         bookingType = BookingType.SCHEDULED,
         status = BookingStatus.AWAITING_WORKER,
         durationMinutes = 120,
+        quotedTotalMinor = 42_000,
         createdAt = clock.instant(),
         updatedAt = clock.instant(),
     )
