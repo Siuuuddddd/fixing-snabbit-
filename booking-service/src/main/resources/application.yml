@@ -23,3 +23,5 @@ booking:
   closing-time: "19:00"
   slot-hold-duration: PT5M
   worker-offer-duration: PT1M
+  expiry-scan-delay: PT30S
+  expiry-batch-size: 100

@@ -12,4 +12,6 @@ data class BookingProperties(
     val closingTime: LocalTime,
     val slotHoldDuration: Duration,
     val workerOfferDuration: Duration,
+    val expiryScanDelay: Duration,
+    val expiryBatchSize: Int,
 )

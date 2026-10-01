@@ -16,7 +16,15 @@ class BookingWindowPolicyTest {
     private val zone = ZoneId.of("Asia/Kolkata")
     private val clock = Clock.fixed(Instant.parse("2026-10-02T04:00:00Z"), ZoneOffset.UTC)
     private val policy = BookingWindowPolicy(
-        BookingProperties(zone, LocalTime.of(8, 0), LocalTime.of(19, 0), Duration.ofMinutes(5), Duration.ofMinutes(1)),
+        BookingProperties(
+            zone,
+            LocalTime.of(8, 0),
+            LocalTime.of(19, 0),
+            Duration.ofMinutes(5),
+            Duration.ofMinutes(1),
+            Duration.ofSeconds(30),
+            100,
+        ),
         clock,
     )
 

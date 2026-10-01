@@ -1,13 +1,21 @@
 package com.snabbit.prototype.booking.persistence
 
 import com.snabbit.prototype.booking.domain.SlotHold
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
 import java.util.UUID
 
 interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
+    fun findAllByBookingIdOrderByVisitIndex(bookingId: UUID): List<SlotHold>
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select hold from SlotHold hold where hold.id = :id")
+    fun findForUpdate(@Param("id") id: UUID): SlotHold?
+
     @Query(
         value = """
             SELECT EXISTS (
@@ -27,4 +35,18 @@ interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
         @Param("endsAt") endsAt: Instant,
         @Param("now") now: Instant,
     ): Boolean
+
+    @Query(
+        value = """
+            SELECT id FROM slot_hold
+            WHERE status = 'HELD' AND expires_at <= :now
+            ORDER BY expires_at
+            LIMIT :limit
+        """,
+        nativeQuery = true,
+    )
+    fun findExpiredIds(
+        @Param("now") now: Instant,
+        @Param("limit") limit: Int,
+    ): List<UUID>
 }

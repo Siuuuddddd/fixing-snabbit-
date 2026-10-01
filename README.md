@@ -30,6 +30,8 @@ Service health is available at `/actuator/health`. Local credentials in `compose
 
 ## Current milestone
 
-This commit establishes the build, service boundaries, local infrastructure, CI and baseline outbox migrations. The next milestone implements Booking Service availability, five-minute slot holds, expiry and confirmation.
+The Booking Service now supports atomic single-day and multi-day holds, worker offer acceptance/rejection, payment-side confirmation, cancellation and scheduled expiry. Capacity is locked in deterministic order and every lifecycle fact is written to the transactional outbox.
+
+Payment confirmation is exposed only below `/internal/v1`; it is not routed by the customer API Gateway. Authentication and service-to-service authorization will be added before any real provider integration.
 
 See [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).

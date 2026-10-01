@@ -11,9 +11,12 @@ import java.time.ZonedDateTime
 @Component
 class BookingWindowPolicy(
     private val properties: BookingProperties,
-    private val clock: Clock = Clock.systemUTC(),
+    private val clock: Clock,
 ) {
     fun validate(type: BookingType, startsAt: Instant, duration: Duration) {
+        if (startsAt.isBefore(clock.instant())) {
+            throw BookingRuleViolation("Visit start time cannot be in the past")
+        }
         val localStart = startsAt.atZone(properties.zoneId)
         val localEnd = localStart.plus(duration)
         val today = ZonedDateTime.now(clock.withZone(properties.zoneId)).toLocalDate()

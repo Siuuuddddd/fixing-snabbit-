@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.Version
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
 
@@ -24,6 +26,8 @@ class SlotHold(
     val id: UUID,
     @Column(name = "booking_id", nullable = false)
     val bookingId: UUID,
+    @Column(name = "visit_index", nullable = false)
+    val visitIndex: Int,
     @Column(name = "customer_id", nullable = false)
     val customerId: UUID,
     @Column(name = "worker_id", nullable = false)
@@ -35,6 +39,7 @@ class SlotHold(
     @Column(name = "ends_at", nullable = false)
     val endsAt: Instant,
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "slot_hold_status")
     var status: SlotHoldStatus,
     @Column(name = "expires_at", nullable = false)
@@ -43,4 +48,20 @@ class SlotHold(
     val createdAt: Instant,
     @Version
     var version: Long = 0,
-)
+) {
+    fun confirm() {
+        check(status == SlotHoldStatus.HELD) { "Only held slots can be confirmed" }
+        status = SlotHoldStatus.CONFIRMED
+    }
+
+    fun expire() {
+        if (status == SlotHoldStatus.HELD) status = SlotHoldStatus.EXPIRED
+    }
+
+    fun release() {
+        if (status == SlotHoldStatus.HELD) status = SlotHoldStatus.RELEASED
+    }
+
+    fun isActive(now: Instant): Boolean =
+        status == SlotHoldStatus.CONFIRMED || (status == SlotHoldStatus.HELD && expiresAt.isAfter(now))
+}
