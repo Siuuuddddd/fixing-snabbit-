@@ -3,6 +3,7 @@ package com.snabbit.prototype.booking.application
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.Booking
+import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.domain.BookingStatus
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
@@ -77,6 +78,8 @@ class BookingLifecycleServiceTest {
 
         assertEquals(BookingStatus.AWAITING_WORKER.name, result.status)
         assertEquals(2, result.visits.size)
+        assertEquals(command.quotedTotalMinor, result.quotedTotalMinor)
+        assertEquals(command.requirements, result.requirements)
         assertEquals(result.visits[0].holdExpiresAt, result.visits[1].holdExpiresAt)
         verify(exactly = 1) { bookingRepository.saveAndFlush(any()) }
     }
@@ -165,6 +168,13 @@ class BookingLifecycleServiceTest {
             VisitCommand(workerId, Instant.parse("2026-10-03T04:30:00Z")),
             VisitCommand(workerId, Instant.parse("2026-10-04T04:30:00Z")),
         ),
+        requirements = BookingRequirements(
+            hasPets = true,
+            preferredLanguages = listOf("HINDI"),
+            allergies = listOf("DUST"),
+            workerConstraints = listOf("MASK_REQUIRED"),
+        ),
+        quotedTotalMinor = 75_000,
     )
 
     private fun capacity(workerId: UUID, date: LocalDate) = WorkerDayCapacity(

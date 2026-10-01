@@ -40,6 +40,11 @@ class Booking(
     var status: BookingStatus,
     @Column(name = "duration_minutes", nullable = false)
     val durationMinutes: Int,
+    @Column(name = "quoted_total_minor", nullable = false)
+    val quotedTotalMinor: Long = 0,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    val requirements: BookingRequirements = BookingRequirements(),
     @Column(name = "payment_reference", unique = true)
     var paymentReference: String? = null,
     @Column(name = "created_at", nullable = false)

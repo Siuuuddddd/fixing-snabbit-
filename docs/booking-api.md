@@ -16,9 +16,12 @@ AWAITING_WORKER --all offers accepted--> AWAITING_PAYMENT --verified payment--> 
 
 All visits in a multi-day request use one duration and are held in one database transaction. If any capacity row is missing or any visit overlaps an active reservation, no booking, hold, offer or outbox row is committed.
 
+The match-and-hold route is the intended customer path. The preselected-worker create route remains useful for internal/prototype flows and tests. See [matching-api.md](matching-api.md).
+
 ## Customer-facing routes
 
 - `POST /api/v1/bookings` — create booking, holds and worker offers.
+- `POST /api/v1/bookings/match-and-hold` — load the authoritative household snapshot, match compatible workers, then atomically create holds and offers.
 - `GET /api/v1/bookings/{bookingId}` — return the shared customer/worker duration and current lifecycle.
 - `POST /api/v1/bookings/{bookingId}/worker-offers/{offerId}/accept` — worker accepts one visit.
 - `POST /api/v1/bookings/{bookingId}/worker-offers/{offerId}/reject` — worker rejects and releases the atomic booking.

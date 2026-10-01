@@ -58,6 +58,8 @@ class BookingLifecycleService(
                 bookingType = command.bookingType,
                 status = BookingStatus.AWAITING_WORKER,
                 durationMinutes = command.duration.toMinutes().toInt(),
+                quotedTotalMinor = command.quotedTotalMinor,
+                requirements = command.requirements,
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -96,7 +98,12 @@ class BookingLifecycleService(
         outboxWriter.append(
             booking.id,
             "BookingHeld",
-            mapOf("bookingId" to booking.id, "visitCount" to holds.size, "holdExpiresAt" to holds.first().expiresAt),
+            mapOf(
+                "bookingId" to booking.id,
+                "visitCount" to holds.size,
+                "holdExpiresAt" to holds.first().expiresAt,
+                "quotedTotalMinor" to booking.quotedTotalMinor,
+            ),
             now,
         )
         outboxWriter.append(
@@ -110,6 +117,7 @@ class BookingLifecycleService(
                         "workerId" to offer.workerId,
                         "slotHoldId" to offer.slotHoldId,
                         "expiresAt" to offer.expiresAt,
+                        "requirements" to command.requirements,
                     )
                 },
             ),
@@ -318,6 +326,8 @@ class BookingLifecycleService(
         return BookingSnapshot(
             bookingId = booking.id,
             status = booking.status.name,
+            quotedTotalMinor = booking.quotedTotalMinor,
+            requirements = booking.requirements,
             visits = holds.map { hold ->
                 val offer = offersByHold.getValue(hold.id)
                 VisitSnapshot(

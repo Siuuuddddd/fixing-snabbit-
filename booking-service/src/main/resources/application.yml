@@ -43,3 +43,7 @@ eventing:
   outbox-poll-delay: PT1S
   outbox-claim-duration: PT30S
   outbox-batch-size: 50
+
+integrations:
+  user-service-url: ${USER_SERVICE_URL:http://localhost:8081}
+  worker-service-url: ${WORKER_SERVICE_URL:http://localhost:8083}

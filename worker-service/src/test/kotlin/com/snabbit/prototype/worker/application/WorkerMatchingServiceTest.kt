@@ -1,0 +1,174 @@
+package com.snabbit.prototype.worker.application
+
+import com.snabbit.prototype.worker.domain.AvailabilityStatus
+import com.snabbit.prototype.worker.domain.WorkerAvailability
+import com.snabbit.prototype.worker.domain.WorkerCompatibility
+import com.snabbit.prototype.worker.domain.WorkerProfile
+import com.snabbit.prototype.worker.domain.WorkerSkill
+import com.snabbit.prototype.worker.domain.WorkerSkillId
+import com.snabbit.prototype.worker.domain.WorkerStatus
+import com.snabbit.prototype.worker.domain.WorkerTier
+import com.snabbit.prototype.worker.persistence.WorkerAvailabilityRepository
+import com.snabbit.prototype.worker.persistence.WorkerCompatibilityRepository
+import com.snabbit.prototype.worker.persistence.WorkerProfileRepository
+import com.snabbit.prototype.worker.persistence.WorkerSkillRepository
+import io.mockk.every
+import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.UUID
+
+class WorkerMatchingServiceTest {
+    private val profiles = mockk<WorkerProfileRepository>()
+    private val skills = mockk<WorkerSkillRepository>()
+    private val availability = mockk<WorkerAvailabilityRepository>()
+    private val compatibility = mockk<WorkerCompatibilityRepository>()
+    private val service = WorkerMatchingService(profiles, skills, availability, compatibility)
+    private val start = Instant.parse("2026-10-03T04:30:00Z")
+
+    @Test
+    fun `Plus favourite continuity ranks compatible favourite first`() {
+        val standard = profile(WorkerTier.STANDARD, "Standard")
+        val favourite = profile(WorkerTier.VETERAN, "Favourite")
+        stubCandidates(standard, favourite, acceptsPets = true)
+
+        val matches = service.match(command(favourite.id, hasPets = true))
+
+        assertEquals(favourite.id, matches.first().workerId)
+        assertEquals(39_000, matches.first().priceMinor) // 2 * ₹180 + ₹30 tier charge
+        assertEquals(true, matches.first().favourite)
+    }
+
+    @Test
+    fun `household pet constraint removes incompatible favourite`() {
+        val compatibleWorker = profile(WorkerTier.STANDARD, "Pet friendly")
+        val incompatibleFavourite = profile(WorkerTier.EXPERT, "No pets")
+        stubCandidates(compatibleWorker, incompatibleFavourite, acceptsPets = false)
+
+        val matches = service.match(command(incompatibleFavourite.id, hasPets = true))
+
+        assertEquals(listOf(compatibleWorker.id), matches.map { it.workerId })
+    }
+
+    @Test
+    fun `utensil worker and chemical constraints are hard compatibility filters`() {
+        val incompatible = profile(WorkerTier.STANDARD, "Cannot comply")
+        val compatible = profile(WorkerTier.STANDARD, "Can comply")
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(incompatible, compatible)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(
+            skill(incompatible.id), skill(compatible.id),
+        )
+        every {
+            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
+        } returns listOf(available(incompatible.id), available(compatible.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
+            compatibility(incompatible.id, true),
+            compatibility(
+                compatible.id,
+                true,
+                utensilPreferences = listOf("SEPARATE_UTENSILS"),
+                workerConstraints = listOf("MASK_REQUIRED"),
+                avoidedChemicals = listOf("BLEACH"),
+            ),
+        )
+
+        val matches = service.match(
+            command(UUID.randomUUID(), hasPets = false).copy(
+                utensilPreferences = listOf("separate_utensils"),
+                workerConstraints = listOf("mask_required"),
+                disallowedChemicals = listOf("bleach"),
+            ),
+        )
+
+        assertEquals(listOf(compatible.id), matches.map { it.workerId })
+    }
+
+    private fun stubCandidates(first: WorkerProfile, second: WorkerProfile, acceptsPets: Boolean) {
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(first, second)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(
+            skill(first.id),
+            skill(second.id),
+        )
+        every {
+            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
+        } returns listOf(available(first.id), available(second.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
+            compatibility(first.id, true),
+            compatibility(second.id, acceptsPets),
+        )
+    }
+
+    private fun command(favouriteId: UUID, hasPets: Boolean) = MatchWorkersCommand(
+        serviceCode = "HOUSE_CLEANING",
+        startsAt = start,
+        durationMinutes = 120,
+        latitude = 19.076090,
+        longitude = 72.877426,
+        maxDistanceKm = 15.0,
+        hasPets = hasPets,
+        foodContext = "VEGETARIAN",
+        utensilPreferences = emptyList(),
+        preferredLanguages = listOf("Hindi"),
+        workerConstraints = emptyList(),
+        heavyLiftingRequired = false,
+        disallowedChemicals = emptyList(),
+        requiredEquipment = listOf("MOP"),
+        accessibilityNeeds = emptyList(),
+        favouriteWorkerIds = listOf(favouriteId),
+        plusActive = true,
+    )
+
+    private fun profile(tier: WorkerTier, name: String) = WorkerProfile(
+        id = UUID.randomUUID(),
+        phoneE164 = "+919${UUID.randomUUID().toString().filter(Char::isDigit).padEnd(9, '1').take(9)}",
+        displayName = name,
+        tier = tier,
+        status = WorkerStatus.ACTIVE,
+        currentLatitude = BigDecimal("19.076090"),
+        currentLongitude = BigDecimal("72.877426"),
+        serviceRadiusKm = BigDecimal("15.00"),
+        ratingSum = 45,
+        ratingCount = 10,
+        createdAt = start,
+        updatedAt = start,
+    )
+
+    private fun skill(workerId: UUID) = WorkerSkill(
+        WorkerSkillId(workerId, "HOUSE_CLEANING"),
+        basePricePerHourMinor = 18_000,
+        enabled = true,
+    )
+
+    private fun available(workerId: UUID) = WorkerAvailability(
+        id = UUID.randomUUID(),
+        workerId = workerId,
+        serviceDate = LocalDate.parse("2026-10-03"),
+        availableFrom = LocalTime.of(8, 0),
+        availableUntil = LocalTime.of(19, 0),
+        status = AvailabilityStatus.AVAILABLE,
+    )
+
+    private fun compatibility(
+        workerId: UUID,
+        acceptsPets: Boolean,
+        utensilPreferences: List<String> = emptyList(),
+        workerConstraints: List<String> = emptyList(),
+        avoidedChemicals: List<String> = emptyList(),
+    ) = WorkerCompatibility(
+        workerId = workerId,
+        acceptsPets = acceptsPets,
+        languages = listOf("HINDI"),
+        acceptedFoodContexts = listOf("VEGETARIAN"),
+        supportedUtensilPreferences = utensilPreferences,
+        supportedWorkerConstraints = workerConstraints,
+        canHeavyLift = true,
+        availableEquipment = listOf("MOP"),
+        avoidedChemicals = avoidedChemicals,
+        accessibilityCapabilities = emptyList(),
+        updatedAt = start,
+    )
+}
