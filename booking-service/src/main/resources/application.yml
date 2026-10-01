@@ -12,7 +12,16 @@ spring:
     hibernate:
       ddl-auto: validate
   data.redis.host: ${REDIS_HOST:localhost}
-  kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
 management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
@@ -25,3 +34,12 @@ booking:
   worker-offer-duration: PT1M
   expiry-scan-delay: PT30S
   expiry-batch-size: 100
+
+eventing:
+  outbox-enabled: true
+  outbox-topic: booking-events
+  consumer-topic: wallet-events
+  consumer-group: booking-service
+  outbox-poll-delay: PT1S
+  outbox-claim-duration: PT30S
+  outbox-batch-size: 50

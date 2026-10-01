@@ -12,6 +12,10 @@ interface BookingPaymentRepository : JpaRepository<BookingPayment, UUID> {
     fun findByIdempotencyKey(idempotencyKey: String): BookingPayment?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select payment from BookingPayment payment where payment.bookingId = :bookingId")
+    fun findByBookingIdForUpdate(@Param("bookingId") bookingId: UUID): BookingPayment?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select payment from BookingPayment payment where payment.id = :id")
     fun findForUpdate(@Param("id") id: UUID): BookingPayment?
 

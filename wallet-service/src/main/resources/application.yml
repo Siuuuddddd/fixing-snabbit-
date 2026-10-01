@@ -11,7 +11,16 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
-  kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
 management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
@@ -26,3 +35,12 @@ wallet:
     key-id: ${RAZORPAY_KEY_ID:}
     key-secret: ${RAZORPAY_KEY_SECRET:}
     webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:local-webhook-secret}
+
+eventing:
+  outbox-enabled: true
+  outbox-topic: wallet-events
+  consumer-topic: booking-events
+  consumer-group: wallet-service
+  outbox-poll-delay: PT1S
+  outbox-claim-duration: PT30S
+  outbox-batch-size: 50

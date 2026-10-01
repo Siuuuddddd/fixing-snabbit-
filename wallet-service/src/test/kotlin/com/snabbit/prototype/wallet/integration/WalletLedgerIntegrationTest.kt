@@ -29,6 +29,8 @@ import javax.crypto.spec.SecretKeySpec
         "wallet.razorpay.mode=fake",
         "wallet.razorpay.webhook-secret=integration-secret",
         "wallet.refund-retry-delay=PT24H",
+        "eventing.outbox-enabled=false",
+        "spring.kafka.listener.auto-startup=false",
     ],
 )
 @Testcontainers(disabledWithoutDocker = true)

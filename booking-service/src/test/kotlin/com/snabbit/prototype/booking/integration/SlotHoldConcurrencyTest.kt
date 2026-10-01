@@ -4,6 +4,7 @@ import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
+import com.snabbit.prototype.booking.eventing.OutboxDeliveryStore
 import com.snabbit.prototype.booking.support.SlotUnavailable
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -18,6 +19,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -26,7 +28,13 @@ import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
-@SpringBootTest(properties = ["booking.expiry-scan-delay=PT24H"])
+@SpringBootTest(
+    properties = [
+        "booking.expiry-scan-delay=PT24H",
+        "eventing.outbox-enabled=false",
+        "spring.kafka.listener.auto-startup=false",
+    ],
+)
 @Testcontainers(disabledWithoutDocker = true)
 class SlotHoldConcurrencyTest {
     @Autowired
@@ -34,6 +42,9 @@ class SlotHoldConcurrencyTest {
 
     @Autowired
     private lateinit var jdbc: JdbcTemplate
+
+    @Autowired
+    private lateinit var outboxStore: OutboxDeliveryStore
 
     private val workerId = UUID.fromString("20000000-0000-0000-0000-000000000001")
     private val serviceId = UUID.fromString("30000000-0000-0000-0000-000000000001")
@@ -101,6 +112,31 @@ class SlotHoldConcurrencyTest {
         assertTrue(result.exceptionOrNull() is SlotUnavailable)
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM booking", Long::class.java))
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM slot_hold", Long::class.java))
+    }
+
+    @Test
+    fun `outbox lease prevents concurrent publishers and becomes retryable`() {
+        val eventId = UUID.randomUUID()
+        val now = Instant.now()
+        jdbc.update(
+            """
+            INSERT INTO outbox_event
+                (id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
+            VALUES (?, 'Booking', ?, 'BookingHeld', '{}'::jsonb, ?)
+            """.trimIndent(),
+            eventId,
+            UUID.randomUUID().toString(),
+            now,
+        )
+        val firstClaim = UUID.randomUUID()
+        val secondClaim = UUID.randomUUID()
+
+        assertEquals(1, outboxStore.claimBatch(firstClaim, now, now.plusSeconds(30), 10).size)
+        assertEquals(0, outboxStore.claimBatch(secondClaim, now, now.plusSeconds(30), 10).size)
+
+        outboxStore.releaseAfterFailure(eventId, firstClaim, now.plusSeconds(5), "temporary")
+        assertEquals(0, outboxStore.claimBatch(secondClaim, now.plusSeconds(4), now.plusSeconds(34), 10).size)
+        assertEquals(1, outboxStore.claimBatch(secondClaim, now.plusSeconds(6), now.plusSeconds(36), 10).size)
     }
 
     private fun command(customerId: UUID) = CreateBookingCommand(

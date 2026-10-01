@@ -225,6 +225,49 @@ class WalletTransactionService(
     }
 
     @Transactional
+    fun terminateBookingPayment(bookingId: UUID, sourceEventId: UUID): UUID? {
+        val payment = paymentRepository.findByBookingIdForUpdate(bookingId) ?: return null
+        val now = clock.instant()
+        return when (payment.status) {
+            BookingPaymentStatus.CREATING_ORDER,
+            BookingPaymentStatus.PENDING,
+            -> {
+                failPaymentAndRelease(payment, now)
+                null
+            }
+            BookingPaymentStatus.COMPLETED -> {
+                refundRepository.findByBookingPaymentId(payment.id)?.id ?: run {
+                    payment.beginRefund(now)
+                    val refund = refundRepository.save(
+                        PaymentRefund(
+                            id = UUID.randomUUID(),
+                            bookingPaymentId = payment.id,
+                            walletId = payment.walletId,
+                            walletAmountMinor = payment.walletAmountMinor,
+                            onlineAmountMinor = payment.onlineAmountMinor,
+                            status = RefundStatus.CREATING,
+                            idempotencyKey = "booking-termination:$sourceEventId",
+                            createdAt = now,
+                            updatedAt = now,
+                        ),
+                    )
+                    outboxWriter.append(
+                        bookingId,
+                        "WalletRefundQueued",
+                        mapOf("bookingId" to bookingId, "paymentId" to payment.id, "refundId" to refund.id),
+                        now,
+                    )
+                    refund.id
+                }
+            }
+            BookingPaymentStatus.REFUND_PENDING -> refundRepository.findByBookingPaymentId(payment.id)?.id
+            BookingPaymentStatus.FAILED,
+            BookingPaymentStatus.REFUNDED,
+            -> null
+        }
+    }
+
+    @Transactional
     fun processCapture(capture: ProviderCapture): WebhookOutcome {
         val now = clock.instant()
         if (!webhookStore.claim("RAZORPAY", capture.eventId, capture.eventType, now)) {
