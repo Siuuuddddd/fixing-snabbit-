@@ -66,7 +66,14 @@ class MatchAndHoldServiceTest {
         coEvery { clients.household(customerId) } returns household
         coEvery { clients.matches(any()) } returns listOf(match(workerId, 39_000))
         every { lifecycle.create(capture(created)) } answers {
-            BookingSnapshot(UUID.randomUUID(), "AWAITING_WORKER", created.captured.quotedTotalMinor, created.captured.requirements, emptyList())
+            BookingSnapshot(
+                UUID.randomUUID(),
+                customerId,
+                "AWAITING_WORKER",
+                created.captured.quotedTotalMinor,
+                created.captured.requirements,
+                emptyList(),
+            )
         }
 
         service.matchAndHold(

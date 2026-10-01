@@ -1,0 +1,65 @@
+package com.snabbit.prototype.gateway
+
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Test
+import org.springframework.cloud.gateway.filter.GatewayFilterChain
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest
+import org.springframework.mock.web.server.MockServerWebExchange
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import org.springframework.web.server.ServerWebExchange
+import reactor.core.publisher.Mono
+import java.time.Instant
+import java.util.UUID
+
+class AuthenticatedIdentityHeaderFilterTest {
+    private val filter = AuthenticatedIdentityHeaderFilter()
+
+    @Test
+    fun `replaces spoofed identity header with authenticated JWT subject`() {
+        val userId = UUID.randomUUID().toString()
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/bookings")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER, "spoofed")
+                .build(),
+        ).mutate().principal(Mono.just(authentication(userId))).build()
+        val forwarded = invoke(exchange)
+
+        assertEquals(userId, forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
+    }
+
+    @Test
+    fun `removes identity header from unauthenticated request`() {
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/auth/otp/request")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER, "spoofed")
+                .build(),
+        )
+        val forwarded = invoke(exchange)
+
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
+    }
+
+    private fun invoke(exchange: ServerWebExchange): ServerWebExchange {
+        val chain = mockk<GatewayFilterChain>()
+        val forwarded = slot<ServerWebExchange>()
+        every { chain.filter(capture(forwarded)) } returns Mono.empty()
+        filter.filter(exchange, chain).block()
+        return forwarded.captured
+    }
+
+    private fun authentication(subject: String): JwtAuthenticationToken {
+        val now = Instant.parse("2026-10-02T04:00:00Z")
+        val jwt = Jwt.withTokenValue("token")
+            .header("alg", "HS256")
+            .subject(subject)
+            .issuedAt(now)
+            .expiresAt(now.plusSeconds(900))
+            .build()
+        return JwtAuthenticationToken(jwt)
+    }
+}

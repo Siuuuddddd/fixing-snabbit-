@@ -18,6 +18,7 @@ import java.util.UUID
 data class StartBookingPaymentCommand(
     val walletId: UUID,
     val bookingId: UUID,
+    val authenticatedCustomerId: UUID,
     val useWallet: Boolean,
     val idempotencyKey: String,
 )
@@ -66,6 +67,9 @@ class BookingPaymentService(
 ) {
     fun start(command: StartBookingPaymentCommand): BookingPaymentSnapshot {
         val quote = bookings.paymentQuote(command.bookingId)
+        if (quote.customerId != command.authenticatedCustomerId) {
+            throw com.snabbit.prototype.booking.support.CustomerAccessDenied()
+        }
         if (quote.status != "AWAITING_PAYMENT") {
             throw InvalidBookingState("Booking is not awaiting payment")
         }

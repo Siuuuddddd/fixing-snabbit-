@@ -65,7 +65,7 @@ class MatchingClients(builder: RestClient.Builder, properties: IntegrationProper
 
     suspend fun household(userId: UUID): HouseholdSnapshotResponse = withContext(Dispatchers.IO) {
         userClient.get()
-            .uri("/api/v1/users/{userId}/household", userId)
+            .uri("/internal/v1/users/{userId}/household", userId)
             .retrieve()
             .body(HouseholdSnapshotResponse::class.java)
             ?: error("User Service returned an empty household snapshot")

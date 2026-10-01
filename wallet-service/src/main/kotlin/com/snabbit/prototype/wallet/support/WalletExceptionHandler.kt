@@ -31,4 +31,8 @@ class WalletExceptionHandler {
     @ExceptionHandler(BookingQuoteUnavailable::class)
     fun quoteUnavailable(error: BookingQuoteUnavailable): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
+
+    @ExceptionHandler(WalletAccessDenied::class)
+    fun accessDenied(error: WalletAccessDenied): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty())
 }

@@ -14,6 +14,7 @@ class OfferUnavailable(message: String) : RuntimeException(message)
 class InvalidBookingState(message: String) : RuntimeException(message)
 class PaymentRequestRejected(val status: HttpStatusCode, message: String) : RuntimeException(message)
 class PaymentServiceUnavailable(message: String, cause: Throwable) : RuntimeException(message, cause)
+class CustomerAccessDenied : RuntimeException("Authenticated customer does not own this resource")
 
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -40,4 +41,8 @@ class ApiExceptionHandler {
     @ExceptionHandler(PaymentServiceUnavailable::class)
     fun paymentUnavailable(error: PaymentServiceUnavailable): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
+
+    @ExceptionHandler(CustomerAccessDenied::class)
+    fun accessDenied(error: CustomerAccessDenied): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty())
 }

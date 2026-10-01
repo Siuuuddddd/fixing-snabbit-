@@ -11,8 +11,22 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
+
+auth:
+  issuer: https://auth.snabbit.local
+  jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}
+  otp-pepper: ${OTP_PEPPER:local-only-otp-pepper}
+  otp-ttl: PT5M
+  request-cooldown: PT1M
+  access-token-ttl: PT15M
+  max-attempts: 5
+  expose-code: ${OTP_EXPOSE_CODE:false}

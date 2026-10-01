@@ -17,6 +17,11 @@ class WalletService(
 ) {
     fun balance(walletId: UUID): WalletBalance = transactions.balance(walletId)
 
+    fun balanceForCustomer(walletId: UUID, customerId: UUID): WalletBalance {
+        transactions.requireOwnership(walletId, customerId)
+        return transactions.balance(walletId)
+    }
+
     fun addMoney(walletId: UUID, amountMinor: Long, idempotencyKey: String): TopUpSnapshot {
         val prepared = transactions.prepareTopUp(walletId, amountMinor, idempotencyKey)
         if (prepared.status != "CREATING_ORDER") return prepared
@@ -27,6 +32,16 @@ class WalletService(
             transactions.failTopUp(prepared.topUpId)
             throw error
         }
+    }
+
+    fun addMoneyForCustomer(
+        walletId: UUID,
+        customerId: UUID,
+        amountMinor: Long,
+        idempotencyKey: String,
+    ): TopUpSnapshot {
+        transactions.requireOwnership(walletId, customerId)
+        return addMoney(walletId, amountMinor, idempotencyKey)
     }
 
     fun createBookingPayment(

@@ -30,15 +30,24 @@ data class CreateBookingPaymentRequest(
 @RequestMapping("/api/v1/wallets")
 class WalletController(private val service: WalletService) {
     @GetMapping("/{walletId}")
-    fun balance(@PathVariable walletId: UUID): WalletBalance = service.balance(walletId)
+    fun balance(
+        @PathVariable walletId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+    ): WalletBalance = service.balanceForCustomer(walletId, authenticatedCustomerId)
 
     @PostMapping("/{walletId}/top-ups")
     @ResponseStatus(HttpStatus.CREATED)
     fun addMoney(
         @PathVariable walletId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,
         @Valid @RequestBody request: AddMoneyRequest,
-    ): TopUpSnapshot = service.addMoney(walletId, request.amountMinor, idempotencyKey)
+    ): TopUpSnapshot = service.addMoneyForCustomer(
+        walletId,
+        authenticatedCustomerId,
+        request.amountMinor,
+        idempotencyKey,
+    )
 }
 
 @RestController

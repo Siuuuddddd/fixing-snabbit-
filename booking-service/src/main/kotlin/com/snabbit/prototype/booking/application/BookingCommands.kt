@@ -23,6 +23,7 @@ data class VisitCommand(
 
 data class BookingSnapshot(
     val bookingId: UUID,
+    val customerId: UUID,
     val status: String,
     val quotedTotalMinor: Long,
     val requirements: BookingRequirements,

@@ -12,6 +12,8 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface UserProfileRepository : JpaRepository<UserProfile, UUID> {
+    fun findByPhoneE164(phoneE164: String): UserProfile?
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select user from UserProfile user where user.id = :id")
     fun findForUpdate(@Param("id") id: UUID): UserProfile?

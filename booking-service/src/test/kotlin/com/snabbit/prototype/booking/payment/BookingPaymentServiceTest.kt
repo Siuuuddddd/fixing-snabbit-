@@ -3,6 +3,7 @@ package com.snabbit.prototype.booking.payment
 import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.support.InvalidBookingState
+import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -24,7 +25,7 @@ class BookingPaymentServiceTest {
     fun `starts wallet payment only for an active authoritative quote`() {
         val command = command()
         val expected = payment(command)
-        every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId)
+        every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
         every { client.start(command) } returns expected
 
         val result = service.start(command)
@@ -36,9 +37,20 @@ class BookingPaymentServiceTest {
     @Test
     fun `expired hold never reaches wallet service`() {
         val command = command()
-        every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId).copy(holdExpiresAt = now)
+        every { bookings.paymentQuote(command.bookingId) } returns
+            quote(command.bookingId, command.authenticatedCustomerId).copy(holdExpiresAt = now)
 
         assertThrows(InvalidBookingState::class.java) { service.start(command) }
+
+        verify(exactly = 0) { client.start(any()) }
+    }
+
+    @Test
+    fun `authenticated customer cannot pay another customers booking`() {
+        val command = command()
+        every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId, UUID.randomUUID())
+
+        assertThrows(CustomerAccessDenied::class.java) { service.start(command) }
 
         verify(exactly = 0) { client.start(any()) }
     }
@@ -46,13 +58,14 @@ class BookingPaymentServiceTest {
     private fun command() = StartBookingPaymentCommand(
         UUID.randomUUID(),
         UUID.randomUUID(),
+        UUID.randomUUID(),
         true,
         "payment-once",
     )
 
-    private fun quote(bookingId: UUID) = PaymentQuoteSnapshot(
+    private fun quote(bookingId: UUID, customerId: UUID) = PaymentQuoteSnapshot(
         bookingId,
-        UUID.randomUUID(),
+        customerId,
         "AWAITING_PAYMENT",
         15_000,
         "INR",

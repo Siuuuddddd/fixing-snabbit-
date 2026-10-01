@@ -18,6 +18,7 @@ import com.snabbit.prototype.booking.persistence.SlotHoldRepository
 import com.snabbit.prototype.booking.persistence.WorkerDayCapacityRepository
 import com.snabbit.prototype.booking.persistence.WorkerOfferRepository
 import com.snabbit.prototype.booking.support.SlotUnavailable
+import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -176,6 +177,18 @@ class BookingLifecycleServiceTest {
         assertEquals(BookingStatus.AWAITING_PAYMENT.name, quote.status)
         assertEquals(hold.expiresAt, quote.holdExpiresAt)
         assertEquals("INR", quote.currency)
+    }
+
+    @Test
+    fun `customer cannot cancel another customers hold`() {
+        val booking = booking(UUID.randomUUID())
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+
+        assertThrows(CustomerAccessDenied::class.java) {
+            service.cancel(booking.id, UUID.randomUUID())
+        }
+
+        verify(exactly = 0) { holdRepository.findAllByBookingIdOrderByVisitIndex(any()) }
     }
 
     private fun multiDayCommand(workerId: UUID) = CreateBookingCommand(

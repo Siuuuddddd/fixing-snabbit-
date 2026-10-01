@@ -242,9 +242,12 @@ class BookingLifecycleService(
     }
 
     @Transactional
-    fun cancel(bookingId: UUID): BookingSnapshot {
+    fun cancel(bookingId: UUID, expectedCustomerId: UUID? = null): BookingSnapshot {
         val now = clock.instant()
         val booking = requireBookingForUpdate(bookingId)
+        if (expectedCustomerId != null && booking.customerId != expectedCustomerId) {
+            throw com.snabbit.prototype.booking.support.CustomerAccessDenied()
+        }
         if (booking.status == BookingStatus.CANCELLED) return currentSnapshot(booking)
         if (booking.status == BookingStatus.CONFIRMED) {
             throw InvalidBookingState("Confirmed bookings require the cancellation and refund workflow")
@@ -339,6 +342,7 @@ class BookingLifecycleService(
         val offersByHold = offers.associateBy(WorkerOffer::slotHoldId)
         return BookingSnapshot(
             bookingId = booking.id,
+            customerId = booking.customerId,
             status = booking.status.name,
             quotedTotalMinor = booking.quotedTotalMinor,
             requirements = booking.requirements,

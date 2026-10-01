@@ -20,6 +20,7 @@ import com.snabbit.prototype.wallet.persistence.WalletLedgerRepository
 import com.snabbit.prototype.wallet.persistence.WalletOutboxRepository
 import com.snabbit.prototype.wallet.persistence.WalletReservationRepository
 import com.snabbit.prototype.wallet.support.PaymentConflict
+import com.snabbit.prototype.wallet.support.WalletAccessDenied
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -114,6 +115,16 @@ class WalletTransactionServiceTest {
 
         verify(exactly = 0) { paymentRepository.save(any()) }
         verify(exactly = 0) { reservationRepository.save(any()) }
+    }
+
+    @Test
+    fun `customer routes reject a wallet owned by another customer`() {
+        val wallet = wallet()
+        every { walletRepository.findById(wallet.id) } returns java.util.Optional.of(wallet)
+
+        assertThrows(WalletAccessDenied::class.java) {
+            service.requireOwnership(wallet.id, UUID.randomUUID())
+        }
     }
 
     @Test

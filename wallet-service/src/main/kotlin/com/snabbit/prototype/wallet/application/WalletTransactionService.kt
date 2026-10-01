@@ -24,6 +24,7 @@ import com.snabbit.prototype.wallet.support.PaymentConflict
 import com.snabbit.prototype.wallet.support.PaymentNotFound
 import com.snabbit.prototype.wallet.support.WalletNotFound
 import com.snabbit.prototype.wallet.support.WalletRuleViolation
+import com.snabbit.prototype.wallet.support.WalletAccessDenied
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -84,6 +85,12 @@ class WalletTransactionService(
             availableMinor = ledgerBalance - reserved,
             totalSpentMinor = ledgerRepository.totalSpent(walletId),
         )
+    }
+
+    @Transactional(readOnly = true)
+    fun requireOwnership(walletId: UUID, customerId: UUID) {
+        val wallet = walletRepository.findById(walletId).orElseThrow { WalletNotFound(walletId) }
+        if (wallet.customerId != customerId) throw WalletAccessDenied()
     }
 
     @Transactional

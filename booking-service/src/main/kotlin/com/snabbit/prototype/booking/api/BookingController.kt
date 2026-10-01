@@ -12,6 +12,7 @@ import com.snabbit.prototype.booking.matching.MatchAndHoldService
 import com.snabbit.prototype.booking.payment.BookingPaymentSnapshot
 import com.snabbit.prototype.booking.payment.BookingPaymentService
 import com.snabbit.prototype.booking.payment.StartBookingPaymentCommand
+import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.DecimalMax
@@ -76,6 +77,76 @@ data class StartPaymentRequest(
 @RestController
 @RequestMapping("/api/v1/bookings")
 class BookingController(private val service: BookingLifecycleService) {
+    @GetMapping("/{bookingId}")
+    fun get(
+        @PathVariable bookingId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+    ): BookingSnapshot = service.get(bookingId).also { requireOwner(authenticatedCustomerId, it.customerId) }
+
+    @DeleteMapping("/{bookingId}/hold")
+    fun cancelHold(
+        @PathVariable bookingId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+    ): BookingSnapshot = service.cancel(bookingId, authenticatedCustomerId)
+}
+
+@RestController
+@RequestMapping("/api/v1/bookings")
+class MatchAndHoldController(private val service: MatchAndHoldService) {
+    @PostMapping("/match-and-hold")
+    @ResponseStatus(HttpStatus.CREATED)
+    suspend fun matchAndHold(
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+        @Valid @RequestBody request: MatchAndHoldRequest,
+    ): BookingSnapshot {
+        requireOwner(authenticatedCustomerId, request.customerId)
+        return service.matchAndHold(
+            MatchAndHoldCommand(
+                customerId = request.customerId,
+                serviceId = request.serviceId,
+                serviceCode = request.serviceCode,
+                bookingType = request.bookingType,
+                duration = Duration.ofHours(request.durationHours),
+                latitude = request.latitude,
+                longitude = request.longitude,
+                startsAt = request.startsAt,
+            ),
+        )
+    }
+}
+
+@RestController
+@RequestMapping("/api/v1/bookings")
+class BookingPaymentController(private val paymentService: BookingPaymentService) {
+    @PostMapping("/{bookingId}/payments")
+    fun startPayment(
+        @PathVariable bookingId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @Valid @RequestBody request: StartPaymentRequest,
+    ): BookingPaymentSnapshot = paymentService.start(
+        StartBookingPaymentCommand(
+            walletId = request.walletId,
+            bookingId = bookingId,
+            authenticatedCustomerId = authenticatedCustomerId,
+            useWallet = request.useWallet,
+            idempotencyKey = idempotencyKey,
+        ),
+    )
+}
+
+private fun requireOwner(authenticatedCustomerId: UUID, requestedCustomerId: UUID) {
+    if (authenticatedCustomerId != requestedCustomerId) throw CustomerAccessDenied()
+}
+
+data class ConfirmPaymentRequest(
+    @field:NotBlank
+    val paymentReference: String,
+)
+
+@RestController
+@RequestMapping("/internal/v1/bookings")
+class InternalBookingController(private val service: BookingLifecycleService) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@Valid @RequestBody request: CreateBookingRequest): BookingSnapshot =
@@ -89,9 +160,6 @@ class BookingController(private val service: BookingLifecycleService) {
                 requirements = request.requirements,
             ),
         )
-
-    @GetMapping("/{bookingId}")
-    fun get(@PathVariable bookingId: UUID): BookingSnapshot = service.get(bookingId)
 
     @PostMapping("/{bookingId}/worker-offers/{offerId}/accept")
     fun acceptOffer(
@@ -107,56 +175,6 @@ class BookingController(private val service: BookingLifecycleService) {
         @Valid @RequestBody request: WorkerDecisionRequest,
     ): BookingSnapshot = service.rejectOffer(bookingId, offerId, request.workerId)
 
-    @DeleteMapping("/{bookingId}/hold")
-    fun cancelHold(@PathVariable bookingId: UUID): BookingSnapshot = service.cancel(bookingId)
-}
-
-@RestController
-@RequestMapping("/api/v1/bookings")
-class MatchAndHoldController(private val service: MatchAndHoldService) {
-    @PostMapping("/match-and-hold")
-    @ResponseStatus(HttpStatus.CREATED)
-    suspend fun matchAndHold(@Valid @RequestBody request: MatchAndHoldRequest): BookingSnapshot =
-        service.matchAndHold(
-            MatchAndHoldCommand(
-                customerId = request.customerId,
-                serviceId = request.serviceId,
-                serviceCode = request.serviceCode,
-                bookingType = request.bookingType,
-                duration = Duration.ofHours(request.durationHours),
-                latitude = request.latitude,
-                longitude = request.longitude,
-                startsAt = request.startsAt,
-            ),
-        )
-}
-
-@RestController
-@RequestMapping("/api/v1/bookings")
-class BookingPaymentController(private val paymentService: BookingPaymentService) {
-    @PostMapping("/{bookingId}/payments")
-    fun startPayment(
-        @PathVariable bookingId: UUID,
-        @RequestHeader("Idempotency-Key") idempotencyKey: String,
-        @Valid @RequestBody request: StartPaymentRequest,
-    ): BookingPaymentSnapshot = paymentService.start(
-        StartBookingPaymentCommand(
-            walletId = request.walletId,
-            bookingId = bookingId,
-            useWallet = request.useWallet,
-            idempotencyKey = idempotencyKey,
-        ),
-    )
-}
-
-data class ConfirmPaymentRequest(
-    @field:NotBlank
-    val paymentReference: String,
-)
-
-@RestController
-@RequestMapping("/internal/v1/bookings")
-class InternalBookingController(private val service: BookingLifecycleService) {
     @GetMapping("/{bookingId}/payment-quote")
     fun paymentQuote(@PathVariable bookingId: UUID): PaymentQuoteSnapshot = service.paymentQuote(bookingId)
 
