@@ -28,6 +28,14 @@ docker compose up -d
 ./gradlew.bat :booking-service:bootRun
 ```
 
+The default Compose file starts infrastructure only, which is convenient when running a service from the IDE. To build and start the complete local backend, including the gateway and every application service, use:
+
+```powershell
+docker compose -f compose.yaml -f compose.apps.yaml up --build
+```
+
+The application overlay keeps Kafka reachable both from host-run services at `localhost:9092` and containers at `kafka:29092`. All checked-in credentials and exposed ports are local-development defaults only.
+
 Service health is available at `/actuator/health`. Local credentials in `compose.yaml` are development-only.
 
 ## Current milestone

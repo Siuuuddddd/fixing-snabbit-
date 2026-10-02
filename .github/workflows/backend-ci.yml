@@ -32,6 +32,9 @@ jobs:
       - name: Verify Docker for integration tests
         run: docker info
 
+      - name: Validate full-stack Compose topology
+        run: docker compose -f compose.yaml -f compose.apps.yaml config --quiet
+
       - name: Test and package every service
         run: ./gradlew build --no-daemon --stacktrace
 

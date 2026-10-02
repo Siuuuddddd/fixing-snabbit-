@@ -1,0 +1,137 @@
+x-service-environment: &service-environment
+  SPRING_PROFILES_ACTIVE: local
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  JWT_SECRET: local-only-change-me-32-byte-secret
+  OTP_PEPPER: local-only-otp-pepper
+  SERVICE_AUTH_TOKEN: local-only-service-token-change-me-1234567890
+  USER_SERVICE_URL: http://user-service:8081
+  BOOKING_SERVICE_URL: http://booking-service:8082
+  WORKER_SERVICE_URL: http://worker-service:8083
+  WALLET_SERVICE_URL: http://wallet-service:8084
+  SUPPORT_SERVICE_URL: http://support-service:8085
+  NOTIFICATION_SERVICE_URL: http://notification-service:8086
+
+x-service-common: &service-common
+  restart: unless-stopped
+  networks: [default]
+
+services:
+  kafka:
+    environment:
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+  user-service:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: user-service }
+    ports: ["8081:8081"]
+    environment:
+      <<: *service-environment
+      USER_DB_URL: jdbc:postgresql://user-db:5432/users
+      USER_DB_USERNAME: snabbit
+      USER_DB_PASSWORD: snabbit-local
+    depends_on:
+      user-db: { condition: service_healthy }
+      redis: { condition: service_started }
+      kafka: { condition: service_started }
+
+  booking-service:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: booking-service }
+    ports: ["8082:8082"]
+    environment:
+      <<: *service-environment
+      BOOKING_DB_URL: jdbc:postgresql://booking-db:5432/bookings
+      BOOKING_DB_USERNAME: snabbit
+      BOOKING_DB_PASSWORD: snabbit-local
+    depends_on:
+      booking-db: { condition: service_healthy }
+      redis: { condition: service_started }
+      kafka: { condition: service_started }
+
+  worker-service:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: worker-service }
+    ports: ["8083:8083"]
+    environment:
+      <<: *service-environment
+      WORKER_DB_URL: jdbc:postgresql://worker-db:5432/workers
+      WORKER_DB_USERNAME: snabbit
+      WORKER_DB_PASSWORD: snabbit-local
+    depends_on:
+      worker-db: { condition: service_healthy }
+      redis: { condition: service_started }
+      kafka: { condition: service_started }
+
+  wallet-service:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: wallet-service }
+    ports: ["8084:8084"]
+    environment:
+      <<: *service-environment
+      WALLET_DB_URL: jdbc:postgresql://wallet-db:5432/wallets
+      WALLET_DB_USERNAME: snabbit
+      WALLET_DB_PASSWORD: snabbit-local
+      RAZORPAY_MODE: fake
+      RAZORPAY_WEBHOOK_SECRET: local-webhook-secret
+    depends_on:
+      wallet-db: { condition: service_healthy }
+      kafka: { condition: service_started }
+
+  support-service:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: support-service }
+    ports: ["8085:8085"]
+    environment:
+      <<: *service-environment
+      SUPPORT_DB_URL: jdbc:postgresql://support-db:5432/support
+      SUPPORT_DB_USERNAME: snabbit
+      SUPPORT_DB_PASSWORD: snabbit-local
+    depends_on:
+      support-db: { condition: service_healthy }
+
+  notification-service:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: notification-service }
+    ports: ["8086:8086"]
+    environment:
+      <<: *service-environment
+      NOTIFICATION_DB_URL: jdbc:postgresql://notification-db:5432/notifications
+      NOTIFICATION_DB_USERNAME: snabbit
+      NOTIFICATION_DB_PASSWORD: snabbit-local
+    depends_on:
+      notification-db: { condition: service_healthy }
+      kafka: { condition: service_started }
+
+  api-gateway:
+    <<: *service-common
+    build:
+      context: .
+      args: { SERVICE: api-gateway }
+    ports: ["8080:8080"]
+    environment:
+      <<: *service-environment
+    depends_on:
+      user-service: { condition: service_started }
+      booking-service: { condition: service_started }
+      worker-service: { condition: service_started }
+      wallet-service: { condition: service_started }
+      support-service: { condition: service_started }
+      notification-service: { condition: service_started }
