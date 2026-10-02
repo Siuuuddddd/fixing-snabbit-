@@ -26,7 +26,9 @@ interface WorkerProfileRepository : JpaRepository<WorkerProfile, UUID> {
     fun findForUpdate(@Param("id") id: UUID): WorkerProfile?
 }
 
-interface WorkerLocationRepository : JpaRepository<WorkerLocationPoint, UUID>
+interface WorkerLocationRepository : JpaRepository<WorkerLocationPoint, UUID> {
+    fun findFirstByWorkerIdOrderByReceivedAtDesc(workerId: UUID): WorkerLocationPoint?
+}
 
 interface WorkerRatingRepository : JpaRepository<WorkerRating, UUID> {
     fun findByBookingIdAndVisitIndex(bookingId: UUID, visitIndex: Int): WorkerRating?

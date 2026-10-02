@@ -23,6 +23,8 @@ The match-and-hold route is the intended customer path. It reserves an eligible 
 - `POST /api/v1/bookings/match-and-hold` — load the authoritative household snapshot, match compatible workers, then atomically create holds and offers.
 - `POST /api/v1/bookings/{bookingId}/payments` — start split wallet/online payment from the stored quote. Requires `Idempotency-Key`; the request never accepts an amount.
 - `GET /api/v1/bookings/{bookingId}` — return the shared customer/worker duration and current lifecycle.
+- `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location` — return the assigned worker's latest accurate location when the authenticated customer owns the booking and tracking is open.
+- `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location/stream` — stream changed locations as `worker-location` server-sent events with keep-alive comments.
 - `DELETE /api/v1/bookings/{bookingId}/hold` — cancel a pre-confirmation booking and release holds.
 - `GET /api/v1/bookings/{bookingId}/cancellation-quote` — preview the current server-side fee and refund for an unstarted confirmed booking.
 - `POST /api/v1/bookings/{bookingId}/cancellations` — cancel an unstarted confirmed booking and emit the authoritative partial-refund fact.
@@ -35,6 +37,8 @@ The match-and-hold route is the intended customer path. It reserves an eligible 
 - `POST /internal/v1/bookings/{bookingId}/platform-cancellation` — cancel a confirmed service that the platform cannot provide, grant a full refund and restore any Plus pass.
 
 Internal routes require the shared service credential described in [authentication.md](authentication.md). They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions are exposed separately through role-protected worker APIs documented in [worker-api.md](worker-api.md).
+
+Worker tracking opens two hours before a confirmed visit and closes on completion or cancellation. Booking revalidates ownership and visit state throughout the stream. Points older than two minutes are withheld; coordinates are sourced from Worker Service's append-only location history rather than a client-supplied booking payload.
 
 ## Confirmed cancellation policy
 

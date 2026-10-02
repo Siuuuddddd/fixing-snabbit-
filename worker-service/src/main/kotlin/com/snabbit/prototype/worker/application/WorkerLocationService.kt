@@ -19,11 +19,13 @@ data class WorkerLocationCommand(
 )
 
 data class WorkerLocationSnapshot(
+    val locationId: UUID,
     val workerId: UUID,
     val latitude: BigDecimal,
     val longitude: BigDecimal,
     val accuracyMeters: BigDecimal,
     val capturedAt: Instant,
+    val receivedAt: Instant,
 )
 
 class InvalidWorkerLocation(message: String) : RuntimeException(message)
@@ -42,7 +44,7 @@ class WorkerLocationService(
         worker.currentLatitude = command.latitude
         worker.currentLongitude = command.longitude
         worker.updatedAt = now
-        locations.save(
+        val point = locations.save(
             WorkerLocationPoint(
                 UUID.randomUUID(),
                 workerId,
@@ -54,13 +56,19 @@ class WorkerLocationService(
             ),
         )
         return WorkerLocationSnapshot(
+            point.id,
             workerId,
             command.latitude,
             command.longitude,
             command.accuracyMeters,
             command.capturedAt,
+            point.receivedAt,
         )
     }
+
+    @Transactional(readOnly = true)
+    fun latest(workerId: UUID): WorkerLocationSnapshot? =
+        locations.findFirstByWorkerIdOrderByReceivedAtDesc(workerId)?.toSnapshot()
 
     private fun validate(command: WorkerLocationCommand) {
         if (command.latitude.toDouble() !in -90.0..90.0 || command.longitude.toDouble() !in -180.0..180.0) {
@@ -76,4 +84,14 @@ class WorkerLocationService(
             throw InvalidWorkerLocation("Location timestamp is stale or in the future")
         }
     }
+
+    private fun WorkerLocationPoint.toSnapshot() = WorkerLocationSnapshot(
+        id,
+        workerId,
+        latitude,
+        longitude,
+        accuracyMeters,
+        capturedAt,
+        receivedAt,
+    )
 }

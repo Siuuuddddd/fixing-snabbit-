@@ -15,6 +15,8 @@ Prototype worker phones are `+919900000001` and `+919900000002`. OTPs are logged
 
 `POST /api/v1/workers/me/location` records a fresh location sample. It accepts latitude, longitude, `accuracyMeters` and `capturedAt`. Samples older than five minutes, more than 30 seconds in the future or less accurate than 100 metres are rejected. The current worker coordinates are updated under a row lock and every accepted sample is appended to `worker_location_history` for support and audit use.
 
+Booking Service reads the latest durable point through the protected `GET /internal/v1/workers/{workerId}/location` API. The worker credential never reaches the customer application, and Booking applies ownership, visit-state and time-window checks before disclosing a point.
+
 ## Job flow
 
 Authenticated worker routes are:

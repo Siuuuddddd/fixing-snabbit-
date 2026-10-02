@@ -21,6 +21,8 @@ import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -67,7 +69,10 @@ data class WorkerLocationRequest(
 
 @RestController
 @RequestMapping("/internal/v1/workers")
-class InternalWorkerController(private val matchingService: WorkerMatchingService) {
+class InternalWorkerController(
+    private val matchingService: WorkerMatchingService,
+    private val locations: WorkerLocationService,
+) {
     @PostMapping("/matches")
     fun match(@Valid @RequestBody request: MatchWorkersRequest): List<WorkerMatch> = matchingService.match(
         MatchWorkersCommand(
@@ -91,6 +96,12 @@ class InternalWorkerController(private val matchingService: WorkerMatchingServic
             request.plusActive,
         ),
     )
+
+    @GetMapping("/{workerId}/location")
+    fun latestLocation(@PathVariable workerId: UUID): org.springframework.http.ResponseEntity<WorkerLocationSnapshot> =
+        locations.latest(workerId)
+            ?.let { org.springframework.http.ResponseEntity.ok(it) }
+            ?: org.springframework.http.ResponseEntity.notFound().build()
 }
 
 @RestController

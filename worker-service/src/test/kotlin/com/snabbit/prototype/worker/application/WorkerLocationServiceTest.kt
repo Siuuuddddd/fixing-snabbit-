@@ -44,8 +44,29 @@ class WorkerLocationServiceTest {
 
         assertEquals(BigDecimal("19.076100"), worker.currentLatitude)
         assertEquals(BigDecimal("72.877400"), result.longitude)
+        assertEquals(saved.captured.id, result.locationId)
+        assertEquals(now, result.receivedAt)
         assertEquals(worker.id, saved.captured.workerId)
         assertEquals(now, saved.captured.receivedAt)
+    }
+
+    @Test
+    fun `latest location returns the newest durable history point`() {
+        val point = WorkerLocationPoint(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            BigDecimal("19.076100"),
+            BigDecimal("72.877400"),
+            BigDecimal("12.5"),
+            now.minusSeconds(5),
+            now,
+        )
+        every { locations.findFirstByWorkerIdOrderByReceivedAtDesc(point.workerId) } returns point
+
+        val result = service.latest(point.workerId)
+
+        assertEquals(point.id, result?.locationId)
+        assertEquals(point.capturedAt, result?.capturedAt)
     }
 
     @Test

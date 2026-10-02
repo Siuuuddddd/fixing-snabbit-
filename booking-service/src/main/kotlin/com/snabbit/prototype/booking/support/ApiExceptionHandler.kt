@@ -5,6 +5,8 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import com.snabbit.prototype.booking.tracking.WorkerTrackingUnavailable
+import com.snabbit.prototype.booking.tracking.WorkerLocationServiceUnavailable
 import java.util.UUID
 
 class BookingRuleViolation(message: String) : RuntimeException(message)
@@ -45,4 +47,12 @@ class ApiExceptionHandler {
     @ExceptionHandler(CustomerAccessDenied::class)
     fun accessDenied(error: CustomerAccessDenied): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty())
+
+    @ExceptionHandler(WorkerTrackingUnavailable::class)
+    fun trackingUnavailable(error: WorkerTrackingUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
+
+    @ExceptionHandler(WorkerLocationServiceUnavailable::class)
+    fun trackingServiceUnavailable(error: WorkerLocationServiceUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
 }
