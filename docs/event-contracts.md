@@ -30,7 +30,7 @@ Event payloads contain identifiers, lifecycle timestamps and references needed t
 | --- | --- | --- |
 | `WalletTopUpSucceeded` | A signed provider capture credited one append-only ledger row | Wallet read models, notification |
 | `WalletPaymentSucceeded` | Wallet reservation and required online amount completed | Booking, notification |
-| `WalletPaymentFailed` | A pending payment was cancelled or provider order creation failed | Booking, notification |
+| `WalletPaymentFailed` | A pending payment was cancelled or its provider order failed validation | Booking, notification |
 | `WalletPaymentRefundRequired` | Money arrived after capacity/payment expiry and a durable compensation refund was queued | Finance, support |
 | `WalletRefundCompleted` | Wallet credit and any provider refund both completed | Booking, notification, finance |
 | `PlusSubscriptionPurchased` | A signed capture paid an authoritative Plus plan order | User, notification, analytics |

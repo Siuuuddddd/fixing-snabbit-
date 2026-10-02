@@ -3,6 +3,8 @@ package com.snabbit.prototype.wallet.payment
 import com.snabbit.prototype.wallet.config.RazorpayProperties
 import com.snabbit.prototype.wallet.config.WalletProperties
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
@@ -26,6 +28,47 @@ class RazorpayPaymentProviderTest {
             RazorpayProperties("real", "https://api.razorpay.com", "key", "secret", "webhook"),
         ),
     )
+
+    @Test
+    fun `finds an existing Razorpay order by exact receipt`() {
+        val receipt = "booking_0123456789abcdef0123456789abcdef"
+        server.expect(requestTo("https://api.razorpay.com/v1/orders?receipt=$receipt&count=2"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(
+                withSuccess(
+                    """{"count":1,"items":[{"id":"order_existing","amount":12500,"currency":"INR","receipt":"$receipt"}]}""",
+                    MediaType.APPLICATION_JSON,
+                ),
+            )
+
+        assertEquals(
+            ProviderOrder("order_existing", 12_500, "INR"),
+            provider.findOrderByReceipt(receipt),
+        )
+        server.verify()
+    }
+
+    @Test
+    fun `ignores partial receipt matches returned by Razorpay`() {
+        val receipt = "plus_0123456789abcdef0123456789abcdef"
+        server.expect(requestTo("https://api.razorpay.com/v1/orders?receipt=$receipt&count=2"))
+            .andRespond(
+                withSuccess(
+                    """{"count":1,"items":[{"id":"order_other","amount":12500,"currency":"INR","receipt":"${receipt}_other"}]}""",
+                    MediaType.APPLICATION_JSON,
+                ),
+            )
+
+        assertNull(provider.findOrderByReceipt(receipt))
+        server.verify()
+    }
+
+    @Test
+    fun `rejects receipts that exceed the provider limit`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            provider.createOrder(12_500, "x".repeat(41))
+        }
+    }
 
     @Test
     fun `sends the durable refund reference as Razorpay idempotency key`() {
@@ -66,5 +109,23 @@ class RazorpayPaymentProviderTest {
         val replay = fake.refund("pay_2", 12_500, reference)
 
         assertEquals(first, replay)
+    }
+
+    @Test
+    fun `fake provider makes order creation recoverable by receipt`() {
+        val fake = RazorpayPaymentProvider(
+            RestClient.builder(),
+            WalletProperties(
+                "INR", Duration.ofMinutes(5), Duration.ofMinutes(1), Duration.ofMinutes(5),
+                RazorpayProperties("fake", "https://example.invalid", "", "", "webhook"),
+            ),
+        )
+        val receipt = "topup_0123456789abcdef0123456789abcdef"
+
+        val first = fake.createOrder(12_500, receipt)
+        val replay = fake.createOrder(12_500, receipt)
+
+        assertEquals(first, replay)
+        assertEquals(first, fake.findOrderByReceipt(receipt))
     }
 }

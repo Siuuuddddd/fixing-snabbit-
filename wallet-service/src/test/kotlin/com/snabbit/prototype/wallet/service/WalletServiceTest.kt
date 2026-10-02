@@ -3,6 +3,7 @@ package com.snabbit.prototype.wallet.service
 import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.payment.PaymentProvider
+import com.snabbit.prototype.wallet.payment.PaymentProviderException
 import com.snabbit.prototype.wallet.payment.ProviderOrder
 import com.snabbit.prototype.wallet.payment.ProviderRefund
 import com.snabbit.prototype.wallet.support.PaymentConflict
@@ -101,7 +102,9 @@ class WalletServiceTest {
                 walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-once",
             )
         } returns creating
-        every { provider.createOrder(19_900, "plus_${creating.purchaseId}") } returns
+        val receipt = compactReceipt("plus", creating.purchaseId)
+        every { provider.findOrderByReceipt(receipt) } returns null
+        every { provider.createOrder(19_900, receipt) } returns
             ProviderOrder("order_plus", 19_900, "INR")
         every {
             transactions.attachPlusPurchaseOrder(creating.purchaseId, any())
@@ -112,7 +115,112 @@ class WalletServiceTest {
         )
 
         assertEquals(pending, result)
-        verify(exactly = 1) { provider.createOrder(19_900, "plus_${creating.purchaseId}") }
+        verify(exactly = 1) { provider.createOrder(19_900, receipt) }
+    }
+
+    @Test
+    fun `order retry attaches provider order recovered by receipt without creating another`() {
+        val walletId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val creating = PlusPurchaseSnapshot(
+            UUID.randomUUID(), walletId, customerId, "MONTHLY", 19_900, "CREATING_ORDER", null,
+        )
+        val recovered = ProviderOrder("order_recovered", 19_900, "INR")
+        val pending = creating.copy(status = "PENDING", providerOrderId = recovered.id)
+        val receipt = compactReceipt("plus", creating.purchaseId)
+        every {
+            transactions.preparePlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-retry",
+            )
+        } returns creating
+        every { provider.findOrderByReceipt(receipt) } returns recovered
+        every { transactions.attachPlusPurchaseOrder(creating.purchaseId, recovered) } returns pending
+
+        val result = service.createPlusPurchase(
+            walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-retry",
+        )
+
+        assertEquals(pending, result)
+        verify(exactly = 0) { provider.createOrder(any(), any()) }
+    }
+
+    @Test
+    fun `ambiguous create response reconciles the provider order before failing locally`() {
+        val walletId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val creating = PlusPurchaseSnapshot(
+            UUID.randomUUID(), walletId, customerId, "MONTHLY", 19_900, "CREATING_ORDER", null,
+        )
+        val recovered = ProviderOrder("order_after_timeout", 19_900, "INR")
+        val pending = creating.copy(status = "PENDING", providerOrderId = recovered.id)
+        val receipt = compactReceipt("plus", creating.purchaseId)
+        every {
+            transactions.preparePlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-timeout",
+            )
+        } returns creating
+        every { provider.findOrderByReceipt(receipt) } returnsMany listOf(null, recovered)
+        every { provider.createOrder(19_900, receipt) } throws PaymentProviderException("timeout")
+        every { transactions.attachPlusPurchaseOrder(creating.purchaseId, recovered) } returns pending
+
+        val result = service.createPlusPurchase(
+            walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-timeout",
+        )
+
+        assertEquals(pending, result)
+    }
+
+    @Test
+    fun `failed reconciliation leaves creating order retriable`() {
+        val walletId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val creating = PlusPurchaseSnapshot(
+            UUID.randomUUID(), walletId, customerId, "MONTHLY", 19_900, "CREATING_ORDER", null,
+        )
+        val receipt = compactReceipt("plus", creating.purchaseId)
+        val createFailure = PaymentProviderException("timeout")
+        every {
+            transactions.preparePlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-unavailable",
+            )
+        } returns creating
+        every { provider.findOrderByReceipt(receipt) } returns null andThenThrows
+            PaymentProviderException("lookup unavailable")
+        every { provider.createOrder(19_900, receipt) } throws createFailure
+
+        val thrown = assertThrows(PaymentProviderException::class.java) {
+            service.createPlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-unavailable",
+            )
+        }
+
+        assertEquals(createFailure, thrown)
+        assertEquals(1, thrown.suppressed.size)
+    }
+
+    @Test
+    fun `absent order after create error remains retriable for eventual consistency`() {
+        val walletId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val creating = PlusPurchaseSnapshot(
+            UUID.randomUUID(), walletId, customerId, "MONTHLY", 19_900, "CREATING_ORDER", null,
+        )
+        val receipt = compactReceipt("plus", creating.purchaseId)
+        every {
+            transactions.preparePlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-failed",
+            )
+        } returns creating
+        every { provider.findOrderByReceipt(receipt) } returns null
+        every { provider.createOrder(19_900, receipt) } throws PaymentProviderException("declined")
+
+        assertThrows(PaymentProviderException::class.java) {
+            service.createPlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-failed",
+            )
+        }
+
+        verify(exactly = 2) { provider.findOrderByReceipt(receipt) }
     }
 
     @Test
@@ -171,4 +279,7 @@ class WalletServiceTest {
         null,
         null,
     )
+
+    private fun compactReceipt(kind: String, id: UUID): String =
+        "${kind}_${id.toString().replace("-", "")}"
 }

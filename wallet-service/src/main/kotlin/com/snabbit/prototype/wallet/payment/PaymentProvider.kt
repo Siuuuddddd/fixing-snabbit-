@@ -4,6 +4,7 @@ data class ProviderOrder(val id: String, val amountMinor: Long, val currency: St
 data class ProviderRefund(val id: String, val amountMinor: Long)
 
 interface PaymentProvider {
+    fun findOrderByReceipt(receipt: String): ProviderOrder?
     fun createOrder(amountMinor: Long, receipt: String): ProviderOrder
     fun refund(paymentId: String, amountMinor: Long, reference: String): ProviderRefund
 }

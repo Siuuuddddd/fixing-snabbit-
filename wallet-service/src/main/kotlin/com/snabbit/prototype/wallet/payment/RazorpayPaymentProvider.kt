@@ -6,12 +6,14 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class RazorpayPaymentProvider(
     restClientBuilder: RestClient.Builder,
     private val properties: WalletProperties,
 ) : PaymentProvider {
+    private val fakeOrders = ConcurrentHashMap<String, ProviderOrder>()
     private val client = restClientBuilder
         .baseUrl(properties.razorpay.baseUrl)
         .defaultHeaders { headers ->
@@ -21,9 +23,43 @@ class RazorpayPaymentProvider(
         }
         .build()
 
-    override fun createOrder(amountMinor: Long, receipt: String): ProviderOrder {
+    override fun findOrderByReceipt(receipt: String): ProviderOrder? {
+        requireValidReceipt(receipt)
         if (!properties.razorpay.mode.equals("real", ignoreCase = true)) {
-            return ProviderOrder("order_fake_${UUID.randomUUID()}", amountMinor, properties.currency)
+            return fakeOrders[receipt]
+        }
+        requireCredentials()
+        return try {
+            val response = client.get()
+                .uri { builder ->
+                    builder.path("/v1/orders")
+                        .queryParam("receipt", receipt)
+                        .queryParam("count", 2)
+                        .build()
+                }
+                .retrieve()
+                .body(JsonNode::class.java)
+                ?: throw PaymentProviderException("Razorpay returned an empty order lookup response")
+            val items = response.path("items")
+            if (!items.isArray) throw PaymentProviderException("Razorpay order lookup response is missing items")
+            val exactMatches = items.filter { item -> item.path("receipt").asText() == receipt }
+            if (exactMatches.size > 1) {
+                throw PaymentProviderException("Razorpay returned multiple orders for one receipt")
+            }
+            exactMatches.singleOrNull()?.toProviderOrder()
+        } catch (error: PaymentProviderException) {
+            throw error
+        } catch (error: Exception) {
+            throw PaymentProviderException("Razorpay order lookup failed", error)
+        }
+    }
+
+    override fun createOrder(amountMinor: Long, receipt: String): ProviderOrder {
+        requireValidReceipt(receipt)
+        if (!properties.razorpay.mode.equals("real", ignoreCase = true)) {
+            return fakeOrders.computeIfAbsent(receipt) {
+                ProviderOrder("order_fake_${UUID.randomUUID()}", amountMinor, properties.currency)
+            }
         }
         requireCredentials()
         return try {
@@ -33,17 +69,13 @@ class RazorpayPaymentProvider(
                     mapOf(
                         "amount" to amountMinor,
                         "currency" to properties.currency,
-                        "receipt" to receipt.take(40),
+                        "receipt" to receipt,
                     ),
                 )
                 .retrieve()
                 .body(JsonNode::class.java)
                 ?: throw PaymentProviderException("Razorpay returned an empty order response")
-            ProviderOrder(
-                id = response.requiredText("id"),
-                amountMinor = response.requiredLong("amount"),
-                currency = response.requiredText("currency"),
-            )
+            response.toProviderOrder()
         } catch (error: PaymentProviderException) {
             throw error
         } catch (error: Exception) {
@@ -87,6 +119,18 @@ class RazorpayPaymentProvider(
         }
     }
 
+    private fun requireValidReceipt(receipt: String) {
+        require(receipt.isNotBlank() && receipt.length <= MAX_RECEIPT_LENGTH) {
+            "Order receipt must contain between 1 and $MAX_RECEIPT_LENGTH characters"
+        }
+    }
+
+    private fun JsonNode.toProviderOrder() = ProviderOrder(
+        id = requiredText("id"),
+        amountMinor = requiredLong("amount"),
+        currency = requiredText("currency"),
+    )
+
     private fun JsonNode.requiredText(field: String): String =
         path(field).takeUnless { it.isMissingNode || it.asText().isBlank() }?.asText()
             ?: throw PaymentProviderException("Razorpay response is missing $field")
@@ -98,6 +142,7 @@ class RazorpayPaymentProvider(
     private companion object {
         const val REFUND_IDEMPOTENCY_HEADER = "X-Refund-Idempotency"
         const val REFUND_REFERENCE_NOTE = "snabbit_refund_id"
+        const val MAX_RECEIPT_LENGTH = 40
         val REFUND_REFERENCE_PATTERN = Regex("[A-Za-z0-9_-]+")
     }
 }

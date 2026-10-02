@@ -3,6 +3,7 @@ package com.snabbit.prototype.wallet.service
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.payment.PaymentProvider
 import com.snabbit.prototype.wallet.payment.PaymentProviderException
+import com.snabbit.prototype.wallet.payment.ProviderOrder
 import com.snabbit.prototype.wallet.support.PaymentConflict
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -27,13 +28,11 @@ class WalletService(
     fun addMoney(walletId: UUID, amountMinor: Long, idempotencyKey: String): TopUpSnapshot {
         val prepared = transactions.prepareTopUp(walletId, amountMinor, idempotencyKey)
         if (prepared.status != "CREATING_ORDER") return prepared
-        return try {
-            val order = provider.createOrder(amountMinor, "topup_${prepared.topUpId}")
-            transactions.attachTopUpOrder(prepared.topUpId, order)
-        } catch (error: Exception) {
-            transactions.failTopUp(prepared.topUpId)
-            throw error
-        }
+        val order = createOrRecoverOrder(
+            amountMinor,
+            orderReceipt("topup", prepared.topUpId),
+        )
+        return transactions.attachTopUpOrder(prepared.topUpId, order)
     }
 
     fun addMoneyForCustomer(
@@ -62,13 +61,11 @@ class WalletService(
             passCount, passDiscountMinor, serviceCode, idempotencyKey,
         )
         if (prepared.status != "CREATING_ORDER") return prepared
-        return try {
-            val order = provider.createOrder(amountMinor, "plus_${prepared.purchaseId}")
-            transactions.attachPlusPurchaseOrder(prepared.purchaseId, order)
-        } catch (error: Exception) {
-            transactions.failPlusPurchase(prepared.purchaseId)
-            throw error
-        }
+        val order = createOrRecoverOrder(
+            amountMinor,
+            orderReceipt("plus", prepared.purchaseId),
+        )
+        return transactions.attachPlusPurchaseOrder(prepared.purchaseId, order)
     }
 
     fun createBookingPayment(
@@ -97,13 +94,11 @@ class WalletService(
             idempotencyKey,
         )
         if (prepared.status != "CREATING_ORDER" || prepared.onlineAmountMinor == 0L) return prepared
-        return try {
-            val order = provider.createOrder(prepared.onlineAmountMinor, "booking_$bookingId")
-            transactions.attachBookingProviderOrder(prepared.paymentId, order)
-        } catch (error: Exception) {
-            transactions.failBookingPayment(prepared.paymentId)
-            throw error
-        }
+        val order = createOrRecoverOrder(
+            prepared.onlineAmountMinor,
+            orderReceipt("booking", bookingId),
+        )
+        return transactions.attachBookingProviderOrder(prepared.paymentId, order)
     }
 
     fun refund(paymentId: UUID, idempotencyKey: String): RefundSnapshot {
@@ -136,4 +131,28 @@ class WalletService(
             throw PaymentProviderException("Refund processing failed", error)
         }
     }
+
+    private fun createOrRecoverOrder(
+        amountMinor: Long,
+        receipt: String,
+    ): ProviderOrder {
+        provider.findOrderByReceipt(receipt)?.let { return it }
+        return try {
+            provider.createOrder(amountMinor, receipt)
+        } catch (creationError: Exception) {
+            val recovered = try {
+                provider.findOrderByReceipt(receipt)
+            } catch (reconciliationError: Exception) {
+                creationError.addSuppressed(reconciliationError)
+                throw creationError
+            }
+            if (recovered != null) return recovered
+            throw creationError
+        }
+    }
+
+    private fun orderReceipt(kind: String, id: UUID): String =
+        "${kind}_${id.toString().replace("-", "")}".also { receipt ->
+            check(receipt.length <= 40) { "Provider receipt exceeds Razorpay's 40-character limit" }
+        }
 }

@@ -143,11 +143,6 @@ class WalletTransactionService(
     }
 
     @Transactional
-    fun failTopUp(topUpId: UUID) {
-        topUpRepository.findForUpdate(topUpId)?.fail(clock.instant())
-    }
-
-    @Transactional
     fun preparePlusPurchase(
         walletId: UUID,
         customerId: UUID,
@@ -204,11 +199,6 @@ class WalletTransactionService(
         }
         purchase.orderCreated(providerOrder.id, clock.instant())
         return plusPurchaseSnapshot(purchase)
-    }
-
-    @Transactional
-    fun failPlusPurchase(purchaseId: UUID) {
-        plusPurchaseRepository.findForUpdate(purchaseId)?.fail(clock.instant())
     }
 
     @Transactional
@@ -304,11 +294,6 @@ class WalletTransactionService(
         }
         payment.providerOrderCreated(providerOrder.id, clock.instant())
         return paymentSnapshot(payment)
-    }
-
-    @Transactional
-    fun failBookingPayment(paymentId: UUID) {
-        paymentRepository.findForUpdate(paymentId)?.let { failPaymentAndRelease(it, clock.instant()) }
     }
 
     @Transactional
