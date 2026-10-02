@@ -28,6 +28,18 @@ data class HouseholdSnapshotResponse(
     val requiredEquipment: List<String>,
 )
 
+data class AddressSnapshotResponse(
+    val addressId: UUID,
+    val userId: UUID,
+    val label: String,
+    val addressLine: String,
+    val city: String,
+    val pincode: String,
+    val latitude: BigDecimal,
+    val longitude: BigDecimal,
+    val verified: Boolean,
+)
+
 data class WorkerMatchRequest(
     val serviceCode: String,
     val basePricePerHourMinor: Long,
@@ -86,6 +98,14 @@ class MatchingClients(factory: InternalServiceClientFactory, properties: Integra
             .retrieve()
             .body(HouseholdSnapshotResponse::class.java)
             ?: error("User Service returned an empty household snapshot")
+    }
+
+    suspend fun address(userId: UUID, addressId: UUID): AddressSnapshotResponse = withContext(Dispatchers.IO) {
+        userClient.get()
+            .uri("/internal/v1/users/{userId}/addresses/{addressId}", userId, addressId)
+            .retrieve()
+            .body(AddressSnapshotResponse::class.java)
+            ?: error("User Service returned an empty address snapshot")
     }
 
     suspend fun matches(request: WorkerMatchRequest): List<WorkerMatchResponse> = withContext(Dispatchers.IO) {

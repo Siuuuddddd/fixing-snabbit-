@@ -57,6 +57,17 @@ class BookingLifecycleService(
         if ((command.plusPassId == null) != (command.plusDiscountMinor == 0L)) {
             throw BookingRuleViolation("A Plus pass and discount must be supplied together")
         }
+        if (command.serviceAddressId != null &&
+            listOf(
+                command.serviceAddressLabel,
+                command.serviceAddressLine,
+                command.serviceAddressPincode,
+                command.serviceLatitude,
+                command.serviceLongitude,
+            ).any { it == null }
+        ) {
+            throw BookingRuleViolation("A booking address snapshot must be complete")
+        }
 
         val capacities = lockCapacities(command)
         validateInternalOverlaps(command)
@@ -82,6 +93,10 @@ class BookingLifecycleService(
                 grossTotalMinor = command.grossTotalMinor,
                 plusDiscountMinor = command.plusDiscountMinor,
                 plusPassId = command.plusPassId,
+                serviceAddressId = command.serviceAddressId,
+                serviceAddressLabel = command.serviceAddressLabel,
+                serviceAddressLine = command.serviceAddressLine,
+                serviceAddressPincode = command.serviceAddressPincode,
             ),
         )
 

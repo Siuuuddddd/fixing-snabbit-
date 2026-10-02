@@ -74,6 +74,7 @@ class MatchAndHoldServiceTest {
         val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
         val workerId = UUID.randomUUID()
         val household = household(plusActive = false, favourites = emptyList()).copy(
             userId = customerId,
@@ -91,6 +92,7 @@ class MatchAndHoldServiceTest {
             18_000,
         )
         coEvery { clients.household(customerId) } returns household
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
         coEvery { clients.matches(capture(matchRequest)) } returns listOf(match(workerId, 39_000))
         coEvery { clients.reservePass(customerId, any()) } answers {
             val request = secondArg<ReservePlusPassRequest>()
@@ -116,8 +118,7 @@ class MatchAndHoldServiceTest {
                 serviceId,
                 BookingType.SCHEDULED,
                 Duration.ofHours(2),
-                19.07609,
-                72.877426,
+                addressId,
                 listOf(Instant.parse("2026-10-03T04:30:00Z")),
             ),
         )
@@ -128,6 +129,10 @@ class MatchAndHoldServiceTest {
         assertEquals("One dog", created.captured.requirements.petDetails)
         assertEquals(listOf("DUST"), created.captured.requirements.allergies)
         assertEquals(listOf("MASK_REQUIRED"), created.captured.requirements.workerConstraints)
+        assertEquals(addressId, created.captured.serviceAddressId)
+        assertEquals("10 Test Street", created.captured.serviceAddressLine)
+        assertEquals(BigDecimal("19.07609"), created.captured.serviceLatitude)
+        assertEquals(19.07609, matchRequest.captured.latitude)
     }
 
     @Test
@@ -138,12 +143,14 @@ class MatchAndHoldServiceTest {
         val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
         val workerId = UUID.randomUUID()
         val passId = UUID.randomUUID()
         every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
             serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
         )
         coEvery { clients.household(customerId) } returns household(false, emptyList()).copy(userId = customerId)
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
         coEvery { clients.matches(any()) } returns listOf(match(workerId, 18_000))
         coEvery { clients.reservePass(customerId, any()) } answers {
             val request = secondArg<ReservePlusPassRequest>()
@@ -156,7 +163,7 @@ class MatchAndHoldServiceTest {
             service.matchAndHold(
                 MatchAndHoldCommand(
                     customerId, serviceId, BookingType.SCHEDULED, Duration.ofHours(1),
-                    19.07609, 72.877426, listOf(Instant.parse("2026-10-03T04:30:00Z")),
+                    addressId, listOf(Instant.parse("2026-10-03T04:30:00Z")),
                 ),
             )
         }
@@ -172,6 +179,7 @@ class MatchAndHoldServiceTest {
         val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
         val availableStart = Instant.parse("2026-10-03T04:30:00Z")
         val unavailableStart = Instant.parse("2026-10-04T04:30:00Z")
         val workerId = UUID.randomUUID()
@@ -179,6 +187,7 @@ class MatchAndHoldServiceTest {
             serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
         )
         coEvery { clients.household(customerId) } returns household(false, emptyList()).copy(userId = customerId)
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
         coEvery { clients.matches(any()) } answers {
             if (firstArg<WorkerMatchRequest>().startsAt == availableStart) listOf(match(workerId, 21_000)) else emptyList()
         }
@@ -189,8 +198,7 @@ class MatchAndHoldServiceTest {
                 serviceId,
                 BookingType.MULTI_DAY,
                 Duration.ofHours(1),
-                19.07609,
-                72.877426,
+                addressId,
                 listOf(availableStart, unavailableStart),
             ),
         )
@@ -230,5 +238,17 @@ class MatchAndHoldServiceTest {
         BigDecimal.ONE,
         false,
         priceMinor,
+    )
+
+    private fun address(userId: UUID, addressId: UUID) = AddressSnapshotResponse(
+        addressId,
+        userId,
+        "Home",
+        "10 Test Street",
+        "Mumbai",
+        "400001",
+        BigDecimal("19.07609"),
+        BigDecimal("72.877426"),
+        true,
     )
 }

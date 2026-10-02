@@ -4,6 +4,7 @@ import com.snabbit.prototype.user.domain.FavouriteWorker
 import com.snabbit.prototype.user.domain.FavouriteWorkerId
 import com.snabbit.prototype.user.domain.HouseholdPreference
 import com.snabbit.prototype.user.domain.UserProfile
+import com.snabbit.prototype.user.domain.UserAddress
 import com.snabbit.prototype.user.domain.CustomerRating
 import com.snabbit.prototype.user.domain.PlusPass
 import com.snabbit.prototype.user.domain.PlusPassStatus
@@ -25,6 +26,11 @@ interface UserProfileRepository : JpaRepository<UserProfile, UUID> {
 }
 
 interface HouseholdPreferenceRepository : JpaRepository<HouseholdPreference, UUID>
+
+interface UserAddressRepository : JpaRepository<UserAddress, UUID> {
+    fun findAllByUserIdOrderByCreatedAtDesc(userId: UUID): List<UserAddress>
+    fun countByUserId(userId: UUID): Long
+}
 
 interface FavouriteWorkerRepository : JpaRepository<FavouriteWorker, FavouriteWorkerId> {
     fun findAllByIdUserIdOrderByPriority(userId: UUID): List<FavouriteWorker>

@@ -77,6 +77,14 @@ class Booking(
     var cancelledAt: Instant? = null,
     @Column(name = "cancelled_by_staff_id")
     var cancelledByStaffId: UUID? = null,
+    @Column(name = "service_address_id")
+    val serviceAddressId: UUID? = null,
+    @Column(name = "service_address_label")
+    val serviceAddressLabel: String? = null,
+    @Column(name = "service_address_line")
+    val serviceAddressLine: String? = null,
+    @Column(name = "service_address_pincode")
+    val serviceAddressPincode: String? = null,
     @Version
     var version: Long = 0,
 ) {

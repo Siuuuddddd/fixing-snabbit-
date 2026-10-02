@@ -21,6 +21,10 @@ data class CreateBookingCommand(
     val grossTotalMinor: Long = quotedTotalMinor,
     val plusDiscountMinor: Long = 0,
     val plusPassId: UUID? = null,
+    val serviceAddressId: UUID? = null,
+    val serviceAddressLabel: String? = null,
+    val serviceAddressLine: String? = null,
+    val serviceAddressPincode: String? = null,
 )
 
 data class VisitCommand(

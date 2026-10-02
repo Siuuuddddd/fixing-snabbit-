@@ -86,6 +86,7 @@ class WorkerFeedServiceTest {
 
         assertNull(result.serviceLatitude)
         assertNull(result.serviceLongitude)
+        assertNull(result.serviceAddressLine)
     }
 
     @Test
@@ -98,6 +99,7 @@ class WorkerFeedServiceTest {
 
         assertEquals(booking.serviceLatitude, result.serviceLatitude)
         assertEquals(booking.serviceLongitude, result.serviceLongitude)
+        assertEquals(booking.serviceAddressLine, result.serviceAddressLine)
     }
 
     private fun stubAssigned(booking: Booking, hold: SlotHold) {
@@ -128,6 +130,10 @@ class WorkerFeedServiceTest {
         null,
         now,
         now,
+        serviceAddressId = UUID.randomUUID(),
+        serviceAddressLabel = "Home",
+        serviceAddressLine = "10 Test Street",
+        serviceAddressPincode = "400001",
     )
 
     private fun hold(

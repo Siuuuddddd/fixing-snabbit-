@@ -26,8 +26,7 @@ data class MatchAndHoldCommand(
     val serviceId: UUID,
     val bookingType: BookingType,
     val duration: Duration,
-    val latitude: Double,
-    val longitude: Double,
+    val addressId: UUID,
     val startsAt: List<Instant>,
 )
 
@@ -58,8 +57,8 @@ class MatchAndHoldService(
     suspend fun availability(command: MatchAndHoldCommand): BookingAvailabilitySnapshot {
         validateRequest(command)
         val offering = catalog.requireActive(command.serviceId)
-        val household = clients.household(command.customerId)
-        val candidateLists = findCandidates(command, offering.code, offering.basePricePerHourMinor, household)
+        val (household, address) = loadCustomerContext(command)
+        val candidateLists = findCandidates(command, address, offering.code, offering.basePricePerHourMinor, household)
         val commonWorkers = candidateLists
             .map { candidates -> candidates.map(WorkerMatchResponse::workerId).toSet() }
             .reduceOrNull(Set<UUID>::intersect)
@@ -83,8 +82,8 @@ class MatchAndHoldService(
     suspend fun matchAndHold(command: MatchAndHoldCommand): BookingSnapshot {
         validateRequest(command)
         val offering = catalog.requireActive(command.serviceId)
-        val household = clients.household(command.customerId)
-        val candidateLists = findCandidates(command, offering.code, offering.basePricePerHourMinor, household)
+        val (household, address) = loadCustomerContext(command)
+        val candidateLists = findCandidates(command, address, offering.code, offering.basePricePerHourMinor, household)
         if (candidateLists.any(List<WorkerMatchResponse>::isEmpty)) {
             throw SlotUnavailable("No compatible worker is available for every requested visit")
         }
@@ -126,8 +125,12 @@ class MatchAndHoldService(
                     requiredEquipment = household.requiredEquipment,
                 ),
                 quotedTotalMinor = pass.netTotalMinor,
-                serviceLatitude = BigDecimal.valueOf(command.latitude),
-                serviceLongitude = BigDecimal.valueOf(command.longitude),
+                serviceLatitude = address.latitude,
+                serviceLongitude = address.longitude,
+                serviceAddressId = address.addressId,
+                serviceAddressLabel = address.label,
+                serviceAddressLine = address.addressLine,
+                serviceAddressPincode = address.pincode,
                 bookingId = bookingId,
                 grossTotalMinor = pass.grossTotalMinor,
                 plusDiscountMinor = pass.discountMinor,
@@ -160,6 +163,7 @@ class MatchAndHoldService(
 
     private suspend fun findCandidates(
         command: MatchAndHoldCommand,
+        address: AddressSnapshotResponse,
         serviceCode: String,
         basePricePerHourMinor: Long,
         household: HouseholdSnapshotResponse,
@@ -172,8 +176,8 @@ class MatchAndHoldService(
                         basePricePerHourMinor = basePricePerHourMinor,
                         startsAt = start,
                         durationMinutes = command.duration.toMinutes().toInt(),
-                        latitude = command.latitude,
-                        longitude = command.longitude,
+                        latitude = address.latitude.toDouble(),
+                        longitude = address.longitude.toDouble(),
                         maxDistanceKm = 15.0,
                         hasPets = household.hasPets,
                         foodContext = household.foodContext,
@@ -190,6 +194,14 @@ class MatchAndHoldService(
                 )
             }
         }.awaitAll()
+    }
+
+    private suspend fun loadCustomerContext(
+        command: MatchAndHoldCommand,
+    ): Pair<HouseholdSnapshotResponse, AddressSnapshotResponse> = coroutineScope {
+        val household = async { clients.household(command.customerId) }
+        val address = async { clients.address(command.customerId, command.addressId) }
+        household.await() to address.await()
     }
 
     private fun validateRequest(command: MatchAndHoldCommand) {

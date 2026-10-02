@@ -44,6 +44,9 @@ data class WorkerJobFeedItem(
     val requirements: BookingRequirements,
     val serviceLatitude: BigDecimal?,
     val serviceLongitude: BigDecimal?,
+    val serviceAddressLabel: String?,
+    val serviceAddressLine: String?,
+    val serviceAddressPincode: String?,
 )
 
 @Service
@@ -119,6 +122,9 @@ class WorkerFeedService(
                 booking.requirements,
                 booking.serviceLatitude.takeIf { revealLocation },
                 booking.serviceLongitude.takeIf { revealLocation },
+                booking.serviceAddressLabel.takeIf { revealLocation },
+                booking.serviceAddressLine.takeIf { revealLocation },
+                booking.serviceAddressPincode.takeIf { revealLocation },
             )
         }
     }

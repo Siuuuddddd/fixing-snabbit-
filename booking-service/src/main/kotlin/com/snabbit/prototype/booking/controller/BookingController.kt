@@ -21,8 +21,6 @@ import com.snabbit.prototype.booking.payment.StartBookingPaymentCommand
 import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
-import jakarta.validation.constraints.DecimalMax
-import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -63,10 +61,7 @@ data class MatchAndHoldRequest(
     val bookingType: BookingType,
     @field:Min(1) @field:Max(4)
     val durationHours: Long,
-    @field:DecimalMin("-90.0") @field:DecimalMax("90.0")
-    val latitude: Double,
-    @field:DecimalMin("-180.0") @field:DecimalMax("180.0")
-    val longitude: Double,
+    val addressId: UUID,
     @field:NotEmpty @field:Size(max = 7)
     val startsAt: List<Instant>,
 )
@@ -142,8 +137,7 @@ private fun MatchAndHoldRequest.toCommand() = MatchAndHoldCommand(
     serviceId = serviceId,
     bookingType = bookingType,
     duration = Duration.ofHours(durationHours),
-    latitude = latitude,
-    longitude = longitude,
+    addressId = addressId,
     startsAt = startsAt,
 )
 
