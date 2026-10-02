@@ -5,6 +5,7 @@ import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.application.RatingContextSnapshot
 import com.snabbit.prototype.booking.application.BookingOwnershipSnapshot
+import com.snabbit.prototype.booking.application.PlusPassBookingContext
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
@@ -144,6 +145,9 @@ data class ConfirmPaymentRequest(
 @RestController
 @RequestMapping("/internal/v1/bookings")
 class InternalBookingController(private val service: BookingLifecycleService) {
+    @GetMapping("/{bookingId}/plus-pass-context")
+    fun plusPassContext(@PathVariable bookingId: UUID): PlusPassBookingContext = service.plusPassContext(bookingId)
+
     @GetMapping("/{bookingId}/ownership")
     fun ownership(@PathVariable bookingId: UUID): BookingOwnershipSnapshot = service.ownership(bookingId)
 

@@ -37,6 +37,8 @@ The Wallet Service uses an append-only ledger for top-ups, reservations, split w
 
 The Support Service provides booking-bound customer tickets and durable chat history. Customers may open or read only tickets for bookings they own. Server-sent event streams resume from a durable message ID and poll PostgreSQL rather than relying on instance-local memory, so reconnects and multiple service instances preserve message order.
 
+Snabbit Plus is represented by durable subscriptions and single-use discounted passes owned by User Service. Booking reserves an eligible pass before creating its atomic hold, persists an auditable gross/discount/net price breakdown, compensates a failed hold, and consumes or releases the pass from idempotent Booking event handling. Plus membership also retains priority matching and favourite-worker continuity.
+
 Payment confirmation is exposed only below `/internal/v1`; it is not routed by the customer API Gateway. Authentication and service-to-service authorization will be added before any real provider integration.
 
-See [docs/authentication.md](docs/authentication.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/support-api.md](docs/support-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).
+See [docs/authentication.md](docs/authentication.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/plus-api.md](docs/plus-api.md), [docs/support-api.md](docs/support-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).

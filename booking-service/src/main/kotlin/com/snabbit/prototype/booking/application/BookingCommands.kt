@@ -17,6 +17,10 @@ data class CreateBookingCommand(
     val quotedTotalMinor: Long = 0,
     val serviceLatitude: BigDecimal? = null,
     val serviceLongitude: BigDecimal? = null,
+    val bookingId: UUID = UUID.randomUUID(),
+    val grossTotalMinor: Long = quotedTotalMinor,
+    val plusDiscountMinor: Long = 0,
+    val plusPassId: UUID? = null,
 )
 
 data class VisitCommand(
@@ -29,6 +33,9 @@ data class BookingSnapshot(
     val customerId: UUID,
     val status: String,
     val quotedTotalMinor: Long,
+    val grossTotalMinor: Long,
+    val plusDiscountMinor: Long,
+    val plusPassId: UUID?,
     val requirements: BookingRequirements,
     val visits: List<VisitSnapshot>,
 )
@@ -38,6 +45,8 @@ data class PaymentQuoteSnapshot(
     val customerId: UUID,
     val status: String,
     val quotedTotalMinor: Long,
+    val grossTotalMinor: Long,
+    val plusDiscountMinor: Long,
     val currency: String,
     val holdExpiresAt: Instant,
 )
@@ -57,6 +66,15 @@ data class RatingContextSnapshot(
 data class BookingOwnershipSnapshot(
     val bookingId: UUID,
     val customerId: UUID,
+)
+
+data class PlusPassBookingContext(
+    val bookingId: UUID,
+    val customerId: UUID,
+    val status: String,
+    val plusPassId: UUID?,
+    val holdExpiresAt: Instant,
+    val confirmedAt: Instant?,
 )
 
 data class RatingVisitSnapshot(

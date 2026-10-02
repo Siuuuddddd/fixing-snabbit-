@@ -57,6 +57,14 @@ class Booking(
     val createdAt: Instant,
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant,
+    @Column(name = "gross_total_minor", nullable = false)
+    val grossTotalMinor: Long = quotedTotalMinor,
+    @Column(name = "plus_discount_minor", nullable = false)
+    val plusDiscountMinor: Long = 0,
+    @Column(name = "plus_pass_id")
+    val plusPassId: UUID? = null,
+    @Column(name = "confirmed_at")
+    var confirmedAt: Instant? = null,
     @Version
     var version: Long = 0,
 ) {
@@ -69,6 +77,7 @@ class Booking(
     fun confirm(reference: String, now: Instant) {
         check(status == BookingStatus.AWAITING_PAYMENT) { "Booking is not ready for payment confirmation" }
         paymentReference = reference
+        confirmedAt = now
         status = BookingStatus.CONFIRMED
         updatedAt = now
     }

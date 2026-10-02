@@ -5,6 +5,7 @@ import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
+import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.support.SlotUnavailable
@@ -14,6 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.time.Instant
+import java.time.Clock
 import java.math.BigDecimal
 import java.util.UUID
 
@@ -32,6 +34,8 @@ class MatchAndHoldService(
     private val clients: MatchingClients,
     private val lifecycleService: BookingLifecycleService,
     private val catalog: ServiceCatalogService,
+    private val properties: BookingProperties,
+    private val clock: Clock,
 ) {
     suspend fun matchAndHold(command: MatchAndHoldCommand): BookingSnapshot {
         val offering = catalog.requireActive(command.serviceId)
@@ -72,8 +76,19 @@ class MatchAndHoldService(
         val quotedTotalMinor = candidateLists.zip(selectedWorkerIds).sumOf { (candidates, workerId) ->
             candidates.first { it.workerId == workerId }.priceMinor
         }
-        return lifecycleService.create(
-            CreateBookingCommand(
+        val bookingId = UUID.randomUUID()
+        val pass = clients.reservePass(
+            command.customerId,
+            ReservePlusPassRequest(
+                bookingId,
+                offering.code,
+                quotedTotalMinor,
+                clock.instant().plus(properties.slotHoldDuration).plusSeconds(30),
+            ),
+        )
+        try {
+            return lifecycleService.create(
+                CreateBookingCommand(
                 customerId = command.customerId,
                 serviceId = command.serviceId,
                 bookingType = command.bookingType,
@@ -93,11 +108,19 @@ class MatchAndHoldService(
                     disallowedChemicals = household.disallowedChemicals,
                     requiredEquipment = household.requiredEquipment,
                 ),
-                quotedTotalMinor = quotedTotalMinor,
+                quotedTotalMinor = pass.netTotalMinor,
                 serviceLatitude = BigDecimal.valueOf(command.latitude),
                 serviceLongitude = BigDecimal.valueOf(command.longitude),
-            ),
-        )
+                bookingId = bookingId,
+                grossTotalMinor = pass.grossTotalMinor,
+                plusDiscountMinor = pass.discountMinor,
+                plusPassId = pass.passId,
+                ),
+            )
+        } catch (error: Exception) {
+            if (pass.passId != null) runCatching { clients.releasePass(command.customerId, bookingId) }
+            throw error
+        }
     }
 
     internal fun selectWorkers(

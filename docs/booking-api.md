@@ -16,7 +16,7 @@ AWAITING_WORKER --all offers accepted--> AWAITING_PAYMENT --verified payment--> 
 
 All visits in a multi-day request use one duration and are held in one database transaction. If any capacity row is missing or any visit overlaps an active reservation, no booking, hold, offer or outbox row is committed.
 
-The match-and-hold route is the intended customer path. The preselected-worker create route remains useful for internal/prototype flows and tests. See [matching-api.md](matching-api.md).
+The match-and-hold route is the intended customer path. It reserves an eligible Plus pass before the booking transaction and persists gross price, pass discount and net quote separately. The preselected-worker create route remains useful for internal/prototype flows and tests. See [matching-api.md](matching-api.md) and [plus-api.md](plus-api.md).
 
 ## Customer-facing routes
 

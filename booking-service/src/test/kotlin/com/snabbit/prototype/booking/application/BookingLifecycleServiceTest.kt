@@ -143,6 +143,7 @@ class BookingLifecycleServiceTest {
         assertEquals(BookingStatus.CONFIRMED.name, result.status)
         assertEquals(SlotHoldStatus.CONFIRMED, hold.status)
         assertEquals("pay_verified_001", booking.paymentReference)
+        assertEquals(clock.instant(), booking.confirmedAt)
     }
 
     @Test
@@ -282,6 +283,25 @@ class BookingLifecycleServiceTest {
         verify(exactly = 0) { holdRepository.findAllByBookingIdOrderByVisitIndex(any()) }
     }
 
+    @Test
+    fun `Plus pass context exposes durable pass and confirmation state`() {
+        val passId = UUID.randomUUID()
+        val booking = booking(UUID.randomUUID(), passId).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_verified", clock.instant())
+        }
+        val hold = hold(booking.id, UUID.randomUUID()).apply { confirm() }
+        every { bookingRepository.findById(booking.id) } returns Optional.of(booking)
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
+
+        val context = service.plusPassContext(booking.id)
+
+        assertEquals(passId, context.plusPassId)
+        assertEquals(BookingStatus.CONFIRMED.name, context.status)
+        assertEquals(clock.instant(), context.confirmedAt)
+        assertEquals(hold.expiresAt, context.holdExpiresAt)
+    }
+
     private fun multiDayCommand(workerId: UUID) = CreateBookingCommand(
         customerId = UUID.randomUUID(),
         serviceId = UUID.randomUUID(),
@@ -308,7 +328,7 @@ class BookingLifecycleServiceTest {
         availableUntil = LocalTime.of(19, 0),
     )
 
-    private fun booking(id: UUID) = Booking(
+    private fun booking(id: UUID, plusPassId: UUID? = null) = Booking(
         id = id,
         customerId = UUID.randomUUID(),
         serviceId = UUID.randomUUID(),
@@ -320,6 +340,9 @@ class BookingLifecycleServiceTest {
         serviceLongitude = BigDecimal("72.877426"),
         createdAt = clock.instant(),
         updatedAt = clock.instant(),
+        grossTotalMinor = if (plusPassId == null) 42_000 else 45_000,
+        plusDiscountMinor = if (plusPassId == null) 0 else 3_000,
+        plusPassId = plusPassId,
     )
 
     private fun hold(bookingId: UUID, workerId: UUID) = SlotHold(

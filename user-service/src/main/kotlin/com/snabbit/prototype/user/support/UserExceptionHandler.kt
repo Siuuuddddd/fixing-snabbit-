@@ -5,6 +5,7 @@ import com.snabbit.prototype.user.application.UserNotFound
 import com.snabbit.prototype.user.auth.InvalidOtp
 import com.snabbit.prototype.user.auth.OtpRateLimited
 import com.snabbit.prototype.user.rating.CustomerRatingRejected
+import com.snabbit.prototype.user.plus.PlusRequestRejected
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -40,5 +41,9 @@ class UserExceptionHandler {
 
     @ExceptionHandler(CustomerRatingRejected::class)
     fun ratingRejected(error: CustomerRatingRejected): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
+
+    @ExceptionHandler(PlusRequestRejected::class)
+    fun plusRejected(error: PlusRequestRejected): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
 }

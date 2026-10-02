@@ -5,21 +5,34 @@ import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.catalog.ServiceOfferingSnapshot
+import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.BookingType
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
+import java.time.Clock
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 
 class MatchAndHoldServiceTest {
-    private val service = MatchAndHoldService(mockk(), mockk<BookingLifecycleService>(), mockk())
+    private val now = Instant.parse("2026-10-02T04:00:00Z")
+    private val clock = Clock.fixed(now, ZoneOffset.UTC)
+    private val properties = BookingProperties(
+        ZoneId.of("Asia/Kolkata"), LocalTime.of(8, 0), LocalTime.of(19, 0),
+        Duration.ofMinutes(5), Duration.ofMinutes(1), Duration.ofSeconds(30), 100,
+    )
+    private val service = MatchAndHoldService(mockk(), mockk<BookingLifecycleService>(), mockk(), properties, clock)
 
     @Test
     fun `Plus selects favourite worker continuously across every visit`() {
@@ -54,7 +67,7 @@ class MatchAndHoldServiceTest {
         val clients = mockk<MatchingClients>()
         val lifecycle = mockk<BookingLifecycleService>()
         val catalog = mockk<ServiceCatalogService>()
-        val service = MatchAndHoldService(clients, lifecycle, catalog)
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
         val workerId = UUID.randomUUID()
@@ -75,14 +88,21 @@ class MatchAndHoldServiceTest {
         )
         coEvery { clients.household(customerId) } returns household
         coEvery { clients.matches(capture(matchRequest)) } returns listOf(match(workerId, 39_000))
+        coEvery { clients.reservePass(customerId, any()) } answers {
+            val request = secondArg<ReservePlusPassRequest>()
+            PlusPassReservationResponse(null, request.bookingId, request.grossTotalMinor, 0, request.grossTotalMinor, null)
+        }
         every { lifecycle.create(capture(created)) } answers {
             BookingSnapshot(
-                UUID.randomUUID(),
-                customerId,
-                "AWAITING_WORKER",
-                created.captured.quotedTotalMinor,
-                created.captured.requirements,
-                emptyList(),
+                bookingId = created.captured.bookingId,
+                customerId = customerId,
+                status = "AWAITING_WORKER",
+                quotedTotalMinor = created.captured.quotedTotalMinor,
+                grossTotalMinor = created.captured.grossTotalMinor,
+                plusDiscountMinor = created.captured.plusDiscountMinor,
+                plusPassId = created.captured.plusPassId,
+                requirements = created.captured.requirements,
+                visits = emptyList(),
             )
         }
 
@@ -104,6 +124,40 @@ class MatchAndHoldServiceTest {
         assertEquals("One dog", created.captured.requirements.petDetails)
         assertEquals(listOf("DUST"), created.captured.requirements.allergies)
         assertEquals(listOf("MASK_REQUIRED"), created.captured.requirements.workerConstraints)
+    }
+
+    @Test
+    fun `applies reserved Plus pass and releases it if slot creation loses a race`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock)
+        val customerId = UUID.randomUUID()
+        val serviceId = UUID.randomUUID()
+        val workerId = UUID.randomUUID()
+        val passId = UUID.randomUUID()
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.household(customerId) } returns household(false, emptyList()).copy(userId = customerId)
+        coEvery { clients.matches(any()) } returns listOf(match(workerId, 18_000))
+        coEvery { clients.reservePass(customerId, any()) } answers {
+            val request = secondArg<ReservePlusPassRequest>()
+            PlusPassReservationResponse(passId, request.bookingId, 18_000, 3_000, 15_000, request.holdUntil)
+        }
+        every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.support.SlotUnavailable("lost race")
+        coEvery { clients.releasePass(customerId, any()) } returns Unit
+
+        assertThrows<com.snabbit.prototype.booking.support.SlotUnavailable> {
+            service.matchAndHold(
+                MatchAndHoldCommand(
+                    customerId, serviceId, BookingType.SCHEDULED, Duration.ofHours(1),
+                    19.07609, 72.877426, listOf(Instant.parse("2026-10-03T04:30:00Z")),
+                ),
+            )
+        }
+
+        coVerify(exactly = 1) { clients.releasePass(customerId, any()) }
     }
 
     private fun household(plusActive: Boolean, favourites: List<UUID>) = HouseholdSnapshotResponse(

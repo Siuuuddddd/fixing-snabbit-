@@ -64,12 +64,14 @@ class BookingPaymentServiceTest {
     )
 
     private fun quote(bookingId: UUID, customerId: UUID) = PaymentQuoteSnapshot(
-        bookingId,
-        customerId,
-        "AWAITING_PAYMENT",
-        15_000,
-        "INR",
-        now.plusSeconds(300),
+        bookingId = bookingId,
+        customerId = customerId,
+        status = "AWAITING_PAYMENT",
+        quotedTotalMinor = 15_000,
+        grossTotalMinor = 15_000,
+        plusDiscountMinor = 0,
+        currency = "INR",
+        holdExpiresAt = now.plusSeconds(300),
     )
 
     private fun payment(command: StartBookingPaymentCommand) = BookingPaymentSnapshot(

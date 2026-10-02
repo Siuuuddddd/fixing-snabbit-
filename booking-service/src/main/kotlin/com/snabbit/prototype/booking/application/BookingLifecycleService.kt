@@ -46,7 +46,17 @@ class BookingLifecycleService(
     fun create(command: CreateBookingCommand): BookingSnapshot {
         validateVisitCollection(command)
         val now = clock.instant()
-        val bookingId = UUID.randomUUID()
+        val bookingId = command.bookingId
+
+        if (command.grossTotalMinor < 0 || command.plusDiscountMinor < 0 ||
+            command.plusDiscountMinor > command.grossTotalMinor ||
+            command.quotedTotalMinor != command.grossTotalMinor - command.plusDiscountMinor
+        ) {
+            throw BookingRuleViolation("Invalid booking price breakdown")
+        }
+        if ((command.plusPassId == null) != (command.plusDiscountMinor == 0L)) {
+            throw BookingRuleViolation("A Plus pass and discount must be supplied together")
+        }
 
         val capacities = lockCapacities(command)
         validateInternalOverlaps(command)
@@ -69,6 +79,9 @@ class BookingLifecycleService(
                 requirements = command.requirements,
                 createdAt = now,
                 updatedAt = now,
+                grossTotalMinor = command.grossTotalMinor,
+                plusDiscountMinor = command.plusDiscountMinor,
+                plusPassId = command.plusPassId,
             ),
         )
 
@@ -152,6 +165,8 @@ class BookingLifecycleService(
             customerId = booking.customerId,
             status = booking.status.name,
             quotedTotalMinor = booking.quotedTotalMinor,
+            grossTotalMinor = booking.grossTotalMinor,
+            plusDiscountMinor = booking.plusDiscountMinor,
             currency = "INR",
             holdExpiresAt = holds.minOf(SlotHold::expiresAt),
         )
@@ -174,6 +189,19 @@ class BookingLifecycleService(
     fun ownership(bookingId: UUID): BookingOwnershipSnapshot {
         val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
         return BookingOwnershipSnapshot(booking.id, booking.customerId)
+    }
+
+    @Transactional(readOnly = true)
+    fun plusPassContext(bookingId: UUID): PlusPassBookingContext {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        return PlusPassBookingContext(
+            booking.id,
+            booking.customerId,
+            booking.status.name,
+            booking.plusPassId,
+            requireHolds(bookingId).minOf(SlotHold::expiresAt),
+            booking.confirmedAt,
+        )
     }
 
     @Transactional
@@ -504,6 +532,9 @@ class BookingLifecycleService(
             customerId = booking.customerId,
             status = booking.status.name,
             quotedTotalMinor = booking.quotedTotalMinor,
+            grossTotalMinor = booking.grossTotalMinor,
+            plusDiscountMinor = booking.plusDiscountMinor,
+            plusPassId = booking.plusPassId,
             requirements = booking.requirements,
             visits = holds.map { hold ->
                 val offer = offersByHold.getValue(hold.id)

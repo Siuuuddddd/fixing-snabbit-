@@ -1,6 +1,6 @@
 # Booking event contracts
 
-Milestone 2 writes these facts to `outbox_event` in the same PostgreSQL transaction as booking state. The Kafka publisher is a later milestone. Every Kafka record will use `bookingId` as its key and carry a unique outbox event ID in its envelope.
+Booking writes these facts to `outbox_event` in the same PostgreSQL transaction as booking state. The leased outbox publisher sends every Kafka record with `bookingId` as its key and a unique event ID in its envelope. Consumers claim that ID in their own database transaction before applying a side effect.
 
 | Event type | Meaning | Expected consumers |
 | --- | --- | --- |
@@ -17,6 +17,8 @@ Milestone 2 writes these facts to `outbox_event` in the same PostgreSQL transact
 | `BookingCompleted` | Every visit in the booking completed | Ratings, notification, analytics |
 | `BookingExpired` | Capacity expired before confirmation | Payment/refund, notification |
 | `BookingCancelled` | A pre-confirmation booking was cancelled | Worker, notification |
+
+User Service's Plus consumer uses `BookingConfirmed` to consume a held pass and releases it for `BookingCancelled`, `BookingExpired`, `WorkerOfferRejected` or `WorkerOfferExpired`. Delivery retries use retry topics and exhausted records move to a dead-letter topic.
 
 Event payloads contain identifiers, lifecycle timestamps and references needed to retrieve authoritative state. They do not contain customer addresses, phone numbers, payment credentials or provider webhook bodies.
 

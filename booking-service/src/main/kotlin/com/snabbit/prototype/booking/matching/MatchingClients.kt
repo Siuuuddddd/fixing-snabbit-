@@ -59,6 +59,22 @@ data class WorkerMatchResponse(
     val priceMinor: Long,
 )
 
+data class ReservePlusPassRequest(
+    val bookingId: UUID,
+    val serviceCode: String,
+    val grossTotalMinor: Long,
+    val holdUntil: Instant,
+)
+
+data class PlusPassReservationResponse(
+    val passId: UUID?,
+    val bookingId: UUID,
+    val grossTotalMinor: Long,
+    val discountMinor: Long,
+    val netTotalMinor: Long,
+    val expiresAt: Instant?,
+)
+
 @Component
 class MatchingClients(builder: RestClient.Builder, properties: IntegrationProperties) {
     private val userClient = builder.clone().baseUrl(properties.userServiceUrl).build()
@@ -79,5 +95,25 @@ class MatchingClients(builder: RestClient.Builder, properties: IntegrationProper
             .retrieve()
             .body(object : ParameterizedTypeReference<List<WorkerMatchResponse>>() {})
             ?: emptyList()
+    }
+
+    suspend fun reservePass(
+        userId: UUID,
+        request: ReservePlusPassRequest,
+    ): PlusPassReservationResponse = withContext(Dispatchers.IO) {
+        userClient.post()
+            .uri("/internal/v1/users/{userId}/plus/passes/reservations", userId)
+            .body(request)
+            .retrieve()
+            .body(PlusPassReservationResponse::class.java)
+            ?: error("User Service returned an empty pass reservation")
+    }
+
+    suspend fun releasePass(userId: UUID, bookingId: UUID) = withContext(Dispatchers.IO) {
+        userClient.post()
+            .uri("/internal/v1/users/{userId}/plus/passes/reservations/{bookingId}/release", userId, bookingId)
+            .retrieve()
+            .toBodilessEntity()
+        Unit
     }
 }
