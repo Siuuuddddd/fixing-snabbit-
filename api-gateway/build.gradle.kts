@@ -10,6 +10,7 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux:4.3.2")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")

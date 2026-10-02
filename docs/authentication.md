@@ -16,6 +16,8 @@ OTP challenges allow at most five failed attempts and are deleted after success 
 
 The API Gateway permits authentication, health and the Razorpay webhook without a bearer token. Other `/api/v1/**` routes require a valid token with the configured issuer and signature. The gateway always removes any incoming `X-Authenticated-User-Id` value and writes the verified JWT subject instead.
 
+Every routed request also passes through Spring Cloud Gateway's Redis token bucket. Authenticated callers are keyed by immutable JWT subject; unauthenticated OTP and webhook callers use the direct network address. Local defaults allow 20 requests per second with a burst of 40 and can be changed through `GATEWAY_RATE_LIMIT_PER_SECOND` and `GATEWAY_RATE_LIMIT_BURST`. Deployments behind a proxy must preserve a trustworthy direct peer boundary rather than accepting an arbitrary forwarded-IP header.
+
 User, Booking and Wallet customer routes compare that trusted subject with the requested customer or owned resource. Booking-to-User lookups use `/internal/v1/**` and are not routed publicly.
 
 ## Service-to-service authentication

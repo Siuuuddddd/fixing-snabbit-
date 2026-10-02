@@ -4,6 +4,8 @@ x-service-environment: &service-environment
   REDIS_HOST: redis
   REDIS_PORT: 6379
   JWT_SECRET: local-only-change-me-32-byte-secret
+  GATEWAY_RATE_LIMIT_PER_SECOND: 20
+  GATEWAY_RATE_LIMIT_BURST: 40
   OTP_PEPPER: local-only-otp-pepper
   SERVICE_AUTH_TOKEN: local-only-service-token-change-me-1234567890
   USER_SERVICE_URL: http://user-service:8081
