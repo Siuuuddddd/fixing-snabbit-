@@ -38,12 +38,16 @@ class AuthenticatedIdentityHeaderFilterTest {
             MockServerHttpRequest.get("/api/v1/auth/otp/request")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER, "spoofed")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER, "spoofed-worker")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER, "spoofed-staff")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_ROLES_HEADER, "ADMIN")
                 .build(),
         )
         val forwarded = invoke(exchange)
 
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER))
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER))
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_ROLES_HEADER))
     }
 
     @Test
@@ -55,6 +59,26 @@ class AuthenticatedIdentityHeaderFilterTest {
         val forwarded = invoke(exchange)
 
         assertEquals(workerId, forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER))
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
+    }
+
+    @Test
+    fun `staff token creates trusted staff headers and removes spoofed values`() {
+        val staffId = UUID.randomUUID().toString()
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/staff/support/tickets")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER, "spoofed")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_ROLES_HEADER, "ADMIN")
+                .build(),
+        ).mutate().principal(Mono.just(authentication(staffId, "SUPPORT_AGENT"))).build()
+
+        val forwarded = invoke(exchange)
+
+        assertEquals(staffId, forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER))
+        assertEquals(
+            "SUPPORT_AGENT",
+            forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_ROLES_HEADER),
+        )
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
     }
 

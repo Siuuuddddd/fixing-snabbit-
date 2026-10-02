@@ -84,6 +84,23 @@ class SupportService(
 
     fun resolve(ticketId: UUID): SupportTicketSnapshot = transactions.resolve(ticketId)
 
+    fun agentTickets(status: SupportTicketStatus): List<SupportTicketSnapshot> = transactions.agentTickets(status)
+
+    fun agentMessages(ticketId: UUID, afterMessageId: Long): List<SupportMessageSnapshot> =
+        transactions.agentMessages(ticketId, afterMessageId)
+
+    fun agentStream(ticketId: UUID, afterMessageId: Long): Flow<SupportMessageSnapshot> = flow {
+        var cursor = afterMessageId.coerceAtLeast(0)
+        while (currentCoroutineContext().isActive) {
+            val batch = withContext(Dispatchers.IO) { transactions.agentMessages(ticketId, cursor) }
+            batch.forEach { message ->
+                emit(message)
+                cursor = message.messageId
+            }
+            delay(properties.streamPollDelay.toMillis())
+        }
+    }
+
     fun stream(ticketId: UUID, customerId: UUID, afterMessageId: Long): Flow<SupportMessageSnapshot> = flow {
         var cursor = afterMessageId.coerceAtLeast(0)
         withContext(Dispatchers.IO) { transactions.requireCustomer(ticketId, customerId) }
@@ -171,6 +188,17 @@ class SupportTransaction(
     fun messages(ticketId: UUID, customerId: UUID, afterId: Long): List<SupportMessageSnapshot> {
         requireCustomer(ticketId, customerId)
         return messages.findTop100ByTicketIdAndIdGreaterThanOrderByIdAsc(ticketId, afterId).map(::messageSnapshot)
+    }
+
+    @Transactional(readOnly = true)
+    fun agentTickets(status: SupportTicketStatus): List<SupportTicketSnapshot> =
+        tickets.findTop100ByStatusOrderByUpdatedAtDesc(status).map(::ticketSnapshot)
+
+    @Transactional(readOnly = true)
+    fun agentMessages(ticketId: UUID, afterId: Long): List<SupportMessageSnapshot> {
+        if (!tickets.existsById(ticketId)) throw SupportResourceNotFound("Support ticket was not found")
+        return messages.findTop100ByTicketIdAndIdGreaterThanOrderByIdAsc(ticketId, afterId.coerceAtLeast(0))
+            .map(::messageSnapshot)
     }
 
     private fun requireCustomer(ticket: SupportTicket, customerId: UUID) {

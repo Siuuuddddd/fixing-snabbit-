@@ -5,6 +5,7 @@ import com.snabbit.prototype.support.application.SupportRequestRejected
 import com.snabbit.prototype.support.application.SupportResourceNotFound
 import com.snabbit.prototype.support.application.SupportService
 import com.snabbit.prototype.support.application.SupportTicketSnapshot
+import com.snabbit.prototype.support.domain.SupportTicketStatus
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -74,6 +75,44 @@ class CustomerSupportController(private val support: SupportService) {
         @RequestHeader("X-Authenticated-User-Id") customerId: UUID,
         @RequestParam(defaultValue = "0") afterMessageId: Long,
     ): Flow<SupportMessageSnapshot> = support.stream(ticketId, customerId, afterMessageId)
+}
+
+@RestController
+@RequestMapping("/api/v1/staff/support")
+class StaffSupportController(private val support: SupportService) {
+    @GetMapping("/tickets")
+    suspend fun tickets(
+        @RequestParam(defaultValue = "OPEN") status: SupportTicketStatus,
+    ): List<SupportTicketSnapshot> = withContext(Dispatchers.IO) { support.agentTickets(status) }
+
+    @GetMapping("/tickets/{ticketId}/messages")
+    suspend fun messages(
+        @PathVariable ticketId: UUID,
+        @RequestParam(defaultValue = "0") afterMessageId: Long,
+    ): List<SupportMessageSnapshot> = withContext(Dispatchers.IO) {
+        support.agentMessages(ticketId, afterMessageId)
+    }
+
+    @GetMapping("/tickets/{ticketId}/stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun stream(
+        @PathVariable ticketId: UUID,
+        @RequestParam(defaultValue = "0") afterMessageId: Long,
+    ): Flow<SupportMessageSnapshot> = support.agentStream(ticketId, afterMessageId)
+
+    @PostMapping("/tickets/{ticketId}/messages")
+    @ResponseStatus(HttpStatus.CREATED)
+    suspend fun send(
+        @PathVariable ticketId: UUID,
+        @RequestHeader("X-Authenticated-Staff-Id") agentId: UUID,
+        @Valid @RequestBody request: SendSupportMessageRequest,
+    ): SupportMessageSnapshot = withContext(Dispatchers.IO) {
+        support.sendAgentMessage(ticketId, agentId, request.body)
+    }
+
+    @PostMapping("/tickets/{ticketId}/resolve")
+    suspend fun resolve(@PathVariable ticketId: UUID): SupportTicketSnapshot = withContext(Dispatchers.IO) {
+        support.resolve(ticketId)
+    }
 }
 
 @RestController

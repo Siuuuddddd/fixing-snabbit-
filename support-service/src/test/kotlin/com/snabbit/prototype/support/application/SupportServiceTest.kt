@@ -42,4 +42,16 @@ class SupportServiceTest {
 
         assertEquals(expected, result)
     }
+
+    @Test
+    fun `agent stream reads ticket without customer ownership filter`() = runBlocking {
+        val ticketId = UUID.randomUUID()
+        val expected = SupportMessageSnapshot(8, ticketId, "CUSTOMER", UUID.randomUUID(), "Help", Instant.now())
+        every { transactions.agentMessages(ticketId, 7) } returns listOf(expected)
+
+        val result = service.agentStream(ticketId, 7).first()
+
+        assertEquals(expected, result)
+        verify(exactly = 0) { transactions.requireCustomer(any(), any()) }
+    }
 }

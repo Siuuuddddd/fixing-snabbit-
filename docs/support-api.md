@@ -32,9 +32,19 @@ The Android client should remember the greatest `messageId` it has received and 
 
 ## Agent endpoints
 
-The following APIs are private service APIs and are deliberately not exposed through the API Gateway:
+## Staff support API
+
+Support agents and administrators use role-protected `/api/v1/staff/support/**` routes:
+
+- `GET /tickets?status=OPEN` returns the 100 most recently updated tickets in that state.
+- `GET /tickets/{ticketId}/messages?afterMessageId=0` reads durable message history.
+- `GET /tickets/{ticketId}/stream?afterMessageId=0` follows new messages with the same reconnectable cursor model as the customer stream.
+- `POST /tickets/{ticketId}/messages` sends an agent reply using the staff ID injected from the signed JWT. The request cannot choose an `agentId`.
+- `POST /tickets/{ticketId}/resolve` resolves the ticket.
+
+The following APIs remain private service APIs and are deliberately not exposed through the API Gateway:
 
 - `POST /internal/v1/support/tickets/{ticketId}/messages` appends an agent message with `agentId` and `body`.
 - `POST /internal/v1/support/tickets/{ticketId}/resolve` closes the ticket.
 
-Resolved tickets reject additional customer and agent messages. Internal agent calls require service authentication; production deployment must additionally add human support-agent accounts and role authorization before exposing an agent console.
+Resolved tickets reject additional customer and agent messages. Internal automation calls require service authentication, while human agent calls require a short-lived `SUPPORT_AGENT` or `ADMIN` JWT at the gateway.

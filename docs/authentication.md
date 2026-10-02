@@ -31,3 +31,11 @@ The configured token must contain at least 32 bytes. Checked-in local defaults a
 User Service and API Gateway must use the same `JWT_SECRET`, which must be at least 32 bytes. Set a unique `OTP_PEPPER` and `SERVICE_AUTH_TOKEN` as well. The checked-in defaults are local-development values and must never be used outside a local prototype.
 
 The seeded registered customer is `+919876543210`. Workers use the equivalent role-separated flow documented in [worker-api.md](worker-api.md). Production SMS delivery remains an upcoming capability.
+
+## Staff identities and authorization
+
+Staff authenticate through `/api/v1/staff-auth/otp/request` and `/api/v1/staff-auth/otp/verify`. The prototype seeds separate Indian phone identities for `SUPPORT_AGENT`, `OPERATIONS_MANAGER`, `ADMIN` and `FINANCE_OPERATOR`; a token contains exactly the persisted staff role. Unknown or disabled staff phones receive the same generic request response and no OTP challenge, preventing account enumeration.
+
+The API Gateway strips all caller-supplied staff identity headers and writes `X-Authenticated-Staff-Id` and `X-Authenticated-Staff-Roles` only from a verified JWT. Support routes accept `SUPPORT_AGENT` or `ADMIN`; reserved operations and finance namespaces accept their matching role or `ADMIN`. Every other `/api/v1/staff/**` path is denied. Unmatched gateway paths are denied rather than permitted by default.
+
+Prototype staff phones are `+919800000001` (support), `+919800000002` (operations), `+919800000003` (admin) and `+919800000004` (finance). As with customer OTP, codes are exposed in API responses only when the local-only `OTP_EXPOSE_CODE` switch is enabled.

@@ -58,12 +58,17 @@ class GatewaySecurityConfiguration {
                     .pathMatchers(
                         "/api/v1/auth/**",
                         "/api/v1/worker-auth/**",
+                        "/api/v1/staff-auth/**",
                         "/actuator/health/**",
                         "/webhooks/razorpay",
                     ).permitAll()
+                    .pathMatchers("/api/v1/staff/support/**").hasAnyRole("SUPPORT_AGENT", "ADMIN")
+                    .pathMatchers("/api/v1/staff/operations/**").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                    .pathMatchers("/api/v1/staff/finance/**").hasAnyRole("FINANCE_OPERATOR", "ADMIN")
+                    .pathMatchers("/api/v1/staff/**").denyAll()
                     .pathMatchers("/api/v1/worker/**", "/api/v1/workers/**").hasRole("WORKER")
                     .pathMatchers("/api/v1/**").hasRole("CUSTOMER")
-                    .anyExchange().permitAll()
+                    .anyExchange().denyAll()
             }
             .oauth2ResourceServer { resourceServer ->
                 resourceServer.jwt { jwt ->
@@ -88,9 +93,15 @@ class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
             request.headers { headers ->
                 headers.remove(AUTHENTICATED_USER_HEADER)
                 headers.remove(AUTHENTICATED_WORKER_HEADER)
+                headers.remove(AUTHENTICATED_STAFF_HEADER)
+                headers.remove(AUTHENTICATED_STAFF_ROLES_HEADER)
                 val roles = authentication?.token?.getClaimAsStringList("roles").orEmpty()
                 if ("CUSTOMER" in roles) headers.set(AUTHENTICATED_USER_HEADER, authentication!!.token.subject)
                 if ("WORKER" in roles) headers.set(AUTHENTICATED_WORKER_HEADER, authentication!!.token.subject)
+                if (roles.any(STAFF_ROLES::contains)) {
+                    headers.set(AUTHENTICATED_STAFF_HEADER, authentication!!.token.subject)
+                    headers.set(AUTHENTICATED_STAFF_ROLES_HEADER, roles.filter(STAFF_ROLES::contains).joinToString(","))
+                }
             }
         }
         .build()
@@ -100,5 +111,8 @@ class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
     companion object {
         const val AUTHENTICATED_USER_HEADER = "X-Authenticated-User-Id"
         const val AUTHENTICATED_WORKER_HEADER = "X-Authenticated-Worker-Id"
+        const val AUTHENTICATED_STAFF_HEADER = "X-Authenticated-Staff-Id"
+        const val AUTHENTICATED_STAFF_ROLES_HEADER = "X-Authenticated-Staff-Roles"
+        val STAFF_ROLES = setOf("SUPPORT_AGENT", "OPERATIONS_MANAGER", "ADMIN", "FINANCE_OPERATOR")
     }
 }
