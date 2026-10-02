@@ -20,6 +20,8 @@ class OutboxEvent(
     val aggregateId: String,
     @Column(name = "event_type", nullable = false)
     val eventType: String,
+    @Column(name = "schema_version", nullable = false)
+    val schemaVersion: Int = 1,
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     val payload: String,

@@ -3,7 +3,9 @@ package com.snabbit.prototype.booking.events
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.junit.jupiter.api.Test
 import org.springframework.kafka.core.KafkaTemplate
@@ -20,6 +22,7 @@ class OutboxPublisherTest {
     private val kafka = mockk<KafkaTemplate<String, String>>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
+    private val mapper = ObjectMapper().findAndRegisterModules()
     private val properties = EventingProperties(
         outboxTopic = "booking-events",
         consumerTopic = "wallet-events",
@@ -28,19 +31,21 @@ class OutboxPublisherTest {
         outboxClaimDuration = Duration.ofSeconds(30),
         outboxBatchSize = 50,
     )
-    private val publisher = OutboxPublisher(store, kafka, ObjectMapper().findAndRegisterModules(), properties, clock)
+    private val publisher = OutboxPublisher(store, kafka, mapper, properties, clock)
 
     @Test
     fun `marks event published only after Kafka acknowledges it`() {
         val event = event()
+        val published = slot<String>()
         every { store.claimBatch(any(), now, now.plusSeconds(30), 50) } returns listOf(event)
-        every { kafka.send("booking-events", event.aggregateId, any()) } returns CompletableFuture.completedFuture(
+        every { kafka.send("booking-events", event.aggregateId, capture(published)) } returns CompletableFuture.completedFuture(
             SendResult(ProducerRecord("booking-events", event.aggregateId, "value"), mockk()),
         )
         every { store.markPublished(event.id, any(), now) } returns Unit
 
         publisher.publishAvailableEvents()
 
+        assertEquals(1, mapper.readTree(published.captured).path("schemaVersion").asInt())
         verify(exactly = 1) { store.markPublished(event.id, any(), now) }
         verify(exactly = 0) { store.releaseAfterFailure(any(), any(), any(), any()) }
     }

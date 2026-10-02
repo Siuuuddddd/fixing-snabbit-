@@ -43,6 +43,7 @@ class OutboxPublisher(
                 aggregateId = event.aggregateId,
                 occurredAt = event.occurredAt,
                 payload = objectMapper.readTree(event.payload),
+                schemaVersion = event.schemaVersion,
             )
             kafkaTemplate.send(
                 properties.outboxTopic,

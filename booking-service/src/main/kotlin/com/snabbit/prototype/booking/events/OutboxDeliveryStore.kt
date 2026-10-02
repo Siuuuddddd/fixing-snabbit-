@@ -19,6 +19,7 @@ class OutboxDeliveryStore(private val jdbcTemplate: JdbcTemplate) {
                     eventType = result.getString("event_type"),
                     payload = result.getString("payload"),
                     occurredAt = result.getTimestamp("occurred_at").toInstant(),
+                    schemaVersion = result.getInt("schema_version"),
                 )
             },
             Timestamp.from(now),
@@ -73,7 +74,7 @@ class OutboxDeliveryStore(private val jdbcTemplate: JdbcTemplate) {
             FROM candidates
             WHERE event.id = candidates.id
             RETURNING event.id, event.aggregate_type, event.aggregate_id,
-                      event.event_type, event.payload::text, event.occurred_at
+                      event.event_type, event.payload::text, event.occurred_at, event.schema_version
         """.trimIndent()
     }
 }

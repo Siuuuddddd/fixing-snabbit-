@@ -29,4 +29,5 @@ data class ClaimedOutboxEvent(
     val eventType: String,
     val payload: String,
     val occurredAt: Instant,
+    val schemaVersion: Int = CURRENT_EVENT_SCHEMA_VERSION,
 )
