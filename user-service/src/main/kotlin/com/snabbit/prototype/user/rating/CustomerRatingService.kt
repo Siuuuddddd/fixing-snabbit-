@@ -3,11 +3,11 @@ package com.snabbit.prototype.user.rating
 import com.snabbit.prototype.user.domain.CustomerRating
 import com.snabbit.prototype.user.persistence.CustomerRatingRepository
 import com.snabbit.prototype.user.persistence.UserProfileRepository
+import com.snabbit.prototype.user.security.InternalServiceClientFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.client.RestClient
 import java.math.BigDecimal
 import java.time.Clock
 import java.util.UUID
@@ -37,8 +37,8 @@ data class CustomerRatingSnapshot(
 class CustomerRatingRejected(message: String) : RuntimeException(message)
 
 @Component
-class CustomerRatingBookingClient(builder: RestClient.Builder, properties: UserIntegrationProperties) {
-    private val client = builder.clone().baseUrl(properties.bookingServiceUrl).build()
+class CustomerRatingBookingClient(factory: InternalServiceClientFactory, properties: UserIntegrationProperties) {
+    private val client = factory.create(properties.bookingServiceUrl)
 
     fun context(bookingId: UUID): BookingRatingContext = client.get()
         .uri("/internal/v1/bookings/{bookingId}/rating-context", bookingId)

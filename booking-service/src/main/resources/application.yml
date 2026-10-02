@@ -56,3 +56,6 @@ integrations:
   user-service-url: ${USER_SERVICE_URL:http://localhost:8081}
   worker-service-url: ${WORKER_SERVICE_URL:http://localhost:8083}
   wallet-service-url: ${WALLET_SERVICE_URL:http://localhost:8084}
+
+service-auth:
+  token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}

@@ -37,4 +37,4 @@ The following APIs are private service APIs and are deliberately not exposed thr
 - `POST /internal/v1/support/tickets/{ticketId}/messages` appends an agent message with `agentId` and `body`.
 - `POST /internal/v1/support/tickets/{ticketId}/resolve` closes the ticket.
 
-Resolved tickets reject additional customer and agent messages. Production deployment must add authenticated support-agent accounts and service-to-service authorization before exposing an agent console.
+Resolved tickets reject additional customer and agent messages. Internal agent calls require service authentication; production deployment must additionally add human support-agent accounts and role authorization before exposing an agent console.

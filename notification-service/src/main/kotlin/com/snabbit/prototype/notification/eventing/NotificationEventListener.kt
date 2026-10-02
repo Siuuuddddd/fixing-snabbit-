@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.notification.application.NotificationProperties
 import com.snabbit.prototype.notification.application.NotificationTemplate
 import com.snabbit.prototype.notification.application.NotificationTransaction
+import com.snabbit.prototype.notification.security.InternalServiceClientFactory
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.jdbc.core.JdbcTemplate
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.client.RestClient
 import java.sql.Timestamp
 import java.time.Clock
 import java.time.Instant
@@ -42,9 +42,9 @@ data class BookingOwner(val bookingId: UUID, val customerId: UUID)
 data class WalletOwner(val walletId: UUID, val customerId: UUID)
 
 @Component
-class EventRecipientResolver(builder: RestClient.Builder, properties: NotificationIntegrationProperties) {
-    private val bookingClient = builder.clone().baseUrl(properties.bookingServiceUrl).build()
-    private val walletClient = builder.clone().baseUrl(properties.walletServiceUrl).build()
+class EventRecipientResolver(factory: InternalServiceClientFactory, properties: NotificationIntegrationProperties) {
+    private val bookingClient = factory.create(properties.bookingServiceUrl)
+    private val walletClient = factory.create(properties.walletServiceUrl)
 
     fun customerId(event: EventEnvelope): UUID {
         val bookingId = event.payload.path("bookingId").takeUnless { it.isMissingNode || it.isNull }

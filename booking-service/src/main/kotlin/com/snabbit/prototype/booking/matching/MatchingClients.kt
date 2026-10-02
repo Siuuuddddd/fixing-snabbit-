@@ -1,11 +1,11 @@
 package com.snabbit.prototype.booking.matching
 
 import com.snabbit.prototype.booking.config.IntegrationProperties
+import com.snabbit.prototype.booking.security.InternalServiceClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
@@ -76,9 +76,9 @@ data class PlusPassReservationResponse(
 )
 
 @Component
-class MatchingClients(builder: RestClient.Builder, properties: IntegrationProperties) {
-    private val userClient = builder.clone().baseUrl(properties.userServiceUrl).build()
-    private val workerClient = builder.clone().baseUrl(properties.workerServiceUrl).build()
+class MatchingClients(factory: InternalServiceClientFactory, properties: IntegrationProperties) {
+    private val userClient = factory.create(properties.userServiceUrl)
+    private val workerClient = factory.create(properties.workerServiceUrl)
 
     suspend fun household(userId: UUID): HouseholdSnapshotResponse = withContext(Dispatchers.IO) {
         userClient.get()

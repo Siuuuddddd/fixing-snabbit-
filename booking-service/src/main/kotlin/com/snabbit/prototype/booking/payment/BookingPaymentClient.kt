@@ -2,13 +2,13 @@ package com.snabbit.prototype.booking.payment
 
 import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.config.IntegrationProperties
+import com.snabbit.prototype.booking.security.InternalServiceClientFactory
 import com.snabbit.prototype.booking.support.BookingRuleViolation
 import com.snabbit.prototype.booking.support.InvalidBookingState
 import com.snabbit.prototype.booking.support.PaymentRequestRejected
 import com.snabbit.prototype.booking.support.PaymentServiceUnavailable
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestClientResponseException
 import java.time.Clock
@@ -41,8 +41,8 @@ data class BookingPaymentSnapshot(
 )
 
 @Component
-class BookingPaymentClient(builder: RestClient.Builder, properties: IntegrationProperties) {
-    private val walletClient = builder.clone().baseUrl(properties.walletServiceUrl).build()
+class BookingPaymentClient(factory: InternalServiceClientFactory, properties: IntegrationProperties) {
+    private val walletClient = factory.create(properties.walletServiceUrl)
 
     fun start(command: StartBookingPaymentCommand): BookingPaymentSnapshot = try {
         walletClient.post()

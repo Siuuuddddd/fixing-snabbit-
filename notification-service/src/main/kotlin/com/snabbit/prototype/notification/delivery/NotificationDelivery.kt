@@ -3,6 +3,7 @@ package com.snabbit.prototype.notification.delivery
 import com.snabbit.prototype.notification.application.NotificationProperties
 import com.snabbit.prototype.notification.eventing.NotificationIntegrationProperties
 import com.snabbit.prototype.notification.persistence.DeviceRegistrationRepository
+import com.snabbit.prototype.notification.security.InternalServiceClientFactory
 import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Component
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.client.RestClient
 import java.sql.Timestamp
 import java.time.Clock
 import java.time.Duration
@@ -110,8 +110,8 @@ class NotificationDeliveryQuery(private val devices: DeviceRegistrationRepositor
 }
 
 @Component
-class NotificationContactClient(builder: RestClient.Builder, properties: NotificationIntegrationProperties) {
-    private val client = builder.clone().baseUrl(properties.userServiceUrl).build()
+class NotificationContactClient(factory: InternalServiceClientFactory, properties: NotificationIntegrationProperties) {
+    private val client = factory.create(properties.userServiceUrl)
 
     fun contact(customerId: UUID): CustomerContact = client.get()
         .uri("/internal/v1/users/{userId}/contact", customerId)

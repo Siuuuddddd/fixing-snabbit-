@@ -34,7 +34,7 @@ The match-and-hold route is the intended customer path. It reserves an eligible 
 - `POST /internal/v1/bookings` — preselected-worker creation for trusted prototype/integration workflows; customer apps cannot bypass matching through this route.
 - `POST /internal/v1/bookings/{bookingId}/platform-cancellation` — cancel a confirmed service that the platform cannot provide, grant a full refund and restore any Plus pass.
 
-Internal routes must later require service identity. They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions are exposed separately through role-protected worker APIs documented in [worker-api.md](worker-api.md).
+Internal routes require the shared service credential described in [authentication.md](authentication.md). They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions are exposed separately through role-protected worker APIs documented in [worker-api.md](worker-api.md).
 
 ## Confirmed cancellation policy
 

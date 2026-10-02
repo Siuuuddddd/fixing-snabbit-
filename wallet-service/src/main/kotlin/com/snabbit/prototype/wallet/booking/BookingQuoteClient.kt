@@ -1,9 +1,9 @@
 package com.snabbit.prototype.wallet.booking
 
 import com.snabbit.prototype.wallet.support.BookingQuoteUnavailable
+import com.snabbit.prototype.wallet.security.InternalServiceClientFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import java.time.Instant
 import java.util.UUID
@@ -21,8 +21,8 @@ data class BookingPaymentQuote(
 )
 
 @Component
-class BookingQuoteClient(builder: RestClient.Builder, properties: BookingIntegrationProperties) {
-    private val client = builder.clone().baseUrl(properties.bookingServiceUrl).build()
+class BookingQuoteClient(factory: InternalServiceClientFactory, properties: BookingIntegrationProperties) {
+    private val client = factory.create(properties.bookingServiceUrl)
 
     fun get(bookingId: UUID): BookingPaymentQuote = try {
         client.get()

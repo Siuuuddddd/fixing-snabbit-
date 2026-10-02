@@ -39,6 +39,9 @@ auth:
 integrations:
   booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
 
+service-auth:
+  token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
+
 plus-events:
   consumer-topic: booking-events
   consumer-group: user-service-plus

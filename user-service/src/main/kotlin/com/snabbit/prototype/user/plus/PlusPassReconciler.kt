@@ -3,12 +3,12 @@ package com.snabbit.prototype.user.plus
 import com.snabbit.prototype.user.domain.PlusPassStatus
 import com.snabbit.prototype.user.persistence.PlusPassRepository
 import com.snabbit.prototype.user.rating.UserIntegrationProperties
+import com.snabbit.prototype.user.security.InternalServiceClientFactory
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientResponseException
 import java.time.Clock
 import java.time.Instant
@@ -36,8 +36,8 @@ class PlusReconciliationQuery(private val passes: PlusPassRepository) {
 }
 
 @Component
-class PlusReconciliationBookingClient(builder: RestClient.Builder, properties: UserIntegrationProperties) {
-    private val client = builder.clone().baseUrl(properties.bookingServiceUrl).build()
+class PlusReconciliationBookingClient(factory: InternalServiceClientFactory, properties: UserIntegrationProperties) {
+    private val client = factory.create(properties.bookingServiceUrl)
 
     fun context(bookingId: UUID): PlusPassBookingContext? = try {
         client.get()

@@ -29,6 +29,9 @@ integrations:
   wallet-service-url: ${WALLET_SERVICE_URL:http://localhost:8084}
   user-service-url: ${USER_SERVICE_URL:http://localhost:8081}
 
+service-auth:
+  token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
+
 notifications:
   consumer-group: notification-service
   booking-topic: booking-events

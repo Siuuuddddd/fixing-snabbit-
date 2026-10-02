@@ -26,7 +26,7 @@ Creating a top-up does not credit the wallet. Credit occurs only after `/webhook
 - `POST /internal/v1/wallets/booking-payments/{paymentId}/cancel` — release a pending reservation. A later provider capture is automatically queued for a compensating refund.
 - `POST /internal/v1/wallets/booking-payments/{paymentId}/refunds` — full refund with an idempotency key.
 
-These routes must receive service identity before production. They are intentionally absent from customer API Gateway routes.
+These routes require `X-Service-Token` and are intentionally absent from customer API Gateway routes. See [authentication.md](authentication.md).
 
 The Wallet request contains `bookingId` and `useWallet`, never an amount. Wallet accepts only an `AWAITING_PAYMENT` booking with an unexpired hold, a positive INR quote and a wallet owned by the booking customer. Booking and Wallet both check these rules so neither an Android payload nor a mistaken internal caller can choose the charged total.
 

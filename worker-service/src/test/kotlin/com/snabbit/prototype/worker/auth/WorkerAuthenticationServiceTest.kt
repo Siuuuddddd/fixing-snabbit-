@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets
 import java.time.Clock
@@ -68,7 +69,9 @@ class WorkerAuthenticationServiceTest {
 
     private fun decoder(): NimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(
         SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256"),
-    ).macAlgorithm(MacAlgorithm.HS256).build()
+    ).macAlgorithm(MacAlgorithm.HS256).build().also { decoder ->
+        decoder.setJwtValidator(JwtTimestampValidator().apply { setClock(Clock.fixed(now, ZoneOffset.UTC)) })
+    }
 
     private fun worker() = WorkerProfile(
         UUID.randomUUID(),

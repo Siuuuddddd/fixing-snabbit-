@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import java.nio.charset.StandardCharsets
 import java.time.Clock
 import java.time.Duration
@@ -105,7 +106,9 @@ class OtpAuthenticationServiceTest {
 
     private fun decoder(): NimbusJwtDecoder {
         val key = SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256")
-        return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build()
+        return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build().also { decoder ->
+            decoder.setJwtValidator(JwtTimestampValidator().apply { setClock(Clock.fixed(now, ZoneOffset.UTC)) })
+        }
     }
 
     private fun user() = UserProfile(

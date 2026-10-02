@@ -6,6 +6,7 @@ import com.snabbit.prototype.support.domain.SupportTicket
 import com.snabbit.prototype.support.domain.SupportTicketStatus
 import com.snabbit.prototype.support.persistence.SupportMessageRepository
 import com.snabbit.prototype.support.persistence.SupportTicketRepository
+import com.snabbit.prototype.support.security.InternalServiceClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -17,7 +18,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.client.RestClient
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -54,8 +54,8 @@ class SupportRequestRejected(message: String) : RuntimeException(message)
 class SupportResourceNotFound(message: String) : RuntimeException(message)
 
 @Component
-class SupportBookingClient(builder: RestClient.Builder, properties: SupportIntegrationProperties) {
-    private val client = builder.clone().baseUrl(properties.bookingServiceUrl).build()
+class SupportBookingClient(factory: InternalServiceClientFactory, properties: SupportIntegrationProperties) {
+    private val client = factory.create(properties.bookingServiceUrl)
 
     fun ownership(bookingId: UUID): BookingOwnershipContext = client.get()
         .uri("/internal/v1/bookings/{bookingId}/ownership", bookingId)

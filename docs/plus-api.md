@@ -38,4 +38,4 @@ An expired reservation is never blindly returned to inventory: a scheduled recon
 
 Confirmed customer and platform cancellations restore the consumed pass. Plus also halves the configured early or late customer cancellation fee; platform failure always remains a full-refund, zero-fee case.
 
-The internal activation endpoint must only be called by a verified subscription-payment workflow. Service-to-service authentication remains mandatory before production exposure.
+The internal activation endpoint requires service authentication and must only be called by a verified subscription-payment workflow. Production should still upgrade the shared prototype credential to workload identity.
