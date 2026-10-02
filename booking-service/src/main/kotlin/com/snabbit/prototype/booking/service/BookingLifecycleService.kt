@@ -48,6 +48,13 @@ class BookingLifecycleService(
         val now = clock.instant()
         val bookingId = command.bookingId
 
+        if ((command.idempotencyKey == null) != (command.requestFingerprint == null)) {
+            throw BookingRuleViolation("Booking idempotency key and fingerprint must be supplied together")
+        }
+        command.idempotencyKey?.let { key ->
+            findIdempotent(command.customerId, key, command.requestFingerprint!!)?.let { return it }
+        }
+
         if (command.grossTotalMinor < 0 || command.plusDiscountMinor < 0 ||
             command.plusDiscountMinor > command.grossTotalMinor ||
             command.quotedTotalMinor != command.grossTotalMinor - command.plusDiscountMinor
@@ -97,6 +104,8 @@ class BookingLifecycleService(
                 serviceAddressLabel = command.serviceAddressLabel,
                 serviceAddressLine = command.serviceAddressLine,
                 serviceAddressPincode = command.serviceAddressPincode,
+                idempotencyKey = command.idempotencyKey,
+                requestFingerprint = command.requestFingerprint,
             ),
         )
 
@@ -169,6 +178,15 @@ class BookingLifecycleService(
             slotHoldRepository.findAllByBookingIdOrderByVisitIndex(bookingId),
             offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId),
         )
+    }
+
+    @Transactional(readOnly = true)
+    fun findIdempotent(customerId: UUID, idempotencyKey: String, requestFingerprint: String): BookingSnapshot? {
+        val booking = bookingRepository.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey) ?: return null
+        if (booking.requestFingerprint != requestFingerprint) {
+            throw BookingRuleViolation("Idempotency key was already used with different booking details")
+        }
+        return currentSnapshot(booking)
     }
 
     @Transactional(readOnly = true)

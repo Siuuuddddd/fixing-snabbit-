@@ -16,11 +16,11 @@ AWAITING_WORKER --all offers accepted--> AWAITING_PAYMENT --verified payment--> 
 
 All visits in a multi-day request use one duration and are held in one database transaction. If any capacity row is missing or any visit overlaps an active reservation, no booking, hold, offer or outbox row is committed.
 
-The match-and-hold route is the intended customer path. It accepts an owned verified `addressId`, resolves its authoritative coordinates through User Service, reserves an eligible Plus pass before the booking transaction and persists the address/location plus gross price, pass discount and net quote snapshots separately. The preselected-worker create route remains useful for internal/prototype flows and tests. See [matching-api.md](matching-api.md), [address-api.md](address-api.md) and [plus-api.md](plus-api.md).
+The match-and-hold route is the intended customer path. It accepts an owned verified `addressId`, resolves its authoritative coordinates through User Service, reserves an eligible Plus pass before the booking transaction and persists the address/location plus gross price, pass discount and net quote snapshots separately. Every call requires an `Idempotency-Key` containing 8–120 printable characters. Keys are scoped to the authenticated customer: replaying the same request returns the original booking without rematching or reserving another pass, while reusing the key for different booking details returns `422 Unprocessable Entity`. The preselected-worker create route remains useful for internal/prototype flows and tests. See [matching-api.md](matching-api.md), [address-api.md](address-api.md) and [plus-api.md](plus-api.md).
 
 ## Customer-facing routes
 
-- `POST /api/v1/bookings/match-and-hold` — load the authoritative household snapshot, match compatible workers, then atomically create holds and offers.
+- `POST /api/v1/bookings/match-and-hold` — load the authoritative household snapshot, match compatible workers, then atomically create holds and offers. Requires `Idempotency-Key`.
 - `POST /api/v1/bookings/availability` — validate the same request without writing data and report availability, compatible-worker count and lowest price for each visit.
 - `POST /api/v1/bookings/{bookingId}/payments` — start split wallet/online payment from the stored quote. Requires `Idempotency-Key`; the request never accepts an amount.
 - `GET /api/v1/bookings/{bookingId}` — return the shared customer/worker duration and current lifecycle.

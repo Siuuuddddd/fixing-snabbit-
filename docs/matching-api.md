@@ -1,6 +1,6 @@
 # Household-aware worker matching
 
-`POST /api/v1/bookings/match-and-hold` is coordinated by Booking Service. It reads the customer's household snapshot from User Service, requests candidates from Worker Service for each visit, and finally asks the existing Booking lifecycle to acquire real PostgreSQL slot holds. A Worker Service availability result is advisory; the Booking database lock is the final concurrency boundary.
+`POST /api/v1/bookings/match-and-hold` is coordinated by Booking Service. It requires an `Idempotency-Key`, reads the customer's household snapshot from User Service, requests candidates from Worker Service for each visit, and finally asks the existing Booking lifecycle to acquire real PostgreSQL slot holds. Exact retries replay the stored booking; the same customer/key cannot represent different booking details. A Worker Service availability result is advisory; the Booking database lock is the final concurrency boundary.
 
 The request contains `serviceId` and an owned `addressId`, never client-selected price or free-form service coordinates. Booking resolves the active service code and hourly base price from its own catalog, then loads the verified address snapshot from User Service. Android therefore cannot mismatch an ID/code pair, choose a price, or substitute coordinates that do not belong to the authenticated household. `GET /api/v1/services` lists all active services. The prototype catalog includes house cleaning, dish washing, laundry and toilet cleaning.
 

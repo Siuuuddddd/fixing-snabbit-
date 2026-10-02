@@ -85,6 +85,10 @@ class Booking(
     val serviceAddressLine: String? = null,
     @Column(name = "service_address_pincode")
     val serviceAddressPincode: String? = null,
+    @Column(name = "idempotency_key", length = 120)
+    val idempotencyKey: String? = null,
+    @Column(name = "request_fingerprint", length = 64)
+    val requestFingerprint: String? = null,
     @Version
     var version: Long = 0,
 ) {

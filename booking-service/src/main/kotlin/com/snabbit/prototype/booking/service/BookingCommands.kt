@@ -25,6 +25,8 @@ data class CreateBookingCommand(
     val serviceAddressLabel: String? = null,
     val serviceAddressLine: String? = null,
     val serviceAddressPincode: String? = null,
+    val idempotencyKey: String? = null,
+    val requestFingerprint: String? = null,
 )
 
 data class VisitCommand(

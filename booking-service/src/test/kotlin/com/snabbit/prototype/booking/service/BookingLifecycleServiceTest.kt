@@ -19,6 +19,7 @@ import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerDayCapacityRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository
 import com.snabbit.prototype.booking.support.SlotUnavailable
+import com.snabbit.prototype.booking.support.BookingRuleViolation
 import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import com.snabbit.prototype.booking.support.InvalidBookingState
 import io.mockk.every
@@ -102,6 +103,33 @@ class BookingLifecycleServiceTest {
 
         verify(exactly = 0) { bookingRepository.saveAndFlush(any()) }
         verify(exactly = 0) { holdRepository.saveAll<SlotHold>(any()) }
+    }
+
+    @Test
+    fun `idempotency key replays only the original booking request`() {
+        val customerId = UUID.randomUUID()
+        val bookingId = UUID.randomUUID()
+        val workerId = UUID.randomUUID()
+        val booking = booking(
+            bookingId,
+            customerId = customerId,
+            idempotencyKey = "booking-request-001",
+            requestFingerprint = "a".repeat(64),
+        )
+        val hold = hold(bookingId, workerId)
+        val offer = offer(bookingId, workerId, hold.id)
+        every {
+            bookingRepository.findByCustomerIdAndIdempotencyKey(customerId, "booking-request-001")
+        } returns booking
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(bookingId) } returns listOf(hold)
+        every { offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId) } returns listOf(offer)
+
+        val replay = service.findIdempotent(customerId, "booking-request-001", "a".repeat(64))
+
+        assertEquals(bookingId, replay?.bookingId)
+        assertThrows(BookingRuleViolation::class.java) {
+            service.findIdempotent(customerId, "booking-request-001", "b".repeat(64))
+        }
     }
 
     @Test
@@ -437,9 +465,15 @@ class BookingLifecycleServiceTest {
         availableUntil = LocalTime.of(19, 0),
     )
 
-    private fun booking(id: UUID, plusPassId: UUID? = null) = Booking(
+    private fun booking(
+        id: UUID,
+        plusPassId: UUID? = null,
+        customerId: UUID = UUID.randomUUID(),
+        idempotencyKey: String? = null,
+        requestFingerprint: String? = null,
+    ) = Booking(
         id = id,
-        customerId = UUID.randomUUID(),
+        customerId = customerId,
         serviceId = UUID.randomUUID(),
         bookingType = BookingType.SCHEDULED,
         status = BookingStatus.AWAITING_WORKER,
@@ -452,6 +486,8 @@ class BookingLifecycleServiceTest {
         grossTotalMinor = if (plusPassId == null) 42_000 else 45_000,
         plusDiscountMinor = if (plusPassId == null) 0 else 3_000,
         plusPassId = plusPassId,
+        idempotencyKey = idempotencyKey,
+        requestFingerprint = requestFingerprint,
     )
 
     private fun hold(bookingId: UUID, workerId: UUID) = SlotHold(

@@ -5,6 +5,7 @@ import com.snabbit.prototype.booking.service.CreateBookingCommand
 import com.snabbit.prototype.booking.service.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.events.OutboxDeliveryStore
+import com.snabbit.prototype.booking.support.BookingRuleViolation
 import com.snabbit.prototype.booking.support.SlotUnavailable
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -112,6 +113,33 @@ class SlotHoldConcurrencyTest {
         assertTrue(result.exceptionOrNull() is SlotUnavailable)
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM booking", Long::class.java))
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM slot_hold", Long::class.java))
+    }
+
+    @Test
+    fun `same customer idempotency key replays one booking and rejects changed details`() {
+        val customerId = UUID.randomUUID()
+        val original = command(customerId).copy(
+            idempotencyKey = "booking-request-integration-001",
+            requestFingerprint = "a".repeat(64),
+        )
+
+        val first = service.create(original)
+        val replay = service.create(original.copy(bookingId = UUID.randomUUID()))
+        val mismatch = runCatching {
+            service.create(
+                original.copy(
+                    bookingId = UUID.randomUUID(),
+                    requestFingerprint = "b".repeat(64),
+                ),
+            )
+        }
+
+        assertEquals(first.bookingId, replay.bookingId)
+        assertTrue(mismatch.exceptionOrNull() is BookingRuleViolation)
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM booking", Long::class.java))
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM slot_hold", Long::class.java))
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM worker_offer", Long::class.java))
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM outbox_event", Long::class.java))
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.snabbit.prototype.booking.service.CreateBookingCommand
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.catalog.ServiceOfferingSnapshot
 import com.snabbit.prototype.booking.config.BookingProperties
+import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
 import io.mockk.coEvery
@@ -13,6 +14,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -99,6 +101,7 @@ class MatchAndHoldServiceTest {
             val request = secondArg<ReservePlusPassRequest>()
             PlusPassReservationResponse(null, request.bookingId, request.grossTotalMinor, 0, request.grossTotalMinor, null)
         }
+        every { lifecycle.findIdempotent(customerId, any(), any()) } returns null
         every { lifecycle.create(capture(created)) } answers {
             BookingSnapshot(
                 bookingId = created.captured.bookingId,
@@ -121,6 +124,7 @@ class MatchAndHoldServiceTest {
                 Duration.ofHours(2),
                 addressId,
                 listOf(Instant.parse("2026-10-03T04:30:00Z")),
+                "booking-request-001",
             ),
         )
 
@@ -136,6 +140,12 @@ class MatchAndHoldServiceTest {
         assertEquals("10 Test Street", created.captured.serviceAddressLine)
         assertEquals(BigDecimal("19.07609"), created.captured.serviceLatitude)
         assertEquals(19.07609, matchRequest.captured.latitude)
+        assertEquals("booking-request-001", created.captured.idempotencyKey)
+        assertEquals(64, created.captured.requestFingerprint?.length)
+        assertEquals(
+            UUID.nameUUIDFromBytes("$customerId:booking-request-001".toByteArray()),
+            created.captured.bookingId,
+        )
     }
 
     @Test
@@ -159,6 +169,7 @@ class MatchAndHoldServiceTest {
             val request = secondArg<ReservePlusPassRequest>()
             PlusPassReservationResponse(passId, request.bookingId, 18_000, 3_000, 15_000, request.holdUntil)
         }
+        every { lifecycle.findIdempotent(customerId, any(), any()) } returns null
         every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.support.SlotUnavailable("lost race")
         coEvery { clients.releasePass(customerId, any()) } returns Unit
 
@@ -166,12 +177,81 @@ class MatchAndHoldServiceTest {
             service.matchAndHold(
                 MatchAndHoldCommand(
                     customerId, serviceId, BookingType.SCHEDULED, Duration.ofHours(1),
-                    addressId, listOf(Instant.parse("2026-10-03T04:30:00Z")),
+                    addressId, listOf(Instant.parse("2026-10-03T04:30:00Z")), "booking-request-002",
                 ),
             )
         }
 
         coVerify(exactly = 1) { clients.releasePass(customerId, any()) }
+    }
+
+    @Test
+    fun `replays an existing booking without matching or reserving another pass`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
+        val customerId = UUID.randomUUID()
+        val existing = bookingSnapshot(customerId)
+        every { lifecycle.findIdempotent(customerId, "booking-request-003", any()) } returns existing
+
+        val result = service.matchAndHold(
+            MatchAndHoldCommand(
+                customerId,
+                UUID.randomUUID(),
+                BookingType.SCHEDULED,
+                Duration.ofHours(1),
+                UUID.randomUUID(),
+                listOf(Instant.parse("2026-10-03T04:30:00Z")),
+                "booking-request-003",
+            ),
+        )
+
+        assertEquals(existing, result)
+        verify(exactly = 0) { catalog.requireActive(any()) }
+        coVerify(exactly = 0) { clients.household(any()) }
+        coVerify(exactly = 0) { clients.reservePass(any(), any()) }
+        verify(exactly = 0) { lifecycle.create(any()) }
+    }
+
+    @Test
+    fun `concurrent replay keeps the winning Plus pass reservation`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
+        val customerId = UUID.randomUUID()
+        val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
+        val workerId = UUID.randomUUID()
+        val passId = UUID.randomUUID()
+        val recovered = bookingSnapshot(customerId, passId)
+        var idempotencyLookups = 0
+        every { lifecycle.findIdempotent(customerId, "booking-request-004", any()) } answers {
+            if (idempotencyLookups++ == 0) null else recovered
+        }
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.household(customerId) } returns household(true, emptyList()).copy(userId = customerId)
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
+        coEvery { clients.matches(any()) } returns listOf(match(workerId, 18_000))
+        coEvery { clients.reservePass(customerId, any()) } answers {
+            val request = secondArg<ReservePlusPassRequest>()
+            PlusPassReservationResponse(passId, request.bookingId, 18_000, 3_000, 15_000, request.holdUntil)
+        }
+        every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.support.SlotUnavailable("lost race")
+
+        val result = service.matchAndHold(
+            MatchAndHoldCommand(
+                customerId, serviceId, BookingType.SCHEDULED, Duration.ofHours(1),
+                addressId, listOf(Instant.parse("2026-10-03T04:30:00Z")), "booking-request-004",
+            ),
+        )
+
+        assertEquals(recovered, result)
+        assertEquals(2, idempotencyLookups)
+        coVerify(exactly = 0) { clients.releasePass(any(), any()) }
     }
 
     @Test
@@ -253,5 +333,17 @@ class MatchAndHoldServiceTest {
         BigDecimal("19.07609"),
         BigDecimal("72.877426"),
         true,
+    )
+
+    private fun bookingSnapshot(customerId: UUID, passId: UUID? = null) = BookingSnapshot(
+        bookingId = UUID.randomUUID(),
+        customerId = customerId,
+        status = "AWAITING_WORKER",
+        quotedTotalMinor = if (passId == null) 18_000 else 15_000,
+        grossTotalMinor = 18_000,
+        plusDiscountMinor = if (passId == null) 0 else 3_000,
+        plusPassId = passId,
+        requirements = BookingRequirements(),
+        visits = emptyList(),
     )
 }

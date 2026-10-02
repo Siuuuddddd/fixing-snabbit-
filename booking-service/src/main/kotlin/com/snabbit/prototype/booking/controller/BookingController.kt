@@ -125,20 +125,22 @@ class MatchAndHoldController(private val service: MatchAndHoldService) {
     @ResponseStatus(HttpStatus.CREATED)
     suspend fun matchAndHold(
         @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
         @Valid @RequestBody request: MatchAndHoldRequest,
     ): BookingSnapshot {
         requireOwner(authenticatedCustomerId, request.customerId)
-        return service.matchAndHold(request.toCommand())
+        return service.matchAndHold(request.toCommand(idempotencyKey))
     }
 }
 
-private fun MatchAndHoldRequest.toCommand() = MatchAndHoldCommand(
+private fun MatchAndHoldRequest.toCommand(idempotencyKey: String? = null) = MatchAndHoldCommand(
     customerId = customerId,
     serviceId = serviceId,
     bookingType = bookingType,
     duration = Duration.ofHours(durationHours),
     addressId = addressId,
     startsAt = startsAt,
+    idempotencyKey = idempotencyKey,
 )
 
 @RestController

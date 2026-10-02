@@ -19,6 +19,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.Clock
 import java.math.BigDecimal
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.UUID
 
 data class MatchAndHoldCommand(
@@ -28,6 +30,7 @@ data class MatchAndHoldCommand(
     val duration: Duration,
     val addressId: UUID,
     val startsAt: List<Instant>,
+    val idempotencyKey: String? = null,
 )
 
 data class VisitAvailabilitySnapshot(
@@ -81,6 +84,9 @@ class MatchAndHoldService(
 
     suspend fun matchAndHold(command: MatchAndHoldCommand): BookingSnapshot {
         validateRequest(command)
+        val idempotencyKey = validateIdempotencyKey(command.idempotencyKey)
+        val requestFingerprint = fingerprint(command)
+        lifecycleService.findIdempotent(command.customerId, idempotencyKey, requestFingerprint)?.let { return it }
         val offering = catalog.requireActive(command.serviceId)
         val (household, address) = loadCustomerContext(command)
         val candidateLists = findCandidates(command, address, offering.code, offering.basePricePerHourMinor, household)
@@ -92,7 +98,9 @@ class MatchAndHoldService(
         val quotedTotalMinor = candidateLists.zip(selectedWorkerIds).sumOf { (candidates, workerId) ->
             candidates.first { it.workerId == workerId }.priceMinor
         }
-        val bookingId = UUID.randomUUID()
+        val bookingId = UUID.nameUUIDFromBytes(
+            "${command.customerId}:$idempotencyKey".toByteArray(StandardCharsets.UTF_8),
+        )
         val pass = clients.reservePass(
             command.customerId,
             ReservePlusPassRequest(
@@ -135,9 +143,12 @@ class MatchAndHoldService(
                 grossTotalMinor = pass.grossTotalMinor,
                 plusDiscountMinor = pass.discountMinor,
                 plusPassId = pass.passId,
-                ),
+                idempotencyKey = idempotencyKey,
+                requestFingerprint = requestFingerprint,
+            ),
             )
         } catch (error: Exception) {
+            lifecycleService.findIdempotent(command.customerId, idempotencyKey, requestFingerprint)?.let { return it }
             if (pass.passId != null) runCatching { clients.releasePass(command.customerId, bookingId) }
             throw error
         }
@@ -222,5 +233,27 @@ class MatchAndHoldService(
             }
         }
         command.startsAt.forEach { windowPolicy.validate(command.bookingType, it, command.duration) }
+    }
+
+    private fun validateIdempotencyKey(rawKey: String?): String {
+        val key = rawKey?.trim().orEmpty()
+        if (key.length !in 8..120 || key.any(Char::isISOControl)) {
+            throw BookingRuleViolation("Idempotency-Key must contain 8 to 120 printable characters")
+        }
+        return key
+    }
+
+    private fun fingerprint(command: MatchAndHoldCommand): String {
+        val canonical = listOf(
+            command.customerId,
+            command.serviceId,
+            command.bookingType.name,
+            command.duration.toMinutes(),
+            command.addressId,
+            command.startsAt.joinToString(",") { it.toString() },
+        ).joinToString("|")
+        return MessageDigest.getInstance("SHA-256")
+            .digest(canonical.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
     }
 }
