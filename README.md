@@ -13,6 +13,7 @@ Backend foundation for a Mumbai home-services prototype. The system supports cus
 | `booking-service` | Booking lifecycle, slot holds and orchestration | 8082 | 5434 |
 | `worker-service` | Worker profiles, availability, tiers and matching data | 8083 | 5435 |
 | `wallet-service` | Append-only ledger, reservations, top-ups and refunds | 8084 | 5436 |
+| `support-service` | Durable support tickets and live customer chat | 8085 | 5437 |
 
 No service may query another service's database. Immediate commands use HTTP APIs; durable background facts use Kafka and a transactional outbox.
 
@@ -34,6 +35,8 @@ Registered customers and workers authenticate with Indian-phone OTP and role-sep
 
 The Wallet Service uses an append-only ledger for top-ups, reservations, split wallet/online payments, signed Razorpay webhooks and full refunds. Booking-payment amounts come only from Booking's stored server-side quote; Wallet independently validates lifecycle, hold expiry and wallet ownership before reserving or charging money. Transactional outbox publishers deliver keyed Kafka envelopes through short database leases; consumers are idempotent and use retry/dead-letter topics. Capacity and wallet accounts are locked only for short local transactions, and network calls run after those transactions commit.
 
+The Support Service provides booking-bound customer tickets and durable chat history. Customers may open or read only tickets for bookings they own. Server-sent event streams resume from a durable message ID and poll PostgreSQL rather than relying on instance-local memory, so reconnects and multiple service instances preserve message order.
+
 Payment confirmation is exposed only below `/internal/v1`; it is not routed by the customer API Gateway. Authentication and service-to-service authorization will be added before any real provider integration.
 
-See [docs/authentication.md](docs/authentication.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).
+See [docs/authentication.md](docs/authentication.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/support-api.md](docs/support-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).

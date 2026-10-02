@@ -54,6 +54,11 @@ data class RatingContextSnapshot(
     val visits: List<RatingVisitSnapshot>,
 )
 
+data class BookingOwnershipSnapshot(
+    val bookingId: UUID,
+    val customerId: UUID,
+)
+
 data class RatingVisitSnapshot(
     val visitIndex: Int,
     val workerId: UUID,

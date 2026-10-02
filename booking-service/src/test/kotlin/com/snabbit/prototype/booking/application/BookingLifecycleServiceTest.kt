@@ -270,6 +270,18 @@ class BookingLifecycleServiceTest {
         assertEquals(true, context.visits.single().completed)
     }
 
+    @Test
+    fun `ownership context exposes the authoritative booking customer`() {
+        val booking = booking(UUID.randomUUID())
+        every { bookingRepository.findById(booking.id) } returns Optional.of(booking)
+
+        val ownership = service.ownership(booking.id)
+
+        assertEquals(booking.id, ownership.bookingId)
+        assertEquals(booking.customerId, ownership.customerId)
+        verify(exactly = 0) { holdRepository.findAllByBookingIdOrderByVisitIndex(any()) }
+    }
+
     private fun multiDayCommand(workerId: UUID) = CreateBookingCommand(
         customerId = UUID.randomUUID(),
         serviceId = UUID.randomUUID(),

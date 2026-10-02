@@ -37,6 +37,9 @@ spring:
         - id: wallets
           uri: ${WALLET_SERVICE_URL:http://localhost:8084}
           predicates: [Path=/api/v1/wallets/**]
+        - id: support
+          uri: ${SUPPORT_SERVICE_URL:http://localhost:8085}
+          predicates: [Path=/api/v1/support/**]
         - id: razorpay-webhook
           uri: ${WALLET_SERVICE_URL:http://localhost:8084}
           predicates: [Path=/webhooks/razorpay]

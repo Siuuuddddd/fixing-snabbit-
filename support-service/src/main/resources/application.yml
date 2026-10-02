@@ -1,0 +1,24 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: support-service
+  main:
+    web-application-type: reactive
+  datasource:
+    url: ${SUPPORT_DB_URL:jdbc:postgresql://localhost:5437/support}
+    username: ${SUPPORT_DB_USERNAME:snabbit}
+    password: ${SUPPORT_DB_PASSWORD:snabbit-local}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+management:
+  endpoints.web.exposure.include: health,info,prometheus
+  endpoint.health.probes.enabled: true
+
+integrations:
+  booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
+
+support:
+  stream-poll-delay: PT1S

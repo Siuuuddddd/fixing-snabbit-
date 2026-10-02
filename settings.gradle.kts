@@ -6,4 +6,5 @@ include(
     "booking-service",
     "worker-service",
     "wallet-service",
+    "support-service",
 )

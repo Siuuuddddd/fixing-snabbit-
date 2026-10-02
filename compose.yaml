@@ -46,6 +46,15 @@ services:
     ports: ["5436:5432"]
     volumes: ["wallet-db-data:/var/lib/postgresql/data"]
 
+  support-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: support
+      POSTGRES_USER: snabbit
+      POSTGRES_PASSWORD: snabbit-local
+    ports: ["5437:5432"]
+    volumes: ["support-db-data:/var/lib/postgresql/data"]
+
   redis:
     image: redis:8-alpine
     restart: unless-stopped
@@ -74,4 +83,5 @@ volumes:
   booking-db-data:
   worker-db-data:
   wallet-db-data:
+  support-db-data:
   redis-data:

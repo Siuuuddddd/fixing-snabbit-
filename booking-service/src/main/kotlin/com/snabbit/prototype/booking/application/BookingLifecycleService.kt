@@ -170,6 +170,12 @@ class BookingLifecycleService(
         )
     }
 
+    @Transactional(readOnly = true)
+    fun ownership(bookingId: UUID): BookingOwnershipSnapshot {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        return BookingOwnershipSnapshot(booking.id, booking.customerId)
+    }
+
     @Transactional
     fun acceptOffer(bookingId: UUID, offerId: UUID, workerId: UUID): BookingSnapshot {
         val now = clock.instant()
