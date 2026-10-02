@@ -7,6 +7,7 @@ import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.catalog.ServiceOfferingSnapshot
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.BookingType
+import com.snabbit.prototype.booking.domain.BookingWindowPolicy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -32,7 +33,10 @@ class MatchAndHoldServiceTest {
         ZoneId.of("Asia/Kolkata"), LocalTime.of(8, 0), LocalTime.of(19, 0),
         Duration.ofMinutes(5), Duration.ofMinutes(1), Duration.ofSeconds(30), 100,
     )
-    private val service = MatchAndHoldService(mockk(), mockk<BookingLifecycleService>(), mockk(), properties, clock)
+    private val windowPolicy = BookingWindowPolicy(properties, clock)
+    private val service = MatchAndHoldService(
+        mockk(), mockk<BookingLifecycleService>(), mockk(), properties, clock, windowPolicy,
+    )
 
     @Test
     fun `Plus selects favourite worker continuously across every visit`() {
@@ -67,7 +71,7 @@ class MatchAndHoldServiceTest {
         val clients = mockk<MatchingClients>()
         val lifecycle = mockk<BookingLifecycleService>()
         val catalog = mockk<ServiceCatalogService>()
-        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock)
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
         val workerId = UUID.randomUUID()
@@ -131,7 +135,7 @@ class MatchAndHoldServiceTest {
         val clients = mockk<MatchingClients>()
         val lifecycle = mockk<BookingLifecycleService>()
         val catalog = mockk<ServiceCatalogService>()
-        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock)
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
         val workerId = UUID.randomUUID()
@@ -158,6 +162,46 @@ class MatchAndHoldServiceTest {
         }
 
         coVerify(exactly = 1) { clients.releasePass(customerId, any()) }
+    }
+
+    @Test
+    fun `availability identifies the visit customer must replace without creating a hold`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
+        val customerId = UUID.randomUUID()
+        val serviceId = UUID.randomUUID()
+        val availableStart = Instant.parse("2026-10-03T04:30:00Z")
+        val unavailableStart = Instant.parse("2026-10-04T04:30:00Z")
+        val workerId = UUID.randomUUID()
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.household(customerId) } returns household(false, emptyList()).copy(userId = customerId)
+        coEvery { clients.matches(any()) } answers {
+            if (firstArg<WorkerMatchRequest>().startsAt == availableStart) listOf(match(workerId, 21_000)) else emptyList()
+        }
+
+        val result = service.availability(
+            MatchAndHoldCommand(
+                customerId,
+                serviceId,
+                BookingType.MULTI_DAY,
+                Duration.ofHours(1),
+                19.07609,
+                72.877426,
+                listOf(availableStart, unavailableStart),
+            ),
+        )
+
+        assertEquals(false, result.allVisitsAvailable)
+        assertEquals(true, result.visits[0].available)
+        assertEquals(21_000, result.visits[0].lowestPriceMinor)
+        assertEquals(false, result.visits[1].available)
+        assertEquals(null, result.visits[1].lowestPriceMinor)
+        coVerify(exactly = 0) { clients.reservePass(any(), any()) }
+        io.mockk.verify(exactly = 0) { lifecycle.create(any()) }
     }
 
     private fun household(plusActive: Boolean, favourites: List<UUID>) = HouseholdSnapshotResponse(

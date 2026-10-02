@@ -21,6 +21,7 @@ The match-and-hold route is the intended customer path. It reserves an eligible 
 ## Customer-facing routes
 
 - `POST /api/v1/bookings/match-and-hold` — load the authoritative household snapshot, match compatible workers, then atomically create holds and offers.
+- `POST /api/v1/bookings/availability` — validate the same request without writing data and report availability, compatible-worker count and lowest price for each visit.
 - `POST /api/v1/bookings/{bookingId}/payments` — start split wallet/online payment from the stored quote. Requires `Idempotency-Key`; the request never accepts an amount.
 - `GET /api/v1/bookings/{bookingId}` — return the shared customer/worker duration and current lifecycle.
 - `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location` — return the assigned worker's latest accurate location when the authenticated customer owns the booking and tracking is open.
@@ -28,6 +29,8 @@ The match-and-hold route is the intended customer path. It reserves an eligible 
 - `DELETE /api/v1/bookings/{bookingId}/hold` — cancel a pre-confirmation booking and release holds.
 - `GET /api/v1/bookings/{bookingId}/cancellation-quote` — preview the current server-side fee and refund for an unstarted confirmed booking.
 - `POST /api/v1/bookings/{bookingId}/cancellations` — cancel an unstarted confirmed booking and emit the authoritative partial-refund fact.
+
+For a multi-day flow, Android should call `availability` first, highlight each unavailable visit and let the customer replace its date/time. The response also indicates whether one worker is currently compatible across every visit for Plus continuity. This is an advisory preview only: `match-and-hold` repeats matching and PostgreSQL slot locking remains the authoritative concurrency boundary.
 
 ## Internal route
 

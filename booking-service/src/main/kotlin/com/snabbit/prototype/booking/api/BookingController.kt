@@ -14,6 +14,7 @@ import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.matching.MatchAndHoldCommand
 import com.snabbit.prototype.booking.matching.MatchAndHoldService
+import com.snabbit.prototype.booking.matching.BookingAvailabilitySnapshot
 import com.snabbit.prototype.booking.payment.BookingPaymentSnapshot
 import com.snabbit.prototype.booking.payment.BookingPaymentService
 import com.snabbit.prototype.booking.payment.StartBookingPaymentCommand
@@ -116,6 +117,15 @@ class BookingCancellationController(private val service: BookingCancellationServ
 @RestController
 @RequestMapping("/api/v1/bookings")
 class MatchAndHoldController(private val service: MatchAndHoldService) {
+    @PostMapping("/availability")
+    suspend fun availability(
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+        @Valid @RequestBody request: MatchAndHoldRequest,
+    ): BookingAvailabilitySnapshot {
+        requireOwner(authenticatedCustomerId, request.customerId)
+        return service.availability(request.toCommand())
+    }
+
     @PostMapping("/match-and-hold")
     @ResponseStatus(HttpStatus.CREATED)
     suspend fun matchAndHold(
@@ -123,19 +133,19 @@ class MatchAndHoldController(private val service: MatchAndHoldService) {
         @Valid @RequestBody request: MatchAndHoldRequest,
     ): BookingSnapshot {
         requireOwner(authenticatedCustomerId, request.customerId)
-        return service.matchAndHold(
-            MatchAndHoldCommand(
-                customerId = request.customerId,
-                serviceId = request.serviceId,
-                bookingType = request.bookingType,
-                duration = Duration.ofHours(request.durationHours),
-                latitude = request.latitude,
-                longitude = request.longitude,
-                startsAt = request.startsAt,
-            ),
-        )
+        return service.matchAndHold(request.toCommand())
     }
 }
+
+private fun MatchAndHoldRequest.toCommand() = MatchAndHoldCommand(
+    customerId = customerId,
+    serviceId = serviceId,
+    bookingType = bookingType,
+    duration = Duration.ofHours(durationHours),
+    latitude = latitude,
+    longitude = longitude,
+    startsAt = startsAt,
+)
 
 @RestController
 @RequestMapping("/api/v1/bookings")
