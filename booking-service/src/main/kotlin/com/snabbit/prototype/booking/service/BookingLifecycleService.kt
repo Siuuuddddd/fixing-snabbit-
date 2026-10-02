@@ -265,7 +265,11 @@ class BookingLifecycleService(
     }
 
     @Transactional
-    fun cancelConfirmedByPlatform(bookingId: UUID, rawReason: String): BookingSnapshot {
+    fun cancelConfirmedByPlatform(
+        bookingId: UUID,
+        rawReason: String,
+        staffId: UUID? = null,
+    ): BookingSnapshot {
         val now = clock.instant()
         val booking = requireBookingForUpdate(bookingId)
         if (booking.status == BookingStatus.CANCELLED && booking.cancellationType == "PLATFORM") {
@@ -287,17 +291,19 @@ class BookingLifecycleService(
             throw InvalidBookingState("Platform cannot cancel after service has started or completed")
         }
         holds.forEach(SlotHold::cancelByPlatform)
-        booking.cancelByPlatform(reason, now)
+        booking.cancelByPlatform(reason, staffId, now)
+        val eventPayload = mutableMapOf<String, Any>(
+            "bookingId" to booking.id,
+            "customerId" to booking.customerId,
+            "refundAmountMinor" to booking.quotedTotalMinor,
+            "cancellationFeeMinor" to 0,
+            "cancelledAt" to now,
+        )
+        staffId?.let { eventPayload["cancelledByStaffId"] = it }
         outboxWriter.append(
             booking.id,
             "BookingPlatformCancelled",
-            mapOf(
-                "bookingId" to booking.id,
-                "customerId" to booking.customerId,
-                "refundAmountMinor" to booking.quotedTotalMinor,
-                "cancellationFeeMinor" to 0,
-                "cancelledAt" to now,
-            ),
+            eventPayload,
             now,
         )
         return currentSnapshot(booking)

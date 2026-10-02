@@ -41,6 +41,12 @@ For a multi-day flow, Android should call `availability` first, highlight each u
 
 Internal routes require the shared service credential described in [authentication.md](authentication.md). They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions are exposed separately through role-protected worker APIs documented in [worker-api.md](worker-api.md).
 
+## Operations route
+
+- `POST /api/v1/staff/operations/bookings/{bookingId}/platform-cancellation` — allow an operations manager or administrator to cancel before service start when the platform cannot provide a worker.
+
+The gateway supplies the signed staff identity; request bodies cannot choose the operator. Booking persists that identity in `cancelled_by_staff_id`, releases every unstarted assignment and emits the full-refund event consumed idempotently by Wallet Service. Repeating the command is safe and preserves the identity of the original operator.
+
 Worker tracking opens two hours before a confirmed visit and closes on completion or cancellation. Booking revalidates ownership and visit state throughout the stream. Points older than two minutes are withheld; coordinates are sourced from Worker Service's append-only location history rather than a client-supplied booking payload.
 
 ## Confirmed cancellation policy

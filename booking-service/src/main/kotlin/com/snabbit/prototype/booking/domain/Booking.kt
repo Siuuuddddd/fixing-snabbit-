@@ -75,6 +75,8 @@ class Booking(
     var refundAmountMinor: Long? = null,
     @Column(name = "cancelled_at")
     var cancelledAt: Instant? = null,
+    @Column(name = "cancelled_by_staff_id")
+    var cancelledByStaffId: UUID? = null,
     @Version
     var version: Long = 0,
 ) {
@@ -132,7 +134,7 @@ class Booking(
         updatedAt = now
     }
 
-    fun cancelByPlatform(reason: String, now: Instant) {
+    fun cancelByPlatform(reason: String, staffId: UUID?, now: Instant) {
         check(status == BookingStatus.CONFIRMED) { "Only a confirmed booking can be cancelled by the platform" }
         require(reason.isNotBlank()) { "Platform cancellation reason is required" }
         status = BookingStatus.CANCELLED
@@ -140,6 +142,7 @@ class Booking(
         cancellationReason = reason
         cancellationFeeMinor = 0
         refundAmountMinor = quotedTotalMinor
+        cancelledByStaffId = staffId
         cancelledAt = now
         updatedAt = now
     }

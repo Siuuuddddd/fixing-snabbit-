@@ -236,12 +236,14 @@ class BookingLifecycleServiceTest {
         every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
         every { offerRepository.findAllByBookingIdOrderByCreatedAt(booking.id) } returns listOf(offer)
         every { outboxRepository.save(any()) } answers { firstArg() }
+        val staffId = UUID.randomUUID()
 
-        val result = service.cancelConfirmedByPlatform(booking.id, "Replacement worker unavailable")
+        val result = service.cancelConfirmedByPlatform(booking.id, "Replacement worker unavailable", staffId)
 
         assertEquals("PLATFORM", result.cancellationType)
         assertEquals(0, result.cancellationFeeMinor)
         assertEquals(booking.quotedTotalMinor, result.refundAmountMinor)
+        assertEquals(staffId, booking.cancelledByStaffId)
         assertEquals(SlotHoldStatus.RELEASED, hold.status)
         verify(exactly = 1) { outboxRepository.save(match { it.eventType == "BookingPlatformCancelled" }) }
     }
