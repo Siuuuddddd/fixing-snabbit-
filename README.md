@@ -34,7 +34,7 @@ The default Compose file starts infrastructure only, which is convenient when ru
 docker compose -f compose.yaml -f compose.apps.yaml up --build
 ```
 
-The application overlay keeps Kafka reachable both from host-run services at `localhost:9092` and containers at `kafka:29092`. All checked-in credentials and exposed ports are local-development defaults only.
+The application overlay keeps Kafka reachable both from host-run services at `localhost:9092` and containers at `kafka:29092`. All checked-in credentials are local-development defaults only, and every published development port is bound to `127.0.0.1` so databases, brokers and internal APIs are not exposed to the LAN.
 
 Service health is available at `/actuator/health`. Local credentials in `compose.yaml` are development-only.
 

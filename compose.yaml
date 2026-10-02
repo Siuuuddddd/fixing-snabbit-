@@ -16,7 +16,7 @@ services:
       POSTGRES_DB: users
       POSTGRES_USER: snabbit
       POSTGRES_PASSWORD: snabbit-local
-    ports: ["5433:5432"]
+    ports: ["127.0.0.1:5433:5432"]
     volumes: ["user-db-data:/var/lib/postgresql/data"]
 
   booking-db:
@@ -25,7 +25,7 @@ services:
       POSTGRES_DB: bookings
       POSTGRES_USER: snabbit
       POSTGRES_PASSWORD: snabbit-local
-    ports: ["5434:5432"]
+    ports: ["127.0.0.1:5434:5432"]
     volumes: ["booking-db-data:/var/lib/postgresql/data"]
 
   worker-db:
@@ -34,7 +34,7 @@ services:
       POSTGRES_DB: workers
       POSTGRES_USER: snabbit
       POSTGRES_PASSWORD: snabbit-local
-    ports: ["5435:5432"]
+    ports: ["127.0.0.1:5435:5432"]
     volumes: ["worker-db-data:/var/lib/postgresql/data"]
 
   wallet-db:
@@ -43,7 +43,7 @@ services:
       POSTGRES_DB: wallets
       POSTGRES_USER: snabbit
       POSTGRES_PASSWORD: snabbit-local
-    ports: ["5436:5432"]
+    ports: ["127.0.0.1:5436:5432"]
     volumes: ["wallet-db-data:/var/lib/postgresql/data"]
 
   support-db:
@@ -52,7 +52,7 @@ services:
       POSTGRES_DB: support
       POSTGRES_USER: snabbit
       POSTGRES_PASSWORD: snabbit-local
-    ports: ["5437:5432"]
+    ports: ["127.0.0.1:5437:5432"]
     volumes: ["support-db-data:/var/lib/postgresql/data"]
 
   notification-db:
@@ -61,20 +61,20 @@ services:
       POSTGRES_DB: notifications
       POSTGRES_USER: snabbit
       POSTGRES_PASSWORD: snabbit-local
-    ports: ["5438:5432"]
+    ports: ["127.0.0.1:5438:5432"]
     volumes: ["notification-db-data:/var/lib/postgresql/data"]
 
   redis:
     image: redis:8-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
     volumes: ["redis-data:/data"]
 
   kafka:
     image: apache/kafka:4.0.0
     restart: unless-stopped
-    ports: ["9092:9092"]
+    ports: ["127.0.0.1:9092:9092"]
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller

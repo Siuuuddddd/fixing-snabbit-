@@ -33,7 +33,7 @@ services:
     build:
       context: .
       args: { SERVICE: user-service }
-    ports: ["8081:8081"]
+    ports: ["127.0.0.1:8081:8081"]
     environment:
       <<: *service-environment
       USER_DB_URL: jdbc:postgresql://user-db:5432/users
@@ -49,7 +49,7 @@ services:
     build:
       context: .
       args: { SERVICE: booking-service }
-    ports: ["8082:8082"]
+    ports: ["127.0.0.1:8082:8082"]
     environment:
       <<: *service-environment
       BOOKING_DB_URL: jdbc:postgresql://booking-db:5432/bookings
@@ -65,7 +65,7 @@ services:
     build:
       context: .
       args: { SERVICE: worker-service }
-    ports: ["8083:8083"]
+    ports: ["127.0.0.1:8083:8083"]
     environment:
       <<: *service-environment
       WORKER_DB_URL: jdbc:postgresql://worker-db:5432/workers
@@ -81,7 +81,7 @@ services:
     build:
       context: .
       args: { SERVICE: wallet-service }
-    ports: ["8084:8084"]
+    ports: ["127.0.0.1:8084:8084"]
     environment:
       <<: *service-environment
       WALLET_DB_URL: jdbc:postgresql://wallet-db:5432/wallets
@@ -98,7 +98,7 @@ services:
     build:
       context: .
       args: { SERVICE: support-service }
-    ports: ["8085:8085"]
+    ports: ["127.0.0.1:8085:8085"]
     environment:
       <<: *service-environment
       SUPPORT_DB_URL: jdbc:postgresql://support-db:5432/support
@@ -112,7 +112,7 @@ services:
     build:
       context: .
       args: { SERVICE: notification-service }
-    ports: ["8086:8086"]
+    ports: ["127.0.0.1:8086:8086"]
     environment:
       <<: *service-environment
       NOTIFICATION_DB_URL: jdbc:postgresql://notification-db:5432/notifications
@@ -127,7 +127,7 @@ services:
     build:
       context: .
       args: { SERVICE: api-gateway }
-    ports: ["8080:8080"]
+    ports: ["127.0.0.1:8080:8080"]
     environment:
       <<: *service-environment
     depends_on:
