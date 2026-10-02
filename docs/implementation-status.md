@@ -23,7 +23,7 @@ This document maps the confirmed product decisions to the code that currently en
 | Notifications and live updates | Notification Service stores customer and worker history, reconnectable WebSocket streams and leased push/SMS jobs. Worker-offer fan-out contains no customer identity or address. | Notification event, persistence and delivery tests. |
 | Live support | Support Service owns booking-bound tickets and durable chat. Customer ownership and staff identity are authoritative; resumable SSE uses database message IDs. | Support service/transaction/security tests. |
 | Mutual ratings | Each completed visit can receive one worker rating and one customer rating through role-separated APIs. | Worker and customer rating tests. |
-| Role-separated authentication | Customer, worker and four staff roles receive short-lived JWTs from separate OTP paths. Gateway authorization and identity-header replacement prevent body/header identity selection. | Authentication and gateway header-filter tests. |
+| Role-separated authentication | Customer, worker and four staff roles receive short-lived JWTs from separate OTP paths. Gateway authorization and identity-header replacement prevent body/header identity selection. | Authentication, gateway authorization integration and identity-header tests. |
 | Service data isolation | User, Booking, Worker, Wallet, Support and Notification each have an independent PostgreSQL configuration and migration history. Cross-service reads use internal HTTP APIs. | Compose topology, service configuration and Testcontainers suites. |
 
 ## Automated gates
