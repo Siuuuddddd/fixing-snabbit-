@@ -32,6 +32,8 @@ data class MatchWorkersCommand(
     val foodContext: String?,
     val utensilPreferences: List<String>,
     val preferredLanguages: List<String>,
+    val allergies: List<String>,
+    val religiousFoodRestrictions: List<String>,
     val workerConstraints: List<String>,
     val heavyLiftingRequired: Boolean,
     val disallowedChemicals: List<String>,
@@ -117,15 +119,21 @@ class WorkerMatchingService(
         val workerConstraints = worker.supportedWorkerConstraints.map(String::uppercase).toSet()
         val avoidedChemicals = worker.avoidedChemicals.map(String::uppercase).toSet()
         val requestedLanguages = command.preferredLanguages.map(String::uppercase).toSet()
+        val requestedAllergyConstraints = command.allergies.map(String::uppercase).toSet()
+        val requestedReligiousFoodRestrictions = command.religiousFoodRestrictions.map(String::uppercase).toSet()
         val requestedEquipment = command.requiredEquipment.map(String::uppercase).toSet()
         val requestedAccessibility = command.accessibilityNeeds.map(String::uppercase).toSet()
         val requestedUtensilPreferences = command.utensilPreferences.map(String::uppercase).toSet()
         val requestedWorkerConstraints = command.workerConstraints.map(String::uppercase).toSet()
         val disallowedChemicals = command.disallowedChemicals.map(String::uppercase).toSet()
+        val supportedAllergyConstraints = worker.supportedAllergyConstraints.map(String::uppercase).toSet()
+        val acceptedReligiousFoodRestrictions = worker.acceptedReligiousFoodRestrictions.map(String::uppercase).toSet()
         val foodContext = command.foodContext?.uppercase()
         return (!command.hasPets || worker.acceptsPets) &&
             (!command.heavyLiftingRequired || worker.canHeavyLift) &&
             (requestedLanguages.isEmpty() || requestedLanguages.any(languages::contains)) &&
+            supportedAllergyConstraints.containsAll(requestedAllergyConstraints) &&
+            acceptedReligiousFoodRestrictions.containsAll(requestedReligiousFoodRestrictions) &&
             utensilPreferences.containsAll(requestedUtensilPreferences) &&
             workerConstraints.containsAll(requestedWorkerConstraints) &&
             avoidedChemicals.containsAll(disallowedChemicals) &&

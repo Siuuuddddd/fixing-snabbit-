@@ -6,7 +6,7 @@ The request contains `serviceId` and an owned `addressId`, never client-selected
 
 ## Matching rules
 
-Candidates must be active, skilled for the requested service, available for the whole visit and within both the request radius and the worker's own service radius. Hard compatibility filters cover pets, food context, language, utensils, accessibility, heavy lifting, worker constraints, avoided cleaning chemicals and required equipment.
+Candidates must be active, skilled for the requested service, available for the whole visit and within both the request radius and the worker's own service radius. Hard compatibility filters cover pets, food context, language, allergies, religious/food restrictions, utensils, accessibility, heavy lifting, worker constraints, avoided cleaning chemicals and required equipment.
 
 Eligible workers are ranked by Plus/favourite preference, rating and distance. Plus multi-day bookings first look for one worker available on every visit and prefer the customer's favourite order; if continuity is impossible, the best candidate is chosen independently per visit. Tier pricing is base hourly price plus one per-visit surcharge: Standard ₹0, Veteran ₹30, Expert ₹50.
 

@@ -81,6 +81,7 @@ class MatchAndHoldServiceTest {
             hasPets = true,
             petDetails = "One dog",
             allergies = listOf("DUST"),
+            religiousFoodRestrictions = listOf("NO_PORK"),
             workerConstraints = listOf("MASK_REQUIRED"),
         )
         val created = slot<CreateBookingCommand>()
@@ -126,6 +127,8 @@ class MatchAndHoldServiceTest {
         assertEquals(39_000, created.captured.quotedTotalMinor)
         assertEquals("HOUSE_CLEANING", matchRequest.captured.serviceCode)
         assertEquals(18_000, matchRequest.captured.basePricePerHourMinor)
+        assertEquals(listOf("DUST"), matchRequest.captured.allergies)
+        assertEquals(listOf("NO_PORK"), matchRequest.captured.religiousFoodRestrictions)
         assertEquals("One dog", created.captured.requirements.petDetails)
         assertEquals(listOf("DUST"), created.captured.requirements.allergies)
         assertEquals(listOf("MASK_REQUIRED"), created.captured.requirements.workerConstraints)

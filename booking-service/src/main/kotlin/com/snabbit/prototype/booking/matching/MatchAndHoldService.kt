@@ -183,6 +183,8 @@ class MatchAndHoldService(
                         foodContext = household.foodContext,
                         utensilPreferences = household.utensilPreferences,
                         preferredLanguages = household.preferredLanguages,
+                        allergies = household.allergies,
+                        religiousFoodRestrictions = household.religiousFoodRestrictions,
                         workerConstraints = household.workerConstraints,
                         heavyLiftingRequired = household.heavyLiftingRequired,
                         disallowedChemicals = household.disallowedChemicals,

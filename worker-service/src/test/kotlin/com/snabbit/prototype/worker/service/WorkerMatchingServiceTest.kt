@@ -87,6 +87,37 @@ class WorkerMatchingServiceTest {
         assertEquals(listOf(compatible.id), matches.map { it.workerId })
     }
 
+    @Test
+    fun `allergy and religious food restrictions remove workers who cannot comply`() {
+        val incompatible = profile(WorkerTier.STANDARD, "Cannot comply")
+        val compatible = profile(WorkerTier.STANDARD, "Can comply")
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(incompatible, compatible)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(
+            skill(incompatible.id), skill(compatible.id),
+        )
+        every {
+            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
+        } returns listOf(available(incompatible.id), available(compatible.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
+            compatibility(incompatible.id, true),
+            compatibility(
+                compatible.id,
+                true,
+                allergyConstraints = listOf("DUST"),
+                religiousFoodRestrictions = listOf("NO_PORK"),
+            ),
+        )
+
+        val matches = service.match(
+            command(UUID.randomUUID(), hasPets = false).copy(
+                allergies = listOf("dust"),
+                religiousFoodRestrictions = listOf("no_pork"),
+            ),
+        )
+
+        assertEquals(listOf(compatible.id), matches.map { it.workerId })
+    }
+
     private fun stubCandidates(first: WorkerProfile, second: WorkerProfile, acceptsPets: Boolean) {
         every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(first, second)
         every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(
@@ -114,6 +145,8 @@ class WorkerMatchingServiceTest {
         foodContext = "VEGETARIAN",
         utensilPreferences = emptyList(),
         preferredLanguages = listOf("Hindi"),
+        allergies = emptyList(),
+        religiousFoodRestrictions = emptyList(),
         workerConstraints = emptyList(),
         heavyLiftingRequired = false,
         disallowedChemicals = emptyList(),
@@ -159,6 +192,8 @@ class WorkerMatchingServiceTest {
         utensilPreferences: List<String> = emptyList(),
         workerConstraints: List<String> = emptyList(),
         avoidedChemicals: List<String> = emptyList(),
+        allergyConstraints: List<String> = emptyList(),
+        religiousFoodRestrictions: List<String> = emptyList(),
     ) = WorkerCompatibility(
         workerId = workerId,
         acceptsPets = acceptsPets,
@@ -166,6 +201,8 @@ class WorkerMatchingServiceTest {
         acceptedFoodContexts = listOf("VEGETARIAN"),
         supportedUtensilPreferences = utensilPreferences,
         supportedWorkerConstraints = workerConstraints,
+        supportedAllergyConstraints = allergyConstraints,
+        acceptedReligiousFoodRestrictions = religiousFoodRestrictions,
         canHeavyLift = true,
         availableEquipment = listOf("MOP"),
         avoidedChemicals = avoidedChemicals,

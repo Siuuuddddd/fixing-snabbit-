@@ -30,6 +30,12 @@ class WorkerCompatibility(
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "supported_worker_constraints", nullable = false, columnDefinition = "jsonb")
     val supportedWorkerConstraints: List<String>,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "supported_allergy_constraints", nullable = false, columnDefinition = "jsonb")
+    val supportedAllergyConstraints: List<String>,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "accepted_religious_food_restrictions", nullable = false, columnDefinition = "jsonb")
+    val acceptedReligiousFoodRestrictions: List<String>,
     @Column(name = "can_heavy_lift", nullable = false)
     val canHeavyLift: Boolean,
     @JdbcTypeCode(SqlTypes.JSON)
