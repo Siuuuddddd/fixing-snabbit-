@@ -17,6 +17,8 @@ class WalletService(
 ) {
     fun balance(walletId: UUID): WalletBalance = transactions.balance(walletId)
 
+    fun ownership(walletId: UUID): WalletOwnershipSnapshot = transactions.ownership(walletId)
+
     fun balanceForCustomer(walletId: UUID, customerId: UUID): WalletBalance {
         transactions.requireOwnership(walletId, customerId)
         return transactions.balance(walletId)

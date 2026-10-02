@@ -40,6 +40,9 @@ spring:
         - id: support
           uri: ${SUPPORT_SERVICE_URL:http://localhost:8085}
           predicates: [Path=/api/v1/support/**]
+        - id: notifications
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+          predicates: [Path=/api/v1/notifications/**]
         - id: razorpay-webhook
           uri: ${WALLET_SERVICE_URL:http://localhost:8084}
           predicates: [Path=/webhooks/razorpay]

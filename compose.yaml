@@ -55,6 +55,15 @@ services:
     ports: ["5437:5432"]
     volumes: ["support-db-data:/var/lib/postgresql/data"]
 
+  notification-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: snabbit
+      POSTGRES_PASSWORD: snabbit-local
+    ports: ["5438:5432"]
+    volumes: ["notification-db-data:/var/lib/postgresql/data"]
+
   redis:
     image: redis:8-alpine
     restart: unless-stopped
@@ -84,4 +93,5 @@ volumes:
   worker-db-data:
   wallet-db-data:
   support-db-data:
+  notification-db-data:
   redis-data:

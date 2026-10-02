@@ -6,6 +6,7 @@ import com.snabbit.prototype.wallet.application.RazorpayWebhookService
 import com.snabbit.prototype.wallet.application.TopUpSnapshot
 import com.snabbit.prototype.wallet.application.WalletBalance
 import com.snabbit.prototype.wallet.application.WalletService
+import com.snabbit.prototype.wallet.application.WalletOwnershipSnapshot
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
@@ -53,6 +54,9 @@ class WalletController(private val service: WalletService) {
 @RestController
 @RequestMapping("/internal/v1/wallets")
 class InternalWalletController(private val service: WalletService) {
+    @GetMapping("/{walletId}/ownership")
+    fun ownership(@PathVariable walletId: UUID): WalletOwnershipSnapshot = service.ownership(walletId)
+
     @PostMapping("/{walletId}/booking-payments")
     fun createBookingPayment(
         @PathVariable walletId: UUID,

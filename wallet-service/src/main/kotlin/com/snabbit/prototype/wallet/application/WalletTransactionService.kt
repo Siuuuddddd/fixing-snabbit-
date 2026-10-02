@@ -72,6 +72,11 @@ class WalletTransactionService(
     private val clock: Clock,
 ) {
     @Transactional(readOnly = true)
+    fun ownership(walletId: UUID): WalletOwnershipSnapshot {
+        val wallet = walletRepository.findById(walletId).orElseThrow { WalletNotFound(walletId) }
+        return WalletOwnershipSnapshot(wallet.id, wallet.customerId)
+    }
+    @Transactional(readOnly = true)
     fun balance(walletId: UUID): WalletBalance {
         val wallet = walletRepository.findById(walletId).orElseThrow { WalletNotFound(walletId) }
         val now = clock.instant()

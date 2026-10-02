@@ -12,6 +12,8 @@ data class WalletBalance(
     val totalSpentMinor: Long,
 )
 
+data class WalletOwnershipSnapshot(val walletId: UUID, val customerId: UUID)
+
 data class TopUpSnapshot(
     val topUpId: UUID,
     val walletId: UUID,

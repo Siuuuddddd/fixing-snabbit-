@@ -7,4 +7,5 @@ include(
     "worker-service",
     "wallet-service",
     "support-service",
+    "notification-service",
 )

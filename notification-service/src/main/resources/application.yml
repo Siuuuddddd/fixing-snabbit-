@@ -1,0 +1,40 @@
+server:
+  port: 8086
+spring:
+  application:
+    name: notification-service
+  main:
+    web-application-type: reactive
+  datasource:
+    url: ${NOTIFICATION_DB_URL:jdbc:postgresql://localhost:5438/notifications}
+    username: ${NOTIFICATION_DB_USERNAME:snabbit}
+    password: ${NOTIFICATION_DB_PASSWORD:snabbit-local}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+management:
+  endpoints.web.exposure.include: health,info,prometheus
+  endpoint.health.probes.enabled: true
+
+integrations:
+  booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
+  wallet-service-url: ${WALLET_SERVICE_URL:http://localhost:8084}
+  user-service-url: ${USER_SERVICE_URL:http://localhost:8081}
+
+notifications:
+  consumer-group: notification-service
+  booking-topic: booking-events
+  wallet-topic: wallet-events
+  stream-poll-delay: PT1S
+  delivery-poll-delay: PT5S
+  delivery-claim-duration: PT30S
+  delivery-batch-size: 50
+  delivery-max-attempts: 5

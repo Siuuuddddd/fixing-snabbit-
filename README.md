@@ -14,6 +14,7 @@ Backend foundation for a Mumbai home-services prototype. The system supports cus
 | `worker-service` | Worker profiles, availability, tiers and matching data | 8083 | 5435 |
 | `wallet-service` | Append-only ledger, reservations, top-ups and refunds | 8084 | 5436 |
 | `support-service` | Durable support tickets and live customer chat | 8085 | 5437 |
+| `notification-service` | Kafka-backed history, WebSocket updates, push and SMS delivery | 8086 | 5438 |
 
 No service may query another service's database. Immediate commands use HTTP APIs; durable background facts use Kafka and a transactional outbox.
 
@@ -37,8 +38,10 @@ The Wallet Service uses an append-only ledger for top-ups, reservations, split w
 
 The Support Service provides booking-bound customer tickets and durable chat history. Customers may open or read only tickets for bookings they own. Server-sent event streams resume from a durable message ID and poll PostgreSQL rather than relying on instance-local memory, so reconnects and multiple service instances preserve message order.
 
+Notification Service turns committed Booking and Wallet facts into durable customer history, reconnectable WebSocket updates and leased push/SMS delivery jobs. Critical events use both channels; delivery adapters are replaceable and the local profile logs only masked development sends.
+
 Snabbit Plus is represented by durable subscriptions and single-use discounted passes owned by User Service. Booking reserves an eligible pass before creating its atomic hold, persists an auditable gross/discount/net price breakdown, compensates a failed hold, and consumes, releases or restores the pass from idempotent Booking event handling. Plus membership also provides priority matching, favourite-worker continuity and reduced cancellation fees. Confirmed cancellations record their fee/refund breakdown; platform inability triggers a full refund, and Wallet returns partial or full amounts to the original split-payment sources.
 
 Payment confirmation is exposed only below `/internal/v1`; it is not routed by the customer API Gateway. Authentication and service-to-service authorization will be added before any real provider integration.
 
-See [docs/authentication.md](docs/authentication.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/plus-api.md](docs/plus-api.md), [docs/support-api.md](docs/support-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).
+See [docs/authentication.md](docs/authentication.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/plus-api.md](docs/plus-api.md), [docs/support-api.md](docs/support-api.md), [docs/notifications-api.md](docs/notifications-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).
