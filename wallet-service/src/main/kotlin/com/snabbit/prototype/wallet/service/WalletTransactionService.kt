@@ -30,6 +30,7 @@ import com.snabbit.prototype.wallet.support.WalletRuleViolation
 import com.snabbit.prototype.wallet.support.WalletAccessDenied
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.data.domain.PageRequest
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
@@ -163,7 +164,9 @@ class WalletTransactionService(
         if (planCode.isBlank() || planCode.length > 60) throw WalletRuleViolation("A valid Plus plan code is required")
         if (durationDays !in 1..365) throw WalletRuleViolation("Plus duration must be between 1 and 365 days")
         if (passCount !in 0..20) throw WalletRuleViolation("Plus pass count must be between 0 and 20")
-        if (passDiscountMinor < 0 || (passCount > 0 && passDiscountMinor == 0L)) {
+        if (passDiscountMinor < 0 || passDiscountMinor % 100 != 0L ||
+            (passCount > 0 && passDiscountMinor < 100)
+        ) {
             throw WalletRuleViolation("Plus pass discount is invalid")
         }
         val wallet = walletRepository.findForUpdate(walletId) ?: throw WalletNotFound(walletId)
@@ -546,11 +549,19 @@ class WalletTransactionService(
     fun claimRefund(refundId: UUID): RefundExecution? {
         val refund = refundRepository.findForUpdate(refundId)
             ?: throw PaymentNotFound("Refund $refundId was not found")
-        if (refund.status == RefundStatus.COMPLETED || refund.status == RefundStatus.PROCESSING) return null
-        if (refund.status != RefundStatus.CREATING) throw PaymentConflict("Refund cannot be processed")
+        if (refund.status == RefundStatus.COMPLETED) return null
+        val now = clock.instant()
+        if (refund.status == RefundStatus.PROCESSING &&
+            refund.updatedAt.isAfter(now.minus(properties.refundProcessingLease))
+        ) {
+            return null
+        }
+        if (refund.status != RefundStatus.CREATING && refund.status != RefundStatus.PROCESSING) {
+            throw PaymentConflict("Refund cannot be processed")
+        }
         val payment = paymentRepository.findById(refund.bookingPaymentId)
             .orElseThrow { PaymentNotFound("Booking payment was not found") }
-        refund.beginProcessing(clock.instant())
+        refund.beginProcessing(now)
         return RefundExecution(refund.id, payment.providerPaymentId, refund.onlineAmountMinor)
     }
 
@@ -561,7 +572,12 @@ class WalletTransactionService(
 
     @Transactional(readOnly = true)
     fun pendingRefundIds(): List<UUID> =
-        refundRepository.findTop100ByStatusOrderByCreatedAt(RefundStatus.CREATING).map(PaymentRefund::id)
+        refundRepository.findRetryable(
+            RefundStatus.CREATING,
+            RefundStatus.PROCESSING,
+            clock.instant().minus(properties.refundProcessingLease),
+            PageRequest.of(0, 100),
+        ).map(PaymentRefund::id)
 
     @Transactional(readOnly = true)
     fun financeRefunds(status: RefundStatus?): List<FinanceRefundSnapshot> {
@@ -749,7 +765,9 @@ class WalletTransactionService(
     )
 
     private fun validateAmount(amountMinor: Long) {
-        if (amountMinor <= 0) throw WalletRuleViolation("Amount must be greater than zero")
+        if (amountMinor < 100 || amountMinor % 100 != 0L) {
+            throw WalletRuleViolation("Amount must be at least one rupee and use whole-rupee increments")
+        }
     }
 
     private fun validateIdempotencyKey(key: String) {

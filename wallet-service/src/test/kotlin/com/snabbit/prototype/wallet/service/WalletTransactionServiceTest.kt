@@ -13,6 +13,7 @@ import com.snabbit.prototype.wallet.domain.WalletAccount
 import com.snabbit.prototype.wallet.domain.WalletLedgerEntry
 import com.snabbit.prototype.wallet.domain.WalletReservation
 import com.snabbit.prototype.wallet.domain.PaymentRefund
+import com.snabbit.prototype.wallet.domain.RefundStatus
 import com.snabbit.prototype.wallet.repository.BookingPaymentRepository
 import com.snabbit.prototype.wallet.repository.PaymentRefundRepository
 import com.snabbit.prototype.wallet.repository.ProcessedWebhookStore
@@ -24,6 +25,7 @@ import com.snabbit.prototype.wallet.repository.WalletOutboxRepository
 import com.snabbit.prototype.wallet.repository.WalletReservationRepository
 import com.snabbit.prototype.wallet.support.PaymentConflict
 import com.snabbit.prototype.wallet.support.WalletAccessDenied
+import com.snabbit.prototype.wallet.support.WalletRuleViolation
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -53,6 +55,7 @@ class WalletTransactionServiceTest {
         currency = "INR",
         reservationDuration = Duration.ofMinutes(5),
         refundRetryDelay = Duration.ofMinutes(1),
+        refundProcessingLease = Duration.ofMinutes(5),
         razorpay = RazorpayProperties("fake", "https://example.invalid", "", "", "secret"),
     )
     private val service = WalletTransactionService(
@@ -120,6 +123,15 @@ class WalletTransactionServiceTest {
 
         verify(exactly = 0) { paymentRepository.save(any()) }
         verify(exactly = 0) { reservationRepository.save(any()) }
+    }
+
+    @Test
+    fun `money inputs reject sub-rupee values that Razorpay cannot refund`() {
+        assertThrows(WalletRuleViolation::class.java) {
+            service.prepareTopUp(UUID.randomUUID(), 50, "tiny-topup")
+        }
+
+        verify(exactly = 0) { walletRepository.findForUpdate(any()) }
     }
 
     @Test
@@ -243,6 +255,48 @@ class WalletTransactionServiceTest {
         assertEquals(10_000, saved.captured.walletAmountMinor)
         assertEquals(2_500, saved.captured.onlineAmountMinor)
         assertEquals(BookingPaymentStatus.REFUND_PENDING, payment.status)
+    }
+
+    @Test
+    fun `stale processing refund is reclaimed after a crash but an active claim is not`() {
+        val payment = BookingPayment(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null,
+            5_000, 0, 5_000, BookingPaymentStatus.REFUND_PENDING,
+            provider = "RAZORPAY", providerPaymentId = "pay_captured", idempotencyKey = "payment",
+            createdAt = now.minusSeconds(600), updatedAt = now.minusSeconds(600),
+        )
+        val refund = PaymentRefund(
+            UUID.randomUUID(), payment.id, payment.walletId, 0, 5_000, RefundStatus.PROCESSING,
+            null, "refund-once", now.minusSeconds(600), now.minusSeconds(301),
+        )
+        every { refundRepository.findForUpdate(refund.id) } returns refund
+        every { paymentRepository.findById(payment.id) } returns java.util.Optional.of(payment)
+
+        val reclaimed = service.claimRefund(refund.id)
+        val stillActive = service.claimRefund(refund.id)
+
+        assertEquals(refund.id, reclaimed?.refundId)
+        assertEquals(now, refund.updatedAt)
+        assertEquals(null, stillActive)
+        verify(exactly = 1) { paymentRepository.findById(payment.id) }
+    }
+
+    @Test
+    fun `refund retry queue includes abandoned processing leases`() {
+        val refund = PaymentRefund(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0, 5_000, RefundStatus.PROCESSING,
+            null, "refund-queued", now.minusSeconds(600), now.minusSeconds(301),
+        )
+        every {
+            refundRepository.findRetryable(
+                RefundStatus.CREATING,
+                RefundStatus.PROCESSING,
+                now.minusSeconds(300),
+                match { it.pageSize == 100 },
+            )
+        } returns listOf(refund)
+
+        assertEquals(listOf(refund.id), service.pendingRefundIds())
     }
 
     private fun wallet() = WalletAccount(

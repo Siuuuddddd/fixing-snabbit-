@@ -1,6 +1,6 @@
 # Wallet and payment API
 
-All monetary values are integer paise. Currency is `INR` in the prototype.
+All monetary values are integer paise. Currency is `INR` in the prototype. Customer charges and top-ups use whole-rupee increments and must be at least ₹1, which keeps every possible split-payment remainder and later partial refund valid for Razorpay.
 
 ## Accounting invariant
 
@@ -45,7 +45,7 @@ For a ₹150 total with ₹100 available:
 
 ## Refund safety
 
-Refund requests are stored before calling Razorpay. A short transaction claims one refund as `PROCESSING`, so concurrent app instances cannot intentionally submit it twice. Provider failures return it to `CREATING` for the retry scheduler. Wallet portions are credited only after any required online refund succeeds.
+Refund requests are stored before calling Razorpay. A short transaction claims one refund as `PROCESSING`, so concurrent app instances cannot intentionally submit it twice. The durable refund UUID is sent as Razorpay's `X-Refund-Idempotency` key and as an audit note, making a retry safe even if Razorpay succeeds immediately before the Wallet process crashes. A five-minute processing lease lets the scheduler reclaim abandoned work; ordinary provider failures return it to `CREATING` immediately. Wallet portions are credited only after any required online refund succeeds.
 
 Confirmed customer cancellations can request a partial refund only through the trusted `BookingCustomerCancelled` event. Wallet verifies that the requested amount is between zero and the captured total, retains the cancellation fee from the online portion first, then refunds the remainder to the original online and wallet sources. Platform cancellations use the same path with the full captured total. `totalSpentMinor` is derived from completed booking payments minus completed refunds, so a partial refund leaves only the retained fee as spend.
 

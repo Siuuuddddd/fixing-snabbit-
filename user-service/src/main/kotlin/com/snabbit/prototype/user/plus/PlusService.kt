@@ -86,8 +86,10 @@ class PlusService(
     ): PlusStatusSnapshot {
         if (durationDays !in 1..365) throw PlusRequestRejected("Subscription duration must be between 1 and 365 days")
         if (passCount !in 0..20) throw PlusRequestRejected("Pass count must be between 0 and 20")
-        if (passCount > 0 && passDiscountMinor <= 0) {
-            throw PlusRequestRejected("Pass discount must be positive when passes are granted")
+        if (passDiscountMinor < 0 || passDiscountMinor % 100 != 0L ||
+            (passCount > 0 && passDiscountMinor < 100)
+        ) {
+            throw PlusRequestRejected("Pass discount must use non-negative whole-rupee increments")
         }
         val sourceReference = "plus-purchase:$purchaseId"
         val user = users.findForUpdate(userId) ?: throw UserNotFound(userId)
@@ -144,7 +146,10 @@ class PlusService(
         grossTotalMinor: Long,
         holdUntil: Instant,
     ): PassReservationSnapshot {
-        if (grossTotalMinor <= 0) throw PlusRequestRejected("Gross total must be positive")
+        if (grossTotalMinor < 100 || grossTotalMinor % 100 != 0L) {
+            throw PlusRequestRejected("Gross total must use positive whole-rupee increments")
+        }
+        if (grossTotalMinor == 100L) return noDiscount(bookingId, grossTotalMinor)
         val now = clock.instant()
         passes.findByBookingForUpdate(bookingId)?.let {
             if (it.userId != userId) throw PlusRequestRejected("Pass reservation belongs to another customer")
@@ -191,7 +196,7 @@ class PlusService(
     }
 
     private fun reservation(pass: PlusPass, bookingId: UUID, gross: Long): PassReservationSnapshot {
-        val discount = min(pass.discountMinor, gross - 1)
+        val discount = min(pass.discountMinor, gross - 100)
         return PassReservationSnapshot(pass.id, bookingId, gross, discount, gross - discount, pass.holdExpiresAt)
     }
 
@@ -208,8 +213,10 @@ class PlusService(
             throw PlusRequestRejected("Subscription expiry must be in the future and follow its start")
         }
         if (command.passCount !in 0..20) throw PlusRequestRejected("Pass count must be between 0 and 20")
-        if (command.passCount > 0 && command.passDiscountMinor <= 0) {
-            throw PlusRequestRejected("Pass discount must be positive when passes are granted")
+        if (command.passDiscountMinor < 0 || command.passDiscountMinor % 100 != 0L ||
+            (command.passCount > 0 && command.passDiscountMinor < 100)
+        ) {
+            throw PlusRequestRejected("Pass discount must use non-negative whole-rupee increments")
         }
     }
 }

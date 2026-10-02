@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.snabbit.prototype.wallet.config.WalletProperties
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 @Component
@@ -50,15 +51,25 @@ class RazorpayPaymentProvider(
         }
     }
 
-    override fun refund(paymentId: String, amountMinor: Long): ProviderRefund {
+    override fun refund(paymentId: String, amountMinor: Long, reference: String): ProviderRefund {
+        require(reference.length >= 10 && REFUND_REFERENCE_PATTERN.matches(reference)) {
+            "Refund reference must use at least 10 letters, numbers, hyphens or underscores"
+        }
         if (!properties.razorpay.mode.equals("real", ignoreCase = true)) {
-            return ProviderRefund("rfnd_fake_${UUID.randomUUID()}", amountMinor)
+            val deterministicId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8))
+            return ProviderRefund("rfnd_fake_$deterministicId", amountMinor)
         }
         requireCredentials()
         return try {
             val response = client.post()
                 .uri("/v1/payments/{paymentId}/refund", paymentId)
-                .body(mapOf("amount" to amountMinor))
+                .header(REFUND_IDEMPOTENCY_HEADER, reference)
+                .body(
+                    mapOf(
+                        "amount" to amountMinor,
+                        "notes" to mapOf(REFUND_REFERENCE_NOTE to reference),
+                    ),
+                )
                 .retrieve()
                 .body(JsonNode::class.java)
                 ?: throw PaymentProviderException("Razorpay returned an empty refund response")
@@ -83,4 +94,10 @@ class RazorpayPaymentProvider(
     private fun JsonNode.requiredLong(field: String): Long =
         path(field).takeUnless { it.isMissingNode || !it.canConvertToLong() }?.asLong()
             ?: throw PaymentProviderException("Razorpay response is missing $field")
+
+    private companion object {
+        const val REFUND_IDEMPOTENCY_HEADER = "X-Refund-Idempotency"
+        const val REFUND_REFERENCE_NOTE = "snabbit_refund_id"
+        val REFUND_REFERENCE_PATTERN = Regex("[A-Za-z0-9_-]+")
+    }
 }

@@ -116,12 +116,16 @@ class WalletService(
         transactions.cancelBookingPayment(paymentId)
 
     fun executeRefund(refundId: UUID): RefundSnapshot {
-        val execution = transactions.claimRefund(refundId) ?: return transactions.refund(refundId)
+        val execution = transactions.claimRefund(refundId) ?: return transactions.refund(refundId).also { current ->
+            if (current.status == "PROCESSING") {
+                throw PaymentConflict("Refund is already being processed")
+            }
+        }
         return try {
             val providerRefund = if (execution.onlineAmountMinor > 0) {
                 val paymentId = execution.providerPaymentId
                     ?: throw PaymentConflict("Provider payment ID is missing for online refund")
-                provider.refund(paymentId, execution.onlineAmountMinor)
+                provider.refund(paymentId, execution.onlineAmountMinor, refundId.toString())
             } else {
                 null
             }

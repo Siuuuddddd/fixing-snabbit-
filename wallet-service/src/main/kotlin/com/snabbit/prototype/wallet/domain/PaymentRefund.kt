@@ -40,7 +40,7 @@ class PaymentRefund(
     var version: Long = 0,
 ) {
     fun beginProcessing(now: Instant) {
-        check(status == RefundStatus.CREATING)
+        check(status == RefundStatus.CREATING || status == RefundStatus.PROCESSING)
         status = RefundStatus.PROCESSING
         updatedAt = now
     }

@@ -4,6 +4,7 @@ import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.payment.PaymentProvider
 import com.snabbit.prototype.wallet.payment.ProviderOrder
+import com.snabbit.prototype.wallet.payment.ProviderRefund
 import com.snabbit.prototype.wallet.support.PaymentConflict
 import io.mockk.every
 import io.mockk.mockk
@@ -112,6 +113,37 @@ class WalletServiceTest {
 
         assertEquals(pending, result)
         verify(exactly = 1) { provider.createOrder(19_900, "plus_${creating.purchaseId}") }
+    }
+
+    @Test
+    fun `refund uses the durable refund id as provider reconciliation reference`() {
+        val refundId = UUID.randomUUID()
+        val execution = RefundExecution(refundId, "pay_captured", 12_500)
+        val providerRefund = ProviderRefund("rfnd_123", 12_500)
+        val completed = RefundSnapshot(
+            refundId, UUID.randomUUID(), "COMPLETED", 0, 12_500, providerRefund.id,
+        )
+        every { transactions.claimRefund(refundId) } returns execution
+        every { provider.refund("pay_captured", 12_500, refundId.toString()) } returns providerRefund
+        every { transactions.completeRefund(refundId, providerRefund) } returns completed
+
+        val result = service.executeRefund(refundId)
+
+        assertEquals(completed, result)
+        verify(exactly = 1) { provider.refund("pay_captured", 12_500, refundId.toString()) }
+    }
+
+    @Test
+    fun `concurrent refund execution reports the active processing lease`() {
+        val refundId = UUID.randomUUID()
+        every { transactions.claimRefund(refundId) } returns null
+        every { transactions.refund(refundId) } returns RefundSnapshot(
+            refundId, UUID.randomUUID(), "PROCESSING", 0, 12_500, null,
+        )
+
+        assertThrows(PaymentConflict::class.java) { service.executeRefund(refundId) }
+
+        verify(exactly = 0) { provider.refund(any(), any(), any()) }
     }
 
     private fun quote(

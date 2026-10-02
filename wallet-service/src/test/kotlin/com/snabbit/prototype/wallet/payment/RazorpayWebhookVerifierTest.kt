@@ -17,6 +17,7 @@ class RazorpayWebhookVerifierTest {
             currency = "INR",
             reservationDuration = Duration.ofMinutes(5),
             refundRetryDelay = Duration.ofMinutes(1),
+            refundProcessingLease = Duration.ofMinutes(5),
             razorpay = RazorpayProperties("fake", "https://example.invalid", "", "", secret),
         ),
     )

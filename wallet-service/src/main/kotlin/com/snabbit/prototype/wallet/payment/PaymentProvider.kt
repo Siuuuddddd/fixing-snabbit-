@@ -5,7 +5,7 @@ data class ProviderRefund(val id: String, val amountMinor: Long)
 
 interface PaymentProvider {
     fun createOrder(amountMinor: Long, receipt: String): ProviderOrder
-    fun refund(paymentId: String, amountMinor: Long): ProviderRefund
+    fun refund(paymentId: String, amountMinor: Long, reference: String): ProviderRefund
 }
 
 class PaymentProviderException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)

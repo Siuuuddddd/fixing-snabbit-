@@ -60,6 +60,26 @@ class PlusServiceTest {
     }
 
     @Test
+    fun `pass discount never reduces a booking below one rupee`() {
+        val user = user()
+        val bookingId = UUID.randomUUID()
+        val pass = pass(user.id)
+        val holdUntil = now.plusSeconds(300)
+        every { passes.findByBookingForUpdate(bookingId) } returns null
+        every { users.findForUpdate(user.id) } returns user
+        every {
+            passes.findEligibleForUpdate(user.id, "HOUSE_CLEANING", PlusPassStatus.AVAILABLE, holdUntil)
+        } returns listOf(pass)
+
+        val reservation = service.reservePass(user.id, bookingId, "HOUSE_CLEANING", 100, holdUntil)
+
+        assertEquals(null, reservation.passId)
+        assertEquals(0, reservation.discountMinor)
+        assertEquals(100, reservation.netTotalMinor)
+        assertEquals(PlusPassStatus.AVAILABLE, pass.status)
+    }
+
+    @Test
     fun `booking confirmation consumes a held pass using event occurrence time`() {
         val user = user()
         val bookingId = UUID.randomUUID()
