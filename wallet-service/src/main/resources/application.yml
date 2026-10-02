@@ -30,6 +30,7 @@ wallet:
   reservation-duration: PT5M
   refund-retry-delay: PT1M
   refund-processing-lease: PT5M
+  webhook-retry-delay: PT30S
   razorpay:
     mode: ${RAZORPAY_MODE:fake}
     base-url: ${RAZORPAY_BASE_URL:https://api.razorpay.com}

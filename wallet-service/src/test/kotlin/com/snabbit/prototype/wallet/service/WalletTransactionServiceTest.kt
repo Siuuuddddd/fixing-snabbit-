@@ -159,7 +159,10 @@ class WalletTransactionServiceTest {
             updatedAt = now,
         )
         val capture = ProviderCapture("event_1", "payment.captured", "order_1", "pay_1", 5_000)
-        every { webhookStore.claim("RAZORPAY", "event_1", "payment.captured", now) } returns true andThen false
+        every {
+            webhookStore.claim("RAZORPAY", "event_1", "payment.captured", "order_1", "pay_1", 5_000, now)
+        } returns true andThen false
+        every { webhookStore.complete("RAZORPAY", "event_1", now) } returns Unit
         every { topUpRepository.findByProviderOrderIdForUpdate("order_1") } returns topUp
         every { ledgerRepository.existsByIdempotencyKey(any()) } returns false
         every { ledgerRepository.save(any()) } answers { firstArg() }
@@ -192,7 +195,12 @@ class WalletTransactionServiceTest {
             updatedAt = now,
         )
         val capture = ProviderCapture("event_late", "payment.captured", "order_late", "pay_late", 5_000)
-        every { webhookStore.claim("RAZORPAY", "event_late", "payment.captured", now) } returns true
+        every {
+            webhookStore.claim(
+                "RAZORPAY", "event_late", "payment.captured", "order_late", "pay_late", 5_000, now,
+            )
+        } returns true
+        every { webhookStore.complete("RAZORPAY", "event_late", now) } returns Unit
         every { topUpRepository.findByProviderOrderIdForUpdate("order_late") } returns null
         every { plusPurchaseRepository.findByProviderOrderIdForUpdate("order_late") } returns null
         every { paymentRepository.findByProviderOrderIdForUpdate("order_late") } returns payment
@@ -218,7 +226,12 @@ class WalletTransactionServiceTest {
             createdAt = now, updatedAt = now,
         )
         val capture = ProviderCapture("event_plus", "payment.captured", "order_plus", "pay_plus", 19_900)
-        every { webhookStore.claim("RAZORPAY", "event_plus", "payment.captured", now) } returns true
+        every {
+            webhookStore.claim(
+                "RAZORPAY", "event_plus", "payment.captured", "order_plus", "pay_plus", 19_900, now,
+            )
+        } returns true
+        every { webhookStore.complete("RAZORPAY", "event_plus", now) } returns Unit
         every { topUpRepository.findByProviderOrderIdForUpdate("order_plus") } returns null
         every { plusPurchaseRepository.findByProviderOrderIdForUpdate("order_plus") } returns purchase
         every { outboxRepository.save(any()) } answers { firstArg() }
@@ -232,6 +245,27 @@ class WalletTransactionServiceTest {
         verify(exactly = 1) {
             outboxRepository.save(match { it.eventType == "PlusSubscriptionPurchased" })
         }
+    }
+
+    @Test
+    fun `capture for an order not attached yet remains pending`() {
+        val capture = ProviderCapture(
+            "event_early", "payment.captured", "order_not_attached", "pay_early", 5_000,
+        )
+        every {
+            webhookStore.claim(
+                "RAZORPAY", "event_early", "payment.captured",
+                "order_not_attached", "pay_early", 5_000, now,
+            )
+        } returns true
+        every { topUpRepository.findByProviderOrderIdForUpdate("order_not_attached") } returns null
+        every { plusPurchaseRepository.findByProviderOrderIdForUpdate("order_not_attached") } returns null
+        every { paymentRepository.findByProviderOrderIdForUpdate("order_not_attached") } returns null
+
+        val result = service.processCapture(capture)
+
+        assertEquals("PENDING_UNKNOWN_ORDER", result.result)
+        verify(exactly = 0) { webhookStore.complete(any(), any(), any()) }
     }
 
     @Test

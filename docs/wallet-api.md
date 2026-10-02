@@ -21,6 +21,8 @@ Creating a top-up does not credit the wallet. Credit occurs only after `/webhook
 
 Every top-up, Plus purchase and booking payment uses a deterministic Razorpay receipt containing the complete internal UUID in 40 characters or fewer. Before creating an order, Wallet searches Razorpay for an exact receipt match. If order creation returns an ambiguous error, Wallet searches again and attaches the recovered order instead of creating a duplicate. Any failed create or reconciliation leaves the local row in `CREATING_ORDER`, because an immediately empty provider lookup is not sufficient proof that a timed-out create failed. The same idempotent request can therefore recover it safely; booking expiry or cancellation still releases any wallet reservation.
 
+Verified capture webhooks are first recorded in a durable inbox. If a capture arrives during the narrow crash window after Razorpay created the order but before Wallet attached its provider ID, the inbox remains `PENDING` instead of acknowledging the payment as permanently unknown. A scheduler replays pending captures every 30 seconds; once order recovery attaches the ID, the same database transaction applies the ledger/payment effect and marks the inbox row `PROCESSED`. Row locking and event-ID uniqueness serialize concurrent delivery, while retry ordering prevents an old unknown order from starving newer captures.
+
 ## Internal routes
 
 - `GET /internal/v1/bookings/{bookingId}/payment-quote` — authoritative customer, lifecycle state, hold expiry and server-calculated total.

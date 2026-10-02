@@ -3,6 +3,7 @@ package com.snabbit.prototype.wallet.integration
 import com.snabbit.prototype.wallet.service.RazorpayWebhookService
 import com.snabbit.prototype.wallet.service.WalletService
 import com.snabbit.prototype.wallet.service.FinanceRefundService
+import com.snabbit.prototype.wallet.service.CaptureRetryScheduler
 import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.support.InvalidWebhook
@@ -35,6 +36,7 @@ import javax.crypto.spec.SecretKeySpec
         "wallet.razorpay.mode=fake",
         "wallet.razorpay.webhook-secret=integration-secret",
         "wallet.refund-retry-delay=PT24H",
+        "wallet.webhook-retry-delay=PT24H",
         "eventing.outbox-enabled=false",
         "spring.kafka.listener.auto-startup=false",
     ],
@@ -49,6 +51,9 @@ class WalletLedgerIntegrationTest {
 
     @Autowired
     private lateinit var financeRefundService: FinanceRefundService
+
+    @Autowired
+    private lateinit var captureRetryScheduler: CaptureRetryScheduler
 
     @Autowired
     private lateinit var jdbc: JdbcTemplate
@@ -93,12 +98,69 @@ class WalletLedgerIntegrationTest {
 
         val first = deliverCapture("evt_topup_1", topUp.providerOrderId!!, "pay_topup_1", 10_000)
         val replay = deliverCapture("evt_topup_1", topUp.providerOrderId!!, "pay_topup_1", 10_000)
+        assertThrows(IllegalStateException::class.java) {
+            deliverCapture("evt_topup_1", topUp.providerOrderId!!, "pay_different", 10_000)
+        }
         val secondEvent = deliverCapture("evt_topup_2", topUp.providerOrderId!!, "pay_topup_1", 10_000)
 
         assertEquals("TOP_UP_CREDITED", first)
         assertEquals("DUPLICATE", replay)
         assertEquals("ALREADY_PROCESSED", secondEvent)
         assertEquals(10_000, walletService.balance(walletId).availableMinor)
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM wallet_ledger_entry", Long::class.java))
+    }
+
+    @Test
+    fun `capture arriving before order attachment is durably replayed`() {
+        val topUpId = UUID.randomUUID()
+        val providerOrderId = "order_early_capture"
+        val createdAt = Instant.now()
+        jdbc.update(
+            """
+            INSERT INTO top_up_order (
+                id, wallet_id, amount_minor, status, provider, idempotency_key,
+                created_at, updated_at, version
+            ) VALUES (?, ?, 5000, 'CREATING_ORDER', 'RAZORPAY', ?, ?, ?, 0)
+            """.trimIndent(),
+            topUpId,
+            walletId,
+            "early-capture-$topUpId",
+            createdAt,
+            createdAt,
+        )
+
+        val initial = deliverCapture("evt_early", providerOrderId, "pay_early", 5_000)
+
+        assertEquals("PENDING_UNKNOWN_ORDER", initial)
+        assertEquals(
+            "PENDING",
+            jdbc.queryForObject(
+                "SELECT processing_status FROM processed_webhook WHERE event_id = 'evt_early'",
+                String::class.java,
+            ),
+        )
+        jdbc.update(
+            """
+            UPDATE top_up_order
+            SET provider_order_id = ?, status = 'PENDING', updated_at = ?
+            WHERE id = ?
+            """.trimIndent(),
+            providerOrderId,
+            Instant.now(),
+            topUpId,
+        )
+
+        captureRetryScheduler.retryPendingCaptures()
+
+        assertEquals(5_000, walletService.balance(walletId).availableMinor)
+        assertEquals(
+            "PROCESSED",
+            jdbc.queryForObject(
+                "SELECT processing_status FROM processed_webhook WHERE event_id = 'evt_early'",
+                String::class.java,
+            ),
+        )
+        captureRetryScheduler.retryPendingCaptures()
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM wallet_ledger_entry", Long::class.java))
     }
 

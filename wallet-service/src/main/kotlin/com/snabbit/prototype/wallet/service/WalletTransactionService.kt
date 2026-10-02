@@ -372,13 +372,26 @@ class WalletTransactionService(
     @Transactional
     fun processCapture(capture: ProviderCapture): WebhookOutcome {
         val now = clock.instant()
-        if (!webhookStore.claim("RAZORPAY", capture.eventId, capture.eventType, now)) {
+        if (!webhookStore.claim(
+                "RAZORPAY",
+                capture.eventId,
+                capture.eventType,
+                capture.providerOrderId,
+                capture.providerPaymentId,
+                capture.amountMinor,
+                now,
+            )
+        ) {
             return WebhookOutcome("DUPLICATE")
         }
 
         topUpRepository.findByProviderOrderIdForUpdate(capture.providerOrderId)?.let { topUp ->
-            if (topUp.status == TopUpStatus.PAID) return WebhookOutcome("ALREADY_PROCESSED")
-            if (topUp.status != TopUpStatus.PENDING) return WebhookOutcome("IGNORED")
+            if (topUp.status == TopUpStatus.PAID) {
+                return completeCapture(capture, WebhookOutcome("ALREADY_PROCESSED"), now)
+            }
+            if (topUp.status != TopUpStatus.PENDING) {
+                return completeCapture(capture, WebhookOutcome("IGNORED"), now)
+            }
             if (capture.amountMinor != topUp.amountMinor) {
                 throw PaymentConflict("Captured top-up amount does not match the provider order")
             }
@@ -399,12 +412,16 @@ class WalletTransactionService(
                 mapOf("walletId" to topUp.walletId, "topUpId" to topUp.id, "amountMinor" to topUp.amountMinor),
                 now,
             )
-            return WebhookOutcome("TOP_UP_CREDITED")
+            return completeCapture(capture, WebhookOutcome("TOP_UP_CREDITED"), now)
         }
 
         plusPurchaseRepository.findByProviderOrderIdForUpdate(capture.providerOrderId)?.let { purchase ->
-            if (purchase.status == PlusPurchaseStatus.PAID) return WebhookOutcome("ALREADY_PROCESSED")
-            if (purchase.status != PlusPurchaseStatus.PENDING) return WebhookOutcome("IGNORED")
+            if (purchase.status == PlusPurchaseStatus.PAID) {
+                return completeCapture(capture, WebhookOutcome("ALREADY_PROCESSED"), now)
+            }
+            if (purchase.status != PlusPurchaseStatus.PENDING) {
+                return completeCapture(capture, WebhookOutcome("IGNORED"), now)
+            }
             if (capture.amountMinor != purchase.amountMinor) {
                 throw PaymentConflict("Captured Plus purchase amount does not match the provider order")
             }
@@ -426,32 +443,47 @@ class WalletTransactionService(
                 ),
                 now,
             )
-            return WebhookOutcome("PLUS_SUBSCRIPTION_PURCHASED")
+            return completeCapture(capture, WebhookOutcome("PLUS_SUBSCRIPTION_PURCHASED"), now)
         }
 
         paymentRepository.findByProviderOrderIdForUpdate(capture.providerOrderId)?.let { payment ->
-            if (payment.status == BookingPaymentStatus.COMPLETED) return WebhookOutcome("ALREADY_PROCESSED")
+            if (payment.status == BookingPaymentStatus.COMPLETED) {
+                return completeCapture(capture, WebhookOutcome("ALREADY_PROCESSED"), now)
+            }
             if (capture.amountMinor != payment.onlineAmountMinor) {
                 throw PaymentConflict("Captured booking amount does not match the provider order")
             }
             if (payment.status == BookingPaymentStatus.FAILED) {
-                return queueCompensationRefund(payment, capture, now)
+                return completeCapture(capture, queueCompensationRefund(payment, capture, now), now)
             }
-            if (payment.status != BookingPaymentStatus.PENDING) return WebhookOutcome("IGNORED")
+            if (payment.status != BookingPaymentStatus.PENDING) {
+                return completeCapture(capture, WebhookOutcome("IGNORED"), now)
+            }
             val reservation = payment.reservationId?.let(reservationRepository::findForUpdate)
             if (reservation != null &&
                 (reservation.status != ReservationStatus.ACTIVE || !reservation.expiresAt.isAfter(now))
             ) {
                 reservation.expire(now)
-                return queueCompensationRefund(payment, capture, now)
+                return completeCapture(capture, queueCompensationRefund(payment, capture, now), now)
             }
             captureReservation(payment, now)
             payment.complete(capture.providerPaymentId, now)
             paymentSucceeded(payment, now)
-            return WebhookOutcome("BOOKING_PAYMENT_COMPLETED")
+            return completeCapture(capture, WebhookOutcome("BOOKING_PAYMENT_COMPLETED"), now)
         }
 
-        return WebhookOutcome("IGNORED_UNKNOWN_ORDER")
+        return WebhookOutcome("PENDING_UNKNOWN_ORDER")
+    }
+
+    @Transactional(readOnly = true)
+    fun pendingCaptures(): List<ProviderCapture> = webhookStore.pendingCaptures("RAZORPAY", 100).map { stored ->
+        ProviderCapture(
+            eventId = stored.eventId,
+            eventType = stored.eventType,
+            providerOrderId = stored.providerOrderId,
+            providerPaymentId = stored.providerPaymentId,
+            amountMinor = stored.amountMinor,
+        )
     }
 
     @Transactional
@@ -664,6 +696,15 @@ class WalletTransactionService(
             ),
             now,
         )
+    }
+
+    private fun completeCapture(
+        capture: ProviderCapture,
+        outcome: WebhookOutcome,
+        now: Instant,
+    ): WebhookOutcome {
+        webhookStore.complete("RAZORPAY", capture.eventId, now)
+        return outcome
     }
 
     private fun failPaymentAndRelease(payment: BookingPayment, now: Instant) {
