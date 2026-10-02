@@ -18,4 +18,6 @@ interface PaymentRefundRepository : JpaRepository<PaymentRefund, UUID> {
     fun findForUpdate(@Param("id") id: UUID): PaymentRefund?
 
     fun findTop100ByStatusOrderByCreatedAt(status: RefundStatus): List<PaymentRefund>
+    fun findTop100ByOrderByUpdatedAtDesc(): List<PaymentRefund>
+    fun findTop100ByStatusOrderByUpdatedAtDesc(status: RefundStatus): List<PaymentRefund>
 }

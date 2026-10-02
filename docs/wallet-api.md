@@ -49,6 +49,15 @@ Refund requests are stored before calling Razorpay. A short transaction claims o
 
 Confirmed customer cancellations can request a partial refund only through the trusted `BookingCustomerCancelled` event. Wallet verifies that the requested amount is between zero and the captured total, retains the cancellation fee from the online portion first, then refunds the remainder to the original online and wallet sources. Platform cancellations use the same path with the full captured total. `totalSpentMinor` is derived from completed booking payments minus completed refunds, so a partial refund leaves only the retained fee as spend.
 
+Finance operators and administrators can inspect the latest 100 refund records through
+`GET /api/v1/staff/finance/refunds`, optionally filtering by `status`. An existing queued
+refund can be retried with `POST /api/v1/staff/finance/refunds/{refundId}/retry`; retrying an
+already completed refund is an idempotent no-op.
+The retry request accepts no amount, payment ID or wallet ID: it reuses the immutable
+refund record and the original provider payment. Every attempt stores the authenticated
+staff ID and its outcome in `finance_refund_action`. The audit transaction finishes before
+the provider call, so no database transaction remains open while Razorpay is contacted.
+
 ## Razorpay configuration
 
 Local development defaults to fake provider mode. Real mode requires environment variables:

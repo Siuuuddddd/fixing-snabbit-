@@ -52,3 +52,20 @@ data class RefundSnapshot(
     val onlineAmountMinor: Long,
     val providerRefundId: String?,
 )
+
+data class FinanceRefundSnapshot(
+    val refundId: UUID,
+    val bookingPaymentId: UUID,
+    val walletId: UUID,
+    val status: String,
+    val walletAmountMinor: Long,
+    val onlineAmountMinor: Long,
+    val providerRefundId: String?,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+)
+
+data class FinanceRefundRetryResult(
+    val actionId: UUID,
+    val refund: RefundSnapshot,
+)

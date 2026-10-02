@@ -2,6 +2,7 @@ package com.snabbit.prototype.wallet.integration
 
 import com.snabbit.prototype.wallet.service.RazorpayWebhookService
 import com.snabbit.prototype.wallet.service.WalletService
+import com.snabbit.prototype.wallet.service.FinanceRefundService
 import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.support.InvalidWebhook
@@ -45,6 +46,9 @@ class WalletLedgerIntegrationTest {
 
     @Autowired
     private lateinit var webhookService: RazorpayWebhookService
+
+    @Autowired
+    private lateinit var financeRefundService: FinanceRefundService
 
     @Autowired
     private lateinit var jdbc: JdbcTemplate
@@ -213,6 +217,41 @@ class WalletLedgerIntegrationTest {
         assertEquals(
             "REFUNDED",
             jdbc.queryForObject("SELECT status FROM booking_payment WHERE id = ?", String::class.java, payment.paymentId),
+        )
+    }
+
+    @Test
+    fun `finance retry is limited to an existing refund and records the staff audit`() {
+        quoteAmountMinor = 5_000
+        val payment = walletService.createBookingPayment(
+            walletId,
+            UUID.randomUUID(),
+            useWallet = false,
+            idempotencyKey = "finance-audit",
+        )
+        walletService.cancelBookingPayment(payment.paymentId)
+        deliverCapture("evt_finance", payment.providerOrderId!!, "pay_finance", 5_000)
+        val refundId = jdbc.queryForObject("SELECT id FROM payment_refund", UUID::class.java)!!
+        val staffId = UUID.randomUUID()
+
+        val result = financeRefundService.retry(refundId, staffId)
+
+        assertEquals("COMPLETED", result.refund.status)
+        assertEquals(
+            staffId,
+            jdbc.queryForObject(
+                "SELECT staff_id FROM finance_refund_action WHERE id = ?",
+                UUID::class.java,
+                result.actionId,
+            ),
+        )
+        assertEquals(
+            "SUCCEEDED",
+            jdbc.queryForObject(
+                "SELECT status FROM finance_refund_action WHERE id = ?",
+                String::class.java,
+                result.actionId,
+            ),
         )
     }
 

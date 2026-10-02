@@ -564,6 +564,28 @@ class WalletTransactionService(
         refundRepository.findTop100ByStatusOrderByCreatedAt(RefundStatus.CREATING).map(PaymentRefund::id)
 
     @Transactional(readOnly = true)
+    fun financeRefunds(status: RefundStatus?): List<FinanceRefundSnapshot> {
+        val refunds = if (status == null) {
+            refundRepository.findTop100ByOrderByUpdatedAtDesc()
+        } else {
+            refundRepository.findTop100ByStatusOrderByUpdatedAtDesc(status)
+        }
+        return refunds.map { refund ->
+            FinanceRefundSnapshot(
+                refundId = refund.id,
+                bookingPaymentId = refund.bookingPaymentId,
+                walletId = refund.walletId,
+                status = refund.status.name,
+                walletAmountMinor = refund.walletAmountMinor,
+                onlineAmountMinor = refund.onlineAmountMinor,
+                providerRefundId = refund.providerRefundId,
+                createdAt = refund.createdAt,
+                updatedAt = refund.updatedAt,
+            )
+        }
+    }
+
+    @Transactional(readOnly = true)
     fun refund(refundId: UUID): RefundSnapshot = refundRepository.findById(refundId)
         .map(::refundSnapshot)
         .orElseThrow { PaymentNotFound("Refund $refundId was not found") }
