@@ -17,7 +17,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("io.mockk:mockk:1.14.6")
+    testImplementation("io.mockk:mockk:1.14.11")
 }
 
 kotlin { compilerOptions { freeCompilerArgs.add("-Xjsr305=strict") } }
