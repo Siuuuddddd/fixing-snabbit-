@@ -16,8 +16,20 @@ class BookingEventHandler(
     @Transactional
     fun handle(event: EventEnvelope): UUID? {
         if (!processedMessages.claim(properties.consumerGroup, event.eventId, clock.instant())) return null
-        if (event.eventType != "BookingExpired" && event.eventType != "BookingCancelled") return null
+        if (event.eventType != "BookingExpired" &&
+            event.eventType != "BookingCancelled" &&
+            event.eventType != "BookingCustomerCancelled" &&
+            event.eventType != "BookingPlatformCancelled"
+        ) return null
         val bookingId = UUID.fromString(event.aggregateId)
-        return transactions.terminateBookingPayment(bookingId, event.eventId)
+        val requestedRefundMinor = if (
+            event.eventType == "BookingCustomerCancelled" || event.eventType == "BookingPlatformCancelled"
+        ) {
+            event.payload.path("refundAmountMinor").takeUnless { it.isMissingNode || it.isNull }?.asLong()
+                ?: error("BookingCustomerCancelled is missing refundAmountMinor")
+        } else {
+            null
+        }
+        return transactions.terminateBookingPayment(bookingId, event.eventId, requestedRefundMinor)
     }
 }

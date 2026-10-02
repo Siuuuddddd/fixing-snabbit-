@@ -17,8 +17,10 @@ Booking writes these facts to `outbox_event` in the same PostgreSQL transaction 
 | `BookingCompleted` | Every visit in the booking completed | Ratings, notification, analytics |
 | `BookingExpired` | Capacity expired before confirmation | Payment/refund, notification |
 | `BookingCancelled` | A pre-confirmation booking was cancelled | Worker, notification |
+| `BookingCustomerCancelled` | Customer cancelled an unstarted confirmed booking with a recorded fee/refund | Wallet, worker, Plus, notification |
+| `BookingPlatformCancelled` | Platform could not provide a confirmed service; full refund is required | Wallet, worker, Plus, notification, support |
 
-User Service's Plus consumer uses `BookingConfirmed` to consume a held pass and releases it for `BookingCancelled`, `BookingExpired`, `WorkerOfferRejected` or `WorkerOfferExpired`. Delivery retries use retry topics and exhausted records move to a dead-letter topic.
+User Service's Plus consumer uses `BookingConfirmed` to consume a held pass and releases it for `BookingCancelled`, `BookingExpired`, `WorkerOfferRejected` or `WorkerOfferExpired`. A customer or platform cancellation after confirmation restores the consumed pass. Delivery retries use retry topics and exhausted records move to a dead-letter topic.
 
 Event payloads contain identifiers, lifecycle timestamps and references needed to retrieve authoritative state. They do not contain customer addresses, phone numbers, payment credentials or provider webhook bodies.
 

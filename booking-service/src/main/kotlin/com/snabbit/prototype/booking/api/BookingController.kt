@@ -6,6 +6,8 @@ import com.snabbit.prototype.booking.application.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.application.RatingContextSnapshot
 import com.snabbit.prototype.booking.application.BookingOwnershipSnapshot
 import com.snabbit.prototype.booking.application.PlusPassBookingContext
+import com.snabbit.prototype.booking.application.BookingCancellationService
+import com.snabbit.prototype.booking.application.CancellationQuoteSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
@@ -73,6 +75,11 @@ data class StartPaymentRequest(
     val useWallet: Boolean = true,
 )
 
+data class CancelConfirmedBookingRequest(
+    @field:Size(max = 240)
+    val reason: String? = null,
+)
+
 @RestController
 @RequestMapping("/api/v1/bookings")
 class BookingController(private val service: BookingLifecycleService) {
@@ -87,6 +94,23 @@ class BookingController(private val service: BookingLifecycleService) {
         @PathVariable bookingId: UUID,
         @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
     ): BookingSnapshot = service.cancel(bookingId, authenticatedCustomerId)
+}
+
+@RestController
+@RequestMapping("/api/v1/bookings")
+class BookingCancellationController(private val service: BookingCancellationService) {
+    @GetMapping("/{bookingId}/cancellation-quote")
+    suspend fun quote(
+        @PathVariable bookingId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+    ): CancellationQuoteSnapshot = service.quote(bookingId, authenticatedCustomerId)
+
+    @PostMapping("/{bookingId}/cancellations")
+    suspend fun cancel(
+        @PathVariable bookingId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+        @Valid @RequestBody request: CancelConfirmedBookingRequest,
+    ): BookingSnapshot = service.cancel(bookingId, authenticatedCustomerId, request.reason)
 }
 
 @RestController
@@ -142,6 +166,11 @@ data class ConfirmPaymentRequest(
     val paymentReference: String,
 )
 
+data class PlatformCancellationRequest(
+    @field:NotBlank @field:Size(max = 240)
+    val reason: String,
+)
+
 @RestController
 @RequestMapping("/internal/v1/bookings")
 class InternalBookingController(private val service: BookingLifecycleService) {
@@ -153,6 +182,12 @@ class InternalBookingController(private val service: BookingLifecycleService) {
 
     @GetMapping("/{bookingId}/rating-context")
     fun ratingContext(@PathVariable bookingId: UUID): RatingContextSnapshot = service.ratingContext(bookingId)
+
+    @PostMapping("/{bookingId}/platform-cancellation")
+    fun platformCancellation(
+        @PathVariable bookingId: UUID,
+        @Valid @RequestBody request: PlatformCancellationRequest,
+    ): BookingSnapshot = service.cancelConfirmedByPlatform(bookingId, request.reason)
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

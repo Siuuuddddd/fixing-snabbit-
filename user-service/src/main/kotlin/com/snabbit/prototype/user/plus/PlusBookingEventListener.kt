@@ -50,6 +50,7 @@ class PlusBookingEventHandler(
         val bookingId = UUID.fromString(event.aggregateId)
         when (event.eventType) {
             "BookingConfirmed" -> plus.consumePass(bookingId, event.occurredAt)
+            "BookingCustomerCancelled", "BookingPlatformCancelled" -> plus.restorePass(bookingId)
             "BookingCancelled", "BookingExpired", "WorkerOfferRejected", "WorkerOfferExpired" ->
                 plus.releasePass(bookingId)
         }

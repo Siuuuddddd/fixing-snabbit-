@@ -36,4 +36,6 @@ If atomic slot creation fails, Booking immediately calls the release endpoint. A
 
 An expired reservation is never blindly returned to inventory: a scheduled reconciler first reads Booking's authoritative pass context outside any database transaction. It consumes passes attached to confirmed bookings, releases terminal or genuinely expired holds, and safely recovers reservations left behind if Booking crashed before creating the booking.
 
+Confirmed customer and platform cancellations restore the consumed pass. Plus also halves the configured early or late customer cancellation fee; platform failure always remains a full-refund, zero-fee case.
+
 The internal activation endpoint must only be called by a verified subscription-payment workflow. Service-to-service authentication remains mandatory before production exposure.

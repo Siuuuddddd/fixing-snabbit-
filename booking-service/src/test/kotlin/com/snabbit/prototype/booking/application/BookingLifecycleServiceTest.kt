@@ -20,6 +20,7 @@ import com.snabbit.prototype.booking.persistence.WorkerDayCapacityRepository
 import com.snabbit.prototype.booking.persistence.WorkerOfferRepository
 import com.snabbit.prototype.booking.support.SlotUnavailable
 import com.snabbit.prototype.booking.support.CustomerAccessDenied
+import com.snabbit.prototype.booking.support.InvalidBookingState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -162,6 +163,87 @@ class BookingLifecycleServiceTest {
 
         assertEquals(BookingStatus.EXPIRED.name, result.status)
         assertEquals(null, booking.paymentReference)
+    }
+
+    @Test
+    fun `confirmed customer cancellation releases unstarted visit and records Plus fee`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_verified", clock.instant())
+        }
+        val hold = hold(booking.id, UUID.randomUUID()).apply { confirm() }
+        val offer = offer(booking.id, hold.workerId, hold.id).apply { accept(clock.instant()) }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
+        every { offerRepository.findAllByBookingIdOrderByCreatedAt(booking.id) } returns listOf(offer)
+        every { outboxRepository.save(any()) } answers { firstArg() }
+        val policy = BookingCancellationPolicy(
+            BookingCancellationProperties(Duration.ofHours(2), 5_000, 10_000, 50),
+        )
+
+        val result = service.cancelConfirmed(booking.id, booking.customerId, true, "Plans changed", policy)
+
+        assertEquals(BookingStatus.CANCELLED.name, result.status)
+        assertEquals("CUSTOMER", result.cancellationType)
+        assertEquals(5_000, result.cancellationFeeMinor)
+        assertEquals(37_000, result.refundAmountMinor)
+        assertEquals(SlotHoldStatus.RELEASED, hold.status)
+        assertEquals(null, hold.jobStatus)
+        verify(exactly = 1) { outboxRepository.save(match { it.eventType == "BookingCustomerCancelled" }) }
+    }
+
+    @Test
+    fun `customer cannot cancel after worker arrival`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_verified", clock.instant())
+        }
+        val hold = hold(booking.id, UUID.randomUUID()).apply {
+            confirm()
+            arrive(BigDecimal("19.076090"), BigDecimal("72.877426"), BigDecimal.TEN, clock.instant())
+        }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
+
+        assertThrows(InvalidBookingState::class.java) {
+            service.cancelConfirmed(
+                booking.id,
+                booking.customerId,
+                false,
+                null,
+                BookingCancellationPolicy(
+                    BookingCancellationProperties(Duration.ofHours(2), 5_000, 10_000, 50),
+                ),
+            )
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, booking.status)
+        verify(exactly = 0) { outboxRepository.save(any()) }
+    }
+
+    @Test
+    fun `platform cancellation after arrival grants full refund before service start`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_verified", clock.instant())
+        }
+        val hold = hold(booking.id, UUID.randomUUID()).apply {
+            confirm()
+            arrive(BigDecimal("19.076090"), BigDecimal("72.877426"), BigDecimal.TEN, clock.instant())
+        }
+        val offer = offer(booking.id, hold.workerId, hold.id).apply { accept(clock.instant()) }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
+        every { offerRepository.findAllByBookingIdOrderByCreatedAt(booking.id) } returns listOf(offer)
+        every { outboxRepository.save(any()) } answers { firstArg() }
+
+        val result = service.cancelConfirmedByPlatform(booking.id, "Replacement worker unavailable")
+
+        assertEquals("PLATFORM", result.cancellationType)
+        assertEquals(0, result.cancellationFeeMinor)
+        assertEquals(booking.quotedTotalMinor, result.refundAmountMinor)
+        assertEquals(SlotHoldStatus.RELEASED, hold.status)
+        verify(exactly = 1) { outboxRepository.save(match { it.eventType == "BookingPlatformCancelled" }) }
     }
 
     @Test

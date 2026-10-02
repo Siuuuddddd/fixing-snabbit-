@@ -250,7 +250,11 @@ class WalletTransactionService(
     }
 
     @Transactional
-    fun terminateBookingPayment(bookingId: UUID, sourceEventId: UUID): UUID? {
+    fun terminateBookingPayment(
+        bookingId: UUID,
+        sourceEventId: UUID,
+        requestedRefundMinor: Long? = null,
+    ): UUID? {
         val payment = paymentRepository.findByBookingIdForUpdate(bookingId) ?: return null
         val now = clock.instant()
         return when (payment.status) {
@@ -262,14 +266,22 @@ class WalletTransactionService(
             }
             BookingPaymentStatus.COMPLETED -> {
                 refundRepository.findByBookingPaymentId(payment.id)?.id ?: run {
+                    val refundTotal = requestedRefundMinor ?: payment.totalAmountMinor
+                    if (refundTotal !in 0..payment.totalAmountMinor) {
+                        throw PaymentConflict("Requested refund must be between zero and the captured payment")
+                    }
+                    val retainedFee = payment.totalAmountMinor - refundTotal
+                    val retainedOnline = minOf(payment.onlineAmountMinor, retainedFee)
+                    val refundOnline = payment.onlineAmountMinor - retainedOnline
+                    val refundWallet = payment.walletAmountMinor - (retainedFee - retainedOnline)
                     payment.beginRefund(now)
                     val refund = refundRepository.save(
                         PaymentRefund(
                             id = UUID.randomUUID(),
                             bookingPaymentId = payment.id,
                             walletId = payment.walletId,
-                            walletAmountMinor = payment.walletAmountMinor,
-                            onlineAmountMinor = payment.onlineAmountMinor,
+                            walletAmountMinor = refundWallet,
+                            onlineAmountMinor = refundOnline,
                             status = RefundStatus.CREATING,
                             idempotencyKey = "booking-termination:$sourceEventId",
                             createdAt = now,
@@ -279,7 +291,13 @@ class WalletTransactionService(
                     outboxWriter.append(
                         bookingId,
                         "WalletRefundQueued",
-                        mapOf("bookingId" to bookingId, "paymentId" to payment.id, "refundId" to refund.id),
+                        mapOf(
+                            "bookingId" to bookingId,
+                            "paymentId" to payment.id,
+                            "refundId" to refund.id,
+                            "amountMinor" to refundTotal,
+                            "retainedFeeMinor" to retainedFee,
+                        ),
                         now,
                     )
                     refund.id
@@ -419,7 +437,7 @@ class WalletTransactionService(
                 "bookingId" to payment.bookingId,
                 "paymentId" to payment.id,
                 "refundId" to refund.id,
-                "amountMinor" to payment.totalAmountMinor,
+                "amountMinor" to (refund.walletAmountMinor + refund.onlineAmountMinor),
             ),
             now,
         )

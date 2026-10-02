@@ -190,6 +190,29 @@ class WalletTransactionServiceTest {
         verify(exactly = 1) { refundRepository.save(any<PaymentRefund>()) }
     }
 
+    @Test
+    fun `customer cancellation refunds requested total and retains fee from online portion first`() {
+        val payment = BookingPayment(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null,
+            15_000, 10_000, 5_000, BookingPaymentStatus.COMPLETED,
+            provider = "RAZORPAY", providerPaymentId = "pay_captured", idempotencyKey = "booking-payment",
+            createdAt = now, updatedAt = now,
+        )
+        val saved = slot<PaymentRefund>()
+        val sourceEventId = UUID.randomUUID()
+        every { paymentRepository.findByBookingIdForUpdate(payment.bookingId) } returns payment
+        every { refundRepository.findByBookingPaymentId(payment.id) } returns null
+        every { refundRepository.save(capture(saved)) } answers { firstArg() }
+        every { outboxRepository.save(any()) } answers { firstArg() }
+
+        val refundId = service.terminateBookingPayment(payment.bookingId, sourceEventId, 12_500)
+
+        assertEquals(saved.captured.id, refundId)
+        assertEquals(10_000, saved.captured.walletAmountMinor)
+        assertEquals(2_500, saved.captured.onlineAmountMinor)
+        assertEquals(BookingPaymentStatus.REFUND_PENDING, payment.status)
+    }
+
     private fun wallet() = WalletAccount(
         id = UUID.randomUUID(),
         customerId = UUID.randomUUID(),

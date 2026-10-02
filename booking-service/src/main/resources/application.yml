@@ -37,6 +37,12 @@ booking:
   arrival-accuracy-meters: 100
   arrival-radius-meters: 250
 
+cancellation:
+  late-window: PT2H
+  early-fee-minor: 5000
+  late-fee-minor: 10000
+  plus-fee-discount-percent: 50
+
 eventing:
   outbox-enabled: true
   outbox-topic: booking-events

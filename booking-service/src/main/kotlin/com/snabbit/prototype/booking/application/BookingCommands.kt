@@ -38,6 +38,11 @@ data class BookingSnapshot(
     val plusPassId: UUID?,
     val requirements: BookingRequirements,
     val visits: List<VisitSnapshot>,
+    val cancellationType: String? = null,
+    val cancellationReason: String? = null,
+    val cancellationFeeMinor: Long? = null,
+    val refundAmountMinor: Long? = null,
+    val cancelledAt: Instant? = null,
 )
 
 data class PaymentQuoteSnapshot(
@@ -75,6 +80,25 @@ data class PlusPassBookingContext(
     val plusPassId: UUID?,
     val holdExpiresAt: Instant,
     val confirmedAt: Instant?,
+)
+
+data class CancellationContext(
+    val bookingId: UUID,
+    val customerId: UUID,
+    val status: String,
+    val quotedTotalMinor: Long,
+    val earliestVisitStartsAt: Instant,
+    val allVisitsUnstarted: Boolean,
+    val cancellationType: String?,
+)
+
+data class CancellationQuoteSnapshot(
+    val bookingId: UUID,
+    val plusActive: Boolean,
+    val cancellationFeeMinor: Long,
+    val refundAmountMinor: Long,
+    val policyBand: String,
+    val calculatedAt: Instant,
 )
 
 data class RatingVisitSnapshot(

@@ -142,6 +142,11 @@ class PlusService(
         pass.reconcileConfirmed(confirmedAt)
     }
 
+    @Transactional
+    fun restorePass(bookingId: UUID) {
+        passes.findByBookingForUpdate(bookingId)?.restoreAfterPlatformCancellation()
+    }
+
     private fun reservation(pass: PlusPass, bookingId: UUID, gross: Long): PassReservationSnapshot {
         val discount = min(pass.discountMinor, gross - 1)
         return PassReservationSnapshot(pass.id, bookingId, gross, discount, gross - discount, pass.holdExpiresAt)

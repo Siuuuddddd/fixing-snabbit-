@@ -44,6 +44,8 @@ For a ₹150 total with ₹100 available:
 
 Refund requests are stored before calling Razorpay. A short transaction claims one refund as `PROCESSING`, so concurrent app instances cannot intentionally submit it twice. Provider failures return it to `CREATING` for the retry scheduler. Wallet portions are credited only after any required online refund succeeds.
 
+Confirmed customer cancellations can request a partial refund only through the trusted `BookingCustomerCancelled` event. Wallet verifies that the requested amount is between zero and the captured total, retains the cancellation fee from the online portion first, then refunds the remainder to the original online and wallet sources. Platform cancellations use the same path with the full captured total. `totalSpentMinor` is derived from completed booking payments minus completed refunds, so a partial refund leaves only the retained fee as spend.
+
 ## Razorpay configuration
 
 Local development defaults to fake provider mode. Real mode requires environment variables:

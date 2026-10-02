@@ -47,4 +47,34 @@ class BookingEventHandlerTest {
 
         verify(exactly = 1) { transactions.terminateBookingPayment(bookingId, event.eventId) }
     }
+
+    @Test
+    fun `customer cancellation forwards authoritative partial refund amount`() {
+        val bookingId = UUID.randomUUID()
+        val event = EventEnvelope(
+            UUID.randomUUID(), "BookingCustomerCancelled", "Booking", bookingId.toString(), now,
+            ObjectMapper().createObjectNode().put("refundAmountMinor", 12_500),
+        )
+        every { processed.claim("wallet-service", event.eventId, now) } returns true
+        every { transactions.terminateBookingPayment(bookingId, event.eventId, 12_500) } returns UUID.randomUUID()
+
+        handler.handle(event)
+
+        verify(exactly = 1) { transactions.terminateBookingPayment(bookingId, event.eventId, 12_500) }
+    }
+
+    @Test
+    fun `platform cancellation forwards full refund amount`() {
+        val bookingId = UUID.randomUUID()
+        val event = EventEnvelope(
+            UUID.randomUUID(), "BookingPlatformCancelled", "Booking", bookingId.toString(), now,
+            ObjectMapper().createObjectNode().put("refundAmountMinor", 15_000),
+        )
+        every { processed.claim("wallet-service", event.eventId, now) } returns true
+        every { transactions.terminateBookingPayment(bookingId, event.eventId, 15_000) } returns UUID.randomUUID()
+
+        handler.handle(event)
+
+        verify(exactly = 1) { transactions.terminateBookingPayment(bookingId, event.eventId, 15_000) }
+    }
 }

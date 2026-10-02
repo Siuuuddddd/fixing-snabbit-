@@ -35,6 +35,18 @@ class PlusBookingEventHandlerTest {
         }
     }
 
+    @Test
+    fun `confirmed booking cancellations restore a consumed pass`() {
+        listOf("BookingCustomerCancelled", "BookingPlatformCancelled").forEach { eventType ->
+            val event = event(eventType)
+            every { processed.claim("user-service-plus", event.eventId, event.occurredAt) } returns true
+
+            handler.handle(event)
+
+            verify(exactly = 1) { plus.restorePass(UUID.fromString(event.aggregateId)) }
+        }
+    }
+
     private fun event(type: String): BookingEventEnvelope {
         val bookingId = UUID.randomUUID()
         return BookingEventEnvelope(

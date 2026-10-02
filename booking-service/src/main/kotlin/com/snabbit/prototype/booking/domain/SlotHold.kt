@@ -82,6 +82,22 @@ class SlotHold(
         if (status == SlotHoldStatus.HELD) status = SlotHoldStatus.RELEASED
     }
 
+    fun cancelAssignment() {
+        check(status == SlotHoldStatus.CONFIRMED && jobStatus == JobStatus.ASSIGNED) {
+            "Only an assigned visit that has not started arrival can be cancelled"
+        }
+        status = SlotHoldStatus.RELEASED
+        jobStatus = null
+    }
+
+    fun cancelByPlatform() {
+        check(status == SlotHoldStatus.CONFIRMED &&
+            (jobStatus == JobStatus.ASSIGNED || jobStatus == JobStatus.ARRIVED)
+        ) { "Platform cannot cancel a visit after service has started" }
+        status = SlotHoldStatus.RELEASED
+        jobStatus = null
+    }
+
     fun isActive(now: Instant): Boolean =
         status == SlotHoldStatus.CONFIRMED || (status == SlotHoldStatus.HELD && expiresAt.isAfter(now))
 

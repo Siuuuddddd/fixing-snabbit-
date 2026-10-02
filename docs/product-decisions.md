@@ -40,5 +40,5 @@ These defaults unblock implementation and remain configurable:
 - Worker offer timeout: 60 seconds per candidate.
 - Slot hold lifetime: 5 minutes.
 - Arrival geofence: 200 metres.
-- Customer cancellation policy beyond platform-failure refunds will be added before real-money testing.
+- Customer cancellation fees are configurable. Prototype defaults are ₹50 at least two hours before the earliest visit and ₹100 inside two hours, with a 50% Plus reduction. Cancellation is blocked after arrival/service activity; platform failure is always fully refunded.
 - Public product name and non-reserved base package are still required. `com.snabbit.prototype` is temporary because Kotlin forbids application code in `kotlin.*`.

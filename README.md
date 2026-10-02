@@ -37,7 +37,7 @@ The Wallet Service uses an append-only ledger for top-ups, reservations, split w
 
 The Support Service provides booking-bound customer tickets and durable chat history. Customers may open or read only tickets for bookings they own. Server-sent event streams resume from a durable message ID and poll PostgreSQL rather than relying on instance-local memory, so reconnects and multiple service instances preserve message order.
 
-Snabbit Plus is represented by durable subscriptions and single-use discounted passes owned by User Service. Booking reserves an eligible pass before creating its atomic hold, persists an auditable gross/discount/net price breakdown, compensates a failed hold, and consumes or releases the pass from idempotent Booking event handling. Plus membership also retains priority matching and favourite-worker continuity.
+Snabbit Plus is represented by durable subscriptions and single-use discounted passes owned by User Service. Booking reserves an eligible pass before creating its atomic hold, persists an auditable gross/discount/net price breakdown, compensates a failed hold, and consumes, releases or restores the pass from idempotent Booking event handling. Plus membership also provides priority matching, favourite-worker continuity and reduced cancellation fees. Confirmed cancellations record their fee/refund breakdown; platform inability triggers a full refund, and Wallet returns partial or full amounts to the original split-payment sources.
 
 Payment confirmation is exposed only below `/internal/v1`; it is not routed by the customer API Gateway. Authentication and service-to-service authorization will be added before any real provider integration.
 

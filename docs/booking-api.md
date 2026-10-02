@@ -24,14 +24,28 @@ The match-and-hold route is the intended customer path. It reserves an eligible 
 - `POST /api/v1/bookings/{bookingId}/payments` — start split wallet/online payment from the stored quote. Requires `Idempotency-Key`; the request never accepts an amount.
 - `GET /api/v1/bookings/{bookingId}` — return the shared customer/worker duration and current lifecycle.
 - `DELETE /api/v1/bookings/{bookingId}/hold` — cancel a pre-confirmation booking and release holds.
+- `GET /api/v1/bookings/{bookingId}/cancellation-quote` — preview the current server-side fee and refund for an unstarted confirmed booking.
+- `POST /api/v1/bookings/{bookingId}/cancellations` — cancel an unstarted confirmed booking and emit the authoritative partial-refund fact.
 
 ## Internal route
 
 - `POST /internal/v1/bookings/{bookingId}/payment-confirmation` — idempotently confirm all visits with a verified provider payment reference.
 - `GET /internal/v1/bookings/{bookingId}/payment-quote` — expose the authoritative customer, state, hold expiry and quote to Wallet Service.
 - `POST /internal/v1/bookings` — preselected-worker creation for trusted prototype/integration workflows; customer apps cannot bypass matching through this route.
+- `POST /internal/v1/bookings/{bookingId}/platform-cancellation` — cancel a confirmed service that the platform cannot provide, grant a full refund and restore any Plus pass.
 
 Internal routes must later require service identity. They are intentionally not included in API Gateway routes and must never be called from Android based on a client-side payment result. Worker decisions are exposed separately through role-protected worker APIs documented in [worker-api.md](worker-api.md).
+
+## Confirmed cancellation policy
+
+Cancellation is rejected after the first visit's start time, worker arrival for customer requests, or any service activity. The configurable prototype defaults are:
+
+- Two or more hours before the earliest visit: ₹50 standard fee.
+- Less than two hours before the earliest visit: ₹100 standard fee.
+- Active Plus membership reduces either fee by 50%.
+- A platform cancellation before service start carries no fee and refunds the full charged quote.
+
+The quote endpoint is advisory: the cancellation command locks and rechecks the booking and recalculates the fee, so crossing the two-hour boundary or worker arrival cannot use a stale preview. All amounts are recorded in paise on the booking. The Wallet consumer receives the refund amount from the committed Booking event; Android never supplies it.
 
 ## Example multi-day request
 

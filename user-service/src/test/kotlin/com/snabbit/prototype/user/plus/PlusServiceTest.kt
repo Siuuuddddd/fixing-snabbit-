@@ -72,6 +72,23 @@ class PlusServiceTest {
         assertEquals(now.plusSeconds(299), pass.usedAt)
     }
 
+    @Test
+    fun `confirmed cancellation restores consumed pass`() {
+        val user = user()
+        val bookingId = UUID.randomUUID()
+        val pass = pass(user.id).apply {
+            reserve(bookingId, now.plusSeconds(300), now)
+            consume(now.plusSeconds(120))
+        }
+        every { passes.findByBookingForUpdate(bookingId) } returns pass
+
+        service.restorePass(bookingId)
+
+        assertEquals(PlusPassStatus.AVAILABLE, pass.status)
+        assertEquals(null, pass.heldForBookingId)
+        assertEquals(null, pass.usedAt)
+    }
+
     private fun user() = UserProfile(
         UUID.randomUUID(), "+919999999999", "Customer", UserStatus.ACTIVE,
         true, now.plusSeconds(86_400), now, now,

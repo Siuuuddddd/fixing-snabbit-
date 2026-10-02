@@ -72,4 +72,13 @@ class PlusPass(
             holdExpiresAt = null
         }
     }
+
+    fun restoreAfterPlatformCancellation() {
+        if (status == PlusPassStatus.HELD || status == PlusPassStatus.USED) {
+            status = PlusPassStatus.AVAILABLE
+            heldForBookingId = null
+            holdExpiresAt = null
+            usedAt = null
+        }
+    }
 }

@@ -204,6 +204,105 @@ class BookingLifecycleService(
         )
     }
 
+    @Transactional(readOnly = true)
+    fun cancellationContext(bookingId: UUID): CancellationContext {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        val holds = requireHolds(bookingId)
+        return CancellationContext(
+            booking.id,
+            booking.customerId,
+            booking.status.name,
+            booking.quotedTotalMinor,
+            holds.minOf(SlotHold::startsAt),
+            holds.all { it.status == SlotHoldStatus.CONFIRMED && it.jobStatus == JobStatus.ASSIGNED },
+            booking.cancellationType,
+        )
+    }
+
+    @Transactional
+    fun cancelConfirmed(
+        bookingId: UUID,
+        expectedCustomerId: UUID,
+        plusActive: Boolean,
+        rawReason: String?,
+        policy: BookingCancellationPolicy,
+    ): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        if (booking.customerId != expectedCustomerId) throw com.snabbit.prototype.booking.support.CustomerAccessDenied()
+        if (booking.status == BookingStatus.CANCELLED && booking.cancellationType == "CUSTOMER") {
+            return currentSnapshot(booking)
+        }
+        if (booking.status != BookingStatus.CONFIRMED) {
+            throw InvalidBookingState("Only a confirmed booking can be cancelled with a refund")
+        }
+        val holds = requireHolds(bookingId)
+        if (holds.any { it.status != SlotHoldStatus.CONFIRMED || it.jobStatus != JobStatus.ASSIGNED }) {
+            throw InvalidBookingState("A booking cannot be cancelled after worker arrival or service activity")
+        }
+        val earliestStart = holds.minOf(SlotHold::startsAt)
+        if (!earliestStart.isAfter(now)) throw InvalidBookingState("A booking cannot be cancelled after its start time")
+        val quote = policy.quote(booking.id, booking.quotedTotalMinor, earliestStart, plusActive, now)
+        val reason = rawReason?.trim()?.takeIf(String::isNotBlank)?.also {
+            if (it.length > 240) throw BookingRuleViolation("Cancellation reason cannot exceed 240 characters")
+        }
+        holds.forEach(SlotHold::cancelAssignment)
+        booking.cancelConfirmed(reason, quote.cancellationFeeMinor, quote.refundAmountMinor, now)
+        outboxWriter.append(
+            booking.id,
+            "BookingCustomerCancelled",
+            mapOf(
+                "bookingId" to booking.id,
+                "customerId" to booking.customerId,
+                "cancellationFeeMinor" to quote.cancellationFeeMinor,
+                "refundAmountMinor" to quote.refundAmountMinor,
+                "plusActive" to plusActive,
+                "cancelledAt" to now,
+            ),
+            now,
+        )
+        return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun cancelConfirmedByPlatform(bookingId: UUID, rawReason: String): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        if (booking.status == BookingStatus.CANCELLED && booking.cancellationType == "PLATFORM") {
+            return currentSnapshot(booking)
+        }
+        if (booking.status != BookingStatus.CONFIRMED) {
+            throw InvalidBookingState("Only a confirmed booking can be cancelled by the platform")
+        }
+        val reason = rawReason.trim()
+        if (reason.isBlank() || reason.length > 240) {
+            throw BookingRuleViolation("Platform cancellation reason must contain 1 to 240 characters")
+        }
+        val holds = requireHolds(bookingId)
+        if (holds.any {
+                it.status != SlotHoldStatus.CONFIRMED ||
+                    (it.jobStatus != JobStatus.ASSIGNED && it.jobStatus != JobStatus.ARRIVED)
+            }
+        ) {
+            throw InvalidBookingState("Platform cannot cancel after service has started or completed")
+        }
+        holds.forEach(SlotHold::cancelByPlatform)
+        booking.cancelByPlatform(reason, now)
+        outboxWriter.append(
+            booking.id,
+            "BookingPlatformCancelled",
+            mapOf(
+                "bookingId" to booking.id,
+                "customerId" to booking.customerId,
+                "refundAmountMinor" to booking.quotedTotalMinor,
+                "cancellationFeeMinor" to 0,
+                "cancelledAt" to now,
+            ),
+            now,
+        )
+        return currentSnapshot(booking)
+    }
+
     @Transactional
     fun acceptOffer(bookingId: UUID, offerId: UUID, workerId: UUID): BookingSnapshot {
         val now = clock.instant()
@@ -553,6 +652,11 @@ class BookingLifecycleService(
                     completedAt = hold.completedAt,
                 )
             },
+            cancellationType = booking.cancellationType,
+            cancellationReason = booking.cancellationReason,
+            cancellationFeeMinor = booking.cancellationFeeMinor,
+            refundAmountMinor = booking.refundAmountMinor,
+            cancelledAt = booking.cancelledAt,
         )
     }
 }

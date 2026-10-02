@@ -65,6 +65,16 @@ class Booking(
     val plusPassId: UUID? = null,
     @Column(name = "confirmed_at")
     var confirmedAt: Instant? = null,
+    @Column(name = "cancellation_type")
+    var cancellationType: String? = null,
+    @Column(name = "cancellation_reason")
+    var cancellationReason: String? = null,
+    @Column(name = "cancellation_fee_minor")
+    var cancellationFeeMinor: Long? = null,
+    @Column(name = "refund_amount_minor")
+    var refundAmountMinor: Long? = null,
+    @Column(name = "cancelled_at")
+    var cancelledAt: Instant? = null,
     @Version
     var version: Long = 0,
 ) {
@@ -102,8 +112,36 @@ class Booking(
         }
         if (status != BookingStatus.CANCELLED) {
             status = BookingStatus.CANCELLED
+            cancellationType = "PRE_CONFIRMATION"
+            cancelledAt = now
             updatedAt = now
         }
+    }
+
+    fun cancelConfirmed(reason: String?, feeMinor: Long, refundMinor: Long, now: Instant) {
+        check(status == BookingStatus.CONFIRMED) { "Only a confirmed booking can use the refund cancellation workflow" }
+        require(feeMinor >= 0 && refundMinor >= 0 && feeMinor + refundMinor == quotedTotalMinor) {
+            "Cancellation money must equal the charged quote"
+        }
+        status = BookingStatus.CANCELLED
+        cancellationType = "CUSTOMER"
+        cancellationReason = reason
+        cancellationFeeMinor = feeMinor
+        refundAmountMinor = refundMinor
+        cancelledAt = now
+        updatedAt = now
+    }
+
+    fun cancelByPlatform(reason: String, now: Instant) {
+        check(status == BookingStatus.CONFIRMED) { "Only a confirmed booking can be cancelled by the platform" }
+        require(reason.isNotBlank()) { "Platform cancellation reason is required" }
+        status = BookingStatus.CANCELLED
+        cancellationType = "PLATFORM"
+        cancellationReason = reason
+        cancellationFeeMinor = 0
+        refundAmountMinor = quotedTotalMinor
+        cancelledAt = now
+        updatedAt = now
     }
 
     fun complete(now: Instant) {
