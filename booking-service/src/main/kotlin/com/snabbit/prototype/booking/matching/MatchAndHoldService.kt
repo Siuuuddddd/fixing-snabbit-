@@ -4,6 +4,7 @@ import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
+import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.support.SlotUnavailable
@@ -19,7 +20,6 @@ import java.util.UUID
 data class MatchAndHoldCommand(
     val customerId: UUID,
     val serviceId: UUID,
-    val serviceCode: String,
     val bookingType: BookingType,
     val duration: Duration,
     val latitude: Double,
@@ -31,15 +31,18 @@ data class MatchAndHoldCommand(
 class MatchAndHoldService(
     private val clients: MatchingClients,
     private val lifecycleService: BookingLifecycleService,
+    private val catalog: ServiceCatalogService,
 ) {
     suspend fun matchAndHold(command: MatchAndHoldCommand): BookingSnapshot {
+        val offering = catalog.requireActive(command.serviceId)
         val household = clients.household(command.customerId)
         val candidateLists = coroutineScope {
             command.startsAt.map { start ->
                 async {
                     clients.matches(
                         WorkerMatchRequest(
-                            serviceCode = command.serviceCode,
+                            serviceCode = offering.code,
+                            basePricePerHourMinor = offering.basePricePerHourMinor,
                             startsAt = start,
                             durationMinutes = command.duration.toMinutes().toInt(),
                             latitude = command.latitude,

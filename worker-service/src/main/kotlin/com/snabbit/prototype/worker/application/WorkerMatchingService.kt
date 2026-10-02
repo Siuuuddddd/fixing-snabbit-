@@ -22,6 +22,7 @@ import kotlin.math.sqrt
 
 data class MatchWorkersCommand(
     val serviceCode: String,
+    val basePricePerHourMinor: Long,
     val startsAt: Instant,
     val durationMinutes: Int,
     val latitude: Double,
@@ -88,8 +89,7 @@ class WorkerMatchingService(
                 profile.currentLongitude.toDouble(),
             )
             if (distance > command.maxDistanceKm || distance > profile.serviceRadiusKm.toDouble()) return@mapNotNull null
-            val skill = skills.getValue(workerId)
-            val basePrice = skill.basePricePerHourMinor * command.durationMinutes / 60
+            val basePrice = command.basePricePerHourMinor * command.durationMinutes / 60
             RankedMatch(
                 value = WorkerMatch(
                     workerId = profile.id,
@@ -150,6 +150,7 @@ class WorkerMatchingService(
             throw InvalidMatchRequest("Duration must be 1 to 4 whole hours")
         }
         if (command.serviceCode.isBlank()) throw InvalidMatchRequest("Service code is required")
+        if (command.basePricePerHourMinor <= 0) throw InvalidMatchRequest("Base price must be positive")
         if (command.latitude !in -90.0..90.0 || command.longitude !in -180.0..180.0) {
             throw InvalidMatchRequest("Valid coordinates are required")
         }

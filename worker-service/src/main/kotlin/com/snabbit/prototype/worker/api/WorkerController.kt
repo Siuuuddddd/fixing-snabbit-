@@ -34,6 +34,8 @@ import java.util.UUID
 data class MatchWorkersRequest(
     @field:NotBlank
     val serviceCode: String,
+    @field:Min(1)
+    val basePricePerHourMinor: Long,
     val startsAt: Instant,
     @field:Min(60) @field:Max(240)
     val durationMinutes: Int,
@@ -70,6 +72,7 @@ class InternalWorkerController(private val matchingService: WorkerMatchingServic
     fun match(@Valid @RequestBody request: MatchWorkersRequest): List<WorkerMatch> = matchingService.match(
         MatchWorkersCommand(
             request.serviceCode,
+            request.basePricePerHourMinor,
             request.startsAt,
             request.durationMinutes,
             request.latitude,

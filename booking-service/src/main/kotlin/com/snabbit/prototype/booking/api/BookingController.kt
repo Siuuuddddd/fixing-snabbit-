@@ -55,8 +55,6 @@ data class VisitRequest(
 data class MatchAndHoldRequest(
     val customerId: UUID,
     val serviceId: UUID,
-    @field:NotBlank
-    val serviceCode: String,
     val bookingType: BookingType,
     @field:Min(1) @field:Max(4)
     val durationHours: Long,
@@ -103,7 +101,6 @@ class MatchAndHoldController(private val service: MatchAndHoldService) {
             MatchAndHoldCommand(
                 customerId = request.customerId,
                 serviceId = request.serviceId,
-                serviceCode = request.serviceCode,
                 bookingType = request.bookingType,
                 duration = Duration.ofHours(request.durationHours),
                 latitude = request.latitude,

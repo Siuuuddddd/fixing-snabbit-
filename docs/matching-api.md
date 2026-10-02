@@ -2,6 +2,8 @@
 
 `POST /api/v1/bookings/match-and-hold` is coordinated by Booking Service. It reads the customer's household snapshot from User Service, requests candidates from Worker Service for each visit, and finally asks the existing Booking lifecycle to acquire real PostgreSQL slot holds. A Worker Service availability result is advisory; the Booking database lock is the final concurrency boundary.
 
+The request contains only `serviceId`. Booking resolves the active service code and hourly base price from its own catalog, so Android cannot mismatch an ID/code pair or choose a price. `GET /api/v1/services` lists all active services. The prototype catalog includes house cleaning, dish washing, laundry and toilet cleaning.
+
 ## Matching rules
 
 Candidates must be active, skilled for the requested service, available for the whole visit and within both the request radius and the worker's own service radius. Hard compatibility filters cover pets, food context, language, utensils, accessibility, heavy lifting, worker constraints, avoided cleaning chemicals and required equipment.
@@ -22,7 +24,6 @@ The booking persists an immutable-at-creation requirement snapshot and includes 
 {
   "customerId": "40000000-0000-0000-0000-000000000001",
   "serviceId": "30000000-0000-0000-0000-000000000001",
-  "serviceCode": "HOUSE_CLEANING",
   "bookingType": "MULTI_DAY",
   "durationHours": 2,
   "latitude": 19.07609,

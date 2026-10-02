@@ -3,6 +3,8 @@ package com.snabbit.prototype.booking.matching
 import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
+import com.snabbit.prototype.booking.catalog.ServiceCatalogService
+import com.snabbit.prototype.booking.catalog.ServiceOfferingSnapshot
 import com.snabbit.prototype.booking.domain.BookingType
 import io.mockk.coEvery
 import io.mockk.every
@@ -17,7 +19,7 @@ import java.time.Instant
 import java.util.UUID
 
 class MatchAndHoldServiceTest {
-    private val service = MatchAndHoldService(mockk(), mockk<BookingLifecycleService>())
+    private val service = MatchAndHoldService(mockk(), mockk<BookingLifecycleService>(), mockk())
 
     @Test
     fun `Plus selects favourite worker continuously across every visit`() {
@@ -51,7 +53,8 @@ class MatchAndHoldServiceTest {
     fun `persists the authoritative requirements and selected worker quote`() = runBlocking {
         val clients = mockk<MatchingClients>()
         val lifecycle = mockk<BookingLifecycleService>()
-        val service = MatchAndHoldService(clients, lifecycle)
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog)
         val customerId = UUID.randomUUID()
         val serviceId = UUID.randomUUID()
         val workerId = UUID.randomUUID()
@@ -63,8 +66,15 @@ class MatchAndHoldServiceTest {
             workerConstraints = listOf("MASK_REQUIRED"),
         )
         val created = slot<CreateBookingCommand>()
+        val matchRequest = slot<WorkerMatchRequest>()
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId,
+            "HOUSE_CLEANING",
+            "House Cleaning",
+            18_000,
+        )
         coEvery { clients.household(customerId) } returns household
-        coEvery { clients.matches(any()) } returns listOf(match(workerId, 39_000))
+        coEvery { clients.matches(capture(matchRequest)) } returns listOf(match(workerId, 39_000))
         every { lifecycle.create(capture(created)) } answers {
             BookingSnapshot(
                 UUID.randomUUID(),
@@ -80,7 +90,6 @@ class MatchAndHoldServiceTest {
             MatchAndHoldCommand(
                 customerId,
                 serviceId,
-                "HOUSE_CLEANING",
                 BookingType.SCHEDULED,
                 Duration.ofHours(2),
                 19.07609,
@@ -90,6 +99,8 @@ class MatchAndHoldServiceTest {
         )
 
         assertEquals(39_000, created.captured.quotedTotalMinor)
+        assertEquals("HOUSE_CLEANING", matchRequest.captured.serviceCode)
+        assertEquals(18_000, matchRequest.captured.basePricePerHourMinor)
         assertEquals("One dog", created.captured.requirements.petDetails)
         assertEquals(listOf("DUST"), created.captured.requirements.allergies)
         assertEquals(listOf("MASK_REQUIRED"), created.captured.requirements.workerConstraints)

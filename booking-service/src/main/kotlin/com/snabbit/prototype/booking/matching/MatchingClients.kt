@@ -30,6 +30,7 @@ data class HouseholdSnapshotResponse(
 
 data class WorkerMatchRequest(
     val serviceCode: String,
+    val basePricePerHourMinor: Long,
     val startsAt: Instant,
     val durationMinutes: Int,
     val latitude: Double,

@@ -104,6 +104,7 @@ class WorkerMatchingServiceTest {
 
     private fun command(favouriteId: UUID, hasPets: Boolean) = MatchWorkersCommand(
         serviceCode = "HOUSE_CLEANING",
+        basePricePerHourMinor = 18_000,
         startsAt = start,
         durationMinutes = 120,
         latitude = 19.076090,
