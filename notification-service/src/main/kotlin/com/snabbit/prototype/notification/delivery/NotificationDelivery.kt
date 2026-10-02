@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -129,6 +130,7 @@ interface SmsDeliveryAdapter {
 }
 
 @Component
+@Profile("local", "test")
 class LoggingPushDeliveryAdapter : PushDeliveryAdapter {
     private val logger = LoggerFactory.getLogger(javaClass)
     override fun send(tokens: List<String>, title: String, body: String) {
@@ -138,6 +140,7 @@ class LoggingPushDeliveryAdapter : PushDeliveryAdapter {
 }
 
 @Component
+@Profile("local", "test")
 class LoggingSmsDeliveryAdapter : SmsDeliveryAdapter {
     private val logger = LoggerFactory.getLogger(javaClass)
     override fun send(phoneNumber: String, body: String) {

@@ -26,7 +26,7 @@ The configured token must contain at least 32 bytes. Checked-in local defaults a
 
 ## Prototype delivery and secrets
 
-`LoggingOtpDelivery` is a replaceable development adapter. It writes the OTP to the User Service log with the phone number masked. API responses expose the code only when `OTP_EXPOSE_CODE=true`; the secure default is `false`.
+`LoggingOtpDelivery` and the worker equivalent are replaceable development adapters. They exist only under the `local` and `test` Spring profiles and write the OTP to the owning service log with the phone number masked. The checked-in default profile is `local` for developer convenience. A non-local deployment fails to start unless it supplies a real `OtpDelivery`/`WorkerOtpDelivery` bean, preventing an accidental OTP-logging production release. API responses expose the code only when `OTP_EXPOSE_CODE=true`; the secure default is `false`.
 
 User Service and API Gateway must use the same `JWT_SECRET`, which must be at least 32 bytes. Set a unique `OTP_PEPPER` and `SERVICE_AUTH_TOKEN` as well. The checked-in defaults are local-development values and must never be used outside a local prototype.
 

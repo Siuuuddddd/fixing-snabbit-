@@ -1,6 +1,8 @@
 server:
   port: 8086
 spring:
+  profiles:
+    default: local
   application:
     name: notification-service
   main:

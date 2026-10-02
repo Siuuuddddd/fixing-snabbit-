@@ -18,7 +18,7 @@ Android should persist the greatest `notificationId` it has processed. After dis
 
 Every stored notification creates a push delivery. Critical events—payment deadlines/failures, confirmations, arrival, cancellations and refunds—also create an SMS delivery. A short SQL lease using `FOR UPDATE SKIP LOCKED` lets multiple service instances claim jobs without duplicate intentional sends. Failures use exponential delay and become `DEAD` after five attempts.
 
-The checked-in adapters log masked development deliveries. They intentionally never log full device tokens or phone numbers. Production must replace them with FCM and an Indian SMS provider while preserving the existing leased job and acknowledgement boundary.
+The checked-in adapters log masked development deliveries. They intentionally never log full device tokens or phone numbers and are registered only under the `local` and `test` Spring profiles. The checked-in default profile is `local`; a non-local deployment fails to start until it provides real `PushDeliveryAdapter` and `SmsDeliveryAdapter` beans. Production must supply FCM and an Indian SMS provider while preserving the existing leased job and acknowledgement boundary.
 
 Verified Plus purchases are also notification facts. Customers receive a critical `Plus payment verified` notification from the durable `PlusSubscriptionPurchased` wallet event; client-side checkout callbacks never create this message.
 

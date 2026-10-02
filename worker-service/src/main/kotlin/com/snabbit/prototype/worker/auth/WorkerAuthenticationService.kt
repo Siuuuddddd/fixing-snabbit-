@@ -8,6 +8,7 @@ import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
 import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
@@ -38,6 +39,7 @@ interface WorkerOtpDelivery {
 }
 
 @Component
+@Profile("local", "test")
 class LoggingWorkerOtpDelivery : WorkerOtpDelivery {
     private val logger = LoggerFactory.getLogger(javaClass)
 

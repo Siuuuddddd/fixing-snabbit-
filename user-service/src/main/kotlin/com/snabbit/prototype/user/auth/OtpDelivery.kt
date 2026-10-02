@@ -1,6 +1,7 @@
 package com.snabbit.prototype.user.auth
 
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 interface OtpDelivery {
@@ -8,6 +9,7 @@ interface OtpDelivery {
 }
 
 @Component
+@Profile("local", "test")
 class LoggingOtpDelivery : OtpDelivery {
     private val logger = LoggerFactory.getLogger(javaClass)
 
