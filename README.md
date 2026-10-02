@@ -46,6 +46,8 @@ Payment confirmation and other trusted coordination APIs are exposed only below 
 
 See [docs/authentication.md](docs/authentication.md), [docs/address-api.md](docs/address-api.md), [docs/worker-api.md](docs/worker-api.md), [docs/ratings.md](docs/ratings.md), [docs/booking-api.md](docs/booking-api.md), [docs/matching-api.md](docs/matching-api.md), [docs/plus-api.md](docs/plus-api.md), [docs/support-api.md](docs/support-api.md), [docs/notifications-api.md](docs/notifications-api.md), [docs/product-decisions.md](docs/product-decisions.md) and [docs/architecture/0001-service-boundaries.md](docs/architecture/0001-service-boundaries.md).
 
+The requirement-to-code handoff matrix and owner-supplied launch inputs are tracked in [docs/implementation-status.md](docs/implementation-status.md).
+
 Build and integration-test expectations are documented in [docs/testing.md](docs/testing.md). GitHub Actions packages every service and requires the Docker-backed safety tests to execute without skips on each push and pull request.
 
 Operational endpoints and privacy rules are documented in [docs/observability.md](docs/observability.md). Every service includes a real Prometheus registry rather than merely listing an unavailable endpoint.
