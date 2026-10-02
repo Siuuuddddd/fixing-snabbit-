@@ -7,6 +7,7 @@ import com.snabbit.prototype.wallet.application.TopUpSnapshot
 import com.snabbit.prototype.wallet.application.WalletBalance
 import com.snabbit.prototype.wallet.application.WalletService
 import com.snabbit.prototype.wallet.application.WalletOwnershipSnapshot
+import com.snabbit.prototype.wallet.application.PlusPurchaseSnapshot
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
@@ -25,6 +26,16 @@ data class AddMoneyRequest(@field:Min(100) val amountMinor: Long)
 data class CreateBookingPaymentRequest(
     val bookingId: UUID,
     val useWallet: Boolean = true,
+)
+
+data class CreatePlusPurchaseRequest(
+    val customerId: UUID,
+    val planCode: String,
+    val amountMinor: Long,
+    val durationDays: Int,
+    val passCount: Int,
+    val passDiscountMinor: Long,
+    val serviceCode: String? = null,
 )
 
 @RestController
@@ -56,6 +67,17 @@ class WalletController(private val service: WalletService) {
 class InternalWalletController(private val service: WalletService) {
     @GetMapping("/{walletId}/ownership")
     fun ownership(@PathVariable walletId: UUID): WalletOwnershipSnapshot = service.ownership(walletId)
+
+    @PostMapping("/{walletId}/plus-purchases")
+    fun createPlusPurchase(
+        @PathVariable walletId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @Valid @RequestBody request: CreatePlusPurchaseRequest,
+    ): PlusPurchaseSnapshot = service.createPlusPurchase(
+        walletId, request.customerId, request.planCode, request.amountMinor,
+        request.durationDays, request.passCount, request.passDiscountMinor,
+        request.serviceCode, idempotencyKey,
+    )
 
     @PostMapping("/{walletId}/booking-payments")
     fun createBookingPayment(

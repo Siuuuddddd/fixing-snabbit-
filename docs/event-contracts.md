@@ -33,5 +33,6 @@ Event payloads contain identifiers, lifecycle timestamps and references needed t
 | `WalletPaymentFailed` | A pending payment was cancelled or provider order creation failed | Booking, notification |
 | `WalletPaymentRefundRequired` | Money arrived after capacity/payment expiry and a durable compensation refund was queued | Finance, support |
 | `WalletRefundCompleted` | Wallet credit and any provider refund both completed | Booking, notification, finance |
+| `PlusSubscriptionPurchased` | A signed capture paid an authoritative Plus plan order | User, notification, analytics |
 
-Wallet events use `walletId` for top-up aggregates and `bookingId` for booking-payment aggregates. Raw Razorpay webhook bodies, signatures and credentials are never included.
+Wallet events use `walletId` for top-up and Plus-purchase aggregates and `bookingId` for booking-payment aggregates. Raw Razorpay webhook bodies, signatures and credentials are never included.

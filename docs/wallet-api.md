@@ -23,12 +23,15 @@ Creating a top-up does not credit the wallet. Credit occurs only after `/webhook
 
 - `GET /internal/v1/bookings/{bookingId}/payment-quote` — authoritative customer, lifecycle state, hold expiry and server-calculated total.
 - `POST /internal/v1/wallets/{walletId}/booking-payments` — re-read the authoritative Booking quote, verify wallet ownership, atomically reserve available wallet funds and create a Razorpay order for the remainder.
+- `POST /internal/v1/wallets/{walletId}/plus-purchases` — verify wallet ownership and create an idempotent Razorpay order from User Service's authoritative Plus plan terms.
 - `POST /internal/v1/wallets/booking-payments/{paymentId}/cancel` — release a pending reservation. A later provider capture is automatically queued for a compensating refund.
 - `POST /internal/v1/wallets/booking-payments/{paymentId}/refunds` — full refund with an idempotency key.
 
 These routes require `X-Service-Token` and are intentionally absent from customer API Gateway routes. See [authentication.md](authentication.md).
 
 The Wallet request contains `bookingId` and `useWallet`, never an amount. Wallet accepts only an `AWAITING_PAYMENT` booking with an unexpired hold, a positive INR quote and a wallet owned by the booking customer. Booking and Wallet both check these rules so neither an Android payload nor a mistaken internal caller can choose the charged total.
+
+Plus purchase rows are separate from wallet top-ups and never credit the wallet ledger. A matching signed capture emits `PlusSubscriptionPurchased`; User Service alone converts that fact into membership and passes.
 
 ## Split payment behavior
 

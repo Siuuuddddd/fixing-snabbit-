@@ -6,6 +6,7 @@ import com.snabbit.prototype.user.auth.InvalidOtp
 import com.snabbit.prototype.user.auth.OtpRateLimited
 import com.snabbit.prototype.user.rating.CustomerRatingRejected
 import com.snabbit.prototype.user.plus.PlusRequestRejected
+import com.snabbit.prototype.user.plus.PlusPurchaseUnavailable
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -46,4 +47,8 @@ class UserExceptionHandler {
     @ExceptionHandler(PlusRequestRejected::class)
     fun plusRejected(error: PlusRequestRejected): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
+
+    @ExceptionHandler(PlusPurchaseUnavailable::class)
+    fun plusPurchaseUnavailable(error: PlusPurchaseUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
 }

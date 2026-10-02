@@ -20,4 +20,6 @@ Every stored notification creates a push delivery. Critical events—payment dea
 
 The checked-in adapters log masked development deliveries. They intentionally never log full device tokens or phone numbers. Production must replace them with FCM and an Indian SMS provider while preserving the existing leased job and acknowledgement boundary.
 
+Verified Plus purchases are also notification facts. Customers receive a critical `Plus payment verified` notification from the durable `PlusSubscriptionPurchased` wallet event; client-side checkout callbacks never create this message.
+
 Push tokens are stored only in Notification Service. Phone numbers remain owned by User Service and are fetched through `/internal/v1/users/{userId}/contact` outside the delivery transaction. Notification Service never reads User, Booking or Wallet databases directly.

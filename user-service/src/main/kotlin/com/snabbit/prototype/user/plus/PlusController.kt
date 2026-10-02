@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.http.HttpStatus
 import java.time.Instant
 import java.util.UUID
 
@@ -33,10 +35,14 @@ data class ReservePassRequest(
 )
 
 data class ConsumePassRequest(val confirmedAt: Instant)
+data class PurchasePlusRequest(val walletId: UUID, @field:NotBlank @field:Size(max = 60) val planCode: String)
 
 @RestController
 @RequestMapping("/api/v1/users/{userId}/plus")
-class CustomerPlusController(private val service: PlusService) {
+class CustomerPlusController(
+    private val service: PlusService,
+    private val purchases: PlusPurchaseService,
+) {
     @GetMapping
     fun status(
         @PathVariable userId: UUID,
@@ -45,6 +51,17 @@ class CustomerPlusController(private val service: PlusService) {
         if (authenticatedUserId != userId) throw CustomerAccessDenied()
         return service.status(userId)
     }
+
+    @PostMapping("/purchases")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun purchase(
+        @PathVariable userId: UUID,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedUserId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @Valid @RequestBody request: PurchasePlusRequest,
+    ): PlusPurchaseSnapshot = purchases.purchase(
+        userId, authenticatedUserId, request.walletId, request.planCode, idempotencyKey,
+    )
 }
 
 @RestController

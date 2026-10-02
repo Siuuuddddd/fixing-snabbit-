@@ -86,6 +86,8 @@ class NotificationTemplates {
         "BookingCustomerCancelled" -> NotificationTemplate("Cancellation accepted", "Your refund is being returned after the cancellation fee.", true)
         "BookingPlatformCancelled" -> NotificationTemplate("Full refund started", "We could not provide the service. A full refund is being returned.", true)
         "WalletTopUpSucceeded" -> NotificationTemplate("Money added", "Your wallet top-up was verified and credited.", true)
+        "PlusSubscriptionPurchased" ->
+            NotificationTemplate("Plus payment verified", "Your Plus membership purchase was verified.", true)
         "WalletPaymentSucceeded" -> NotificationTemplate("Payment received", "Your booking payment was verified.", false)
         "WalletPaymentFailed" -> NotificationTemplate("Payment stopped", "The booking payment did not complete. Reserved wallet funds were released.", true)
         "WalletPaymentRefundRequired", "WalletRefundQueued" ->

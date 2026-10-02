@@ -1,0 +1,25 @@
+CREATE TABLE plus_purchase (
+    id UUID PRIMARY KEY,
+    wallet_id UUID NOT NULL REFERENCES wallet_account(id),
+    customer_id UUID NOT NULL,
+    plan_code VARCHAR(60) NOT NULL,
+    amount_minor BIGINT NOT NULL,
+    duration_days INTEGER NOT NULL,
+    pass_count INTEGER NOT NULL,
+    pass_discount_minor BIGINT NOT NULL,
+    service_code VARCHAR(60) NULL,
+    status VARCHAR(20) NOT NULL,
+    provider VARCHAR(20) NOT NULL,
+    provider_order_id VARCHAR(160) NULL UNIQUE,
+    provider_payment_id VARCHAR(160) NULL,
+    idempotency_key VARCHAR(180) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    version BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT ck_plus_purchase_amount CHECK (amount_minor > 0),
+    CONSTRAINT ck_plus_purchase_duration CHECK (duration_days BETWEEN 1 AND 365),
+    CONSTRAINT ck_plus_purchase_passes CHECK (pass_count BETWEEN 0 AND 20),
+    CONSTRAINT ck_plus_purchase_discount CHECK (pass_discount_minor >= 0),
+    CONSTRAINT ck_plus_purchase_status CHECK (status IN ('CREATING_ORDER', 'PENDING', 'PAID', 'FAILED'))
+);
+

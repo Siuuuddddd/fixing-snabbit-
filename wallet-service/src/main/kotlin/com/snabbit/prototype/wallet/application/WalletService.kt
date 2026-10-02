@@ -46,6 +46,31 @@ class WalletService(
         return addMoney(walletId, amountMinor, idempotencyKey)
     }
 
+    fun createPlusPurchase(
+        walletId: UUID,
+        customerId: UUID,
+        planCode: String,
+        amountMinor: Long,
+        durationDays: Int,
+        passCount: Int,
+        passDiscountMinor: Long,
+        serviceCode: String?,
+        idempotencyKey: String,
+    ): PlusPurchaseSnapshot {
+        val prepared = transactions.preparePlusPurchase(
+            walletId, customerId, planCode, amountMinor, durationDays,
+            passCount, passDiscountMinor, serviceCode, idempotencyKey,
+        )
+        if (prepared.status != "CREATING_ORDER") return prepared
+        return try {
+            val order = provider.createOrder(amountMinor, "plus_${prepared.purchaseId}")
+            transactions.attachPlusPurchaseOrder(prepared.purchaseId, order)
+        } catch (error: Exception) {
+            transactions.failPlusPurchase(prepared.purchaseId)
+            throw error
+        }
+    }
+
     fun createBookingPayment(
         walletId: UUID,
         bookingId: UUID,

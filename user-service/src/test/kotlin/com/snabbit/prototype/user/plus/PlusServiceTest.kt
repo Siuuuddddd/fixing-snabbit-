@@ -89,6 +89,26 @@ class PlusServiceTest {
         assertEquals(null, pass.usedAt)
     }
 
+    @Test
+    fun `early Plus renewal extends current expiry instead of losing purchased days`() {
+        val user = user().apply { plusExpiresAt = now.plusSeconds(10 * 86_400L) }
+        every { users.findForUpdate(user.id) } returns user
+        every { subscriptions.findBySourceReference("plus-purchase:${testPurchaseId}") } returns null
+        every { subscriptions.save(any()) } answers { firstArg() }
+        every { passes.saveAll(any<List<PlusPass>>()) } answers { firstArg() }
+        every { users.findById(user.id) } returns java.util.Optional.of(user)
+        every { passes.countByUserIdAndStatusAndExpiresAtAfter(user.id, PlusPassStatus.AVAILABLE, now) } returns 4
+
+        service.activatePurchase(user.id, testPurchaseId, now, 30, 4, 3_000, null)
+
+        assertEquals(now.plusSeconds(40 * 86_400L), user.plusExpiresAt)
+        verify(exactly = 1) {
+            subscriptions.save(match { it.startsAt == now.plusSeconds(10 * 86_400L) })
+        }
+    }
+
+    private val testPurchaseId = UUID.randomUUID()
+
     private fun user() = UserProfile(
         UUID.randomUUID(), "+919999999999", "Customer", UserStatus.ACTIVE,
         true, now.plusSeconds(86_400), now, now,

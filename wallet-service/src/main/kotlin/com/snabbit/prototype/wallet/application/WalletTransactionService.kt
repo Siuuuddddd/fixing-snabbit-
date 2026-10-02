@@ -9,6 +9,8 @@ import com.snabbit.prototype.wallet.domain.RefundStatus
 import com.snabbit.prototype.wallet.domain.ReservationStatus
 import com.snabbit.prototype.wallet.domain.TopUpOrder
 import com.snabbit.prototype.wallet.domain.TopUpStatus
+import com.snabbit.prototype.wallet.domain.PlusPurchase
+import com.snabbit.prototype.wallet.domain.PlusPurchaseStatus
 import com.snabbit.prototype.wallet.domain.WalletLedgerEntry
 import com.snabbit.prototype.wallet.domain.WalletReservation
 import com.snabbit.prototype.wallet.payment.ProviderOrder
@@ -17,6 +19,7 @@ import com.snabbit.prototype.wallet.persistence.BookingPaymentRepository
 import com.snabbit.prototype.wallet.persistence.PaymentRefundRepository
 import com.snabbit.prototype.wallet.persistence.ProcessedWebhookStore
 import com.snabbit.prototype.wallet.persistence.TopUpOrderRepository
+import com.snabbit.prototype.wallet.persistence.PlusPurchaseRepository
 import com.snabbit.prototype.wallet.persistence.WalletAccountRepository
 import com.snabbit.prototype.wallet.persistence.WalletLedgerRepository
 import com.snabbit.prototype.wallet.persistence.WalletReservationRepository
@@ -64,6 +67,7 @@ class WalletTransactionService(
     private val ledgerRepository: WalletLedgerRepository,
     private val reservationRepository: WalletReservationRepository,
     private val topUpRepository: TopUpOrderRepository,
+    private val plusPurchaseRepository: PlusPurchaseRepository,
     private val paymentRepository: BookingPaymentRepository,
     private val refundRepository: PaymentRefundRepository,
     private val webhookStore: ProcessedWebhookStore,
@@ -140,6 +144,68 @@ class WalletTransactionService(
     @Transactional
     fun failTopUp(topUpId: UUID) {
         topUpRepository.findForUpdate(topUpId)?.fail(clock.instant())
+    }
+
+    @Transactional
+    fun preparePlusPurchase(
+        walletId: UUID,
+        customerId: UUID,
+        planCode: String,
+        amountMinor: Long,
+        durationDays: Int,
+        passCount: Int,
+        passDiscountMinor: Long,
+        serviceCode: String?,
+        idempotencyKey: String,
+    ): PlusPurchaseSnapshot {
+        validateAmount(amountMinor)
+        validateIdempotencyKey(idempotencyKey)
+        if (planCode.isBlank() || planCode.length > 60) throw WalletRuleViolation("A valid Plus plan code is required")
+        if (durationDays !in 1..365) throw WalletRuleViolation("Plus duration must be between 1 and 365 days")
+        if (passCount !in 0..20) throw WalletRuleViolation("Plus pass count must be between 0 and 20")
+        if (passDiscountMinor < 0 || (passCount > 0 && passDiscountMinor == 0L)) {
+            throw WalletRuleViolation("Plus pass discount is invalid")
+        }
+        val wallet = walletRepository.findForUpdate(walletId) ?: throw WalletNotFound(walletId)
+        if (wallet.customerId != customerId) throw WalletAccessDenied()
+        val normalizedPlan = planCode.trim().uppercase()
+        val normalizedService = serviceCode?.trim()?.uppercase()?.takeIf(String::isNotBlank)
+        plusPurchaseRepository.findByIdempotencyKey(idempotencyKey)?.let { existing ->
+            if (existing.walletId != walletId || existing.customerId != customerId ||
+                existing.planCode != normalizedPlan || existing.amountMinor != amountMinor
+            ) {
+                throw PaymentConflict("Idempotency key was used with different Plus purchase details")
+            }
+            return plusPurchaseSnapshot(existing)
+        }
+        val now = clock.instant()
+        val purchase = plusPurchaseRepository.save(
+            PlusPurchase(
+                UUID.randomUUID(), walletId, customerId, normalizedPlan, amountMinor,
+                durationDays, passCount, passDiscountMinor, normalizedService,
+                PlusPurchaseStatus.CREATING_ORDER, "RAZORPAY", idempotencyKey = idempotencyKey,
+                createdAt = now, updatedAt = now,
+            ),
+        )
+        return plusPurchaseSnapshot(purchase)
+    }
+
+    @Transactional
+    fun attachPlusPurchaseOrder(purchaseId: UUID, providerOrder: ProviderOrder): PlusPurchaseSnapshot {
+        val purchase = plusPurchaseRepository.findForUpdate(purchaseId)
+            ?: throw PaymentNotFound("Plus purchase $purchaseId was not found")
+        if (purchase.status == PlusPurchaseStatus.PENDING) return plusPurchaseSnapshot(purchase)
+        if (providerOrder.amountMinor != purchase.amountMinor || providerOrder.currency != properties.currency) {
+            purchase.fail(clock.instant())
+            throw PaymentConflict("Provider order amount or currency does not match the Plus purchase")
+        }
+        purchase.orderCreated(providerOrder.id, clock.instant())
+        return plusPurchaseSnapshot(purchase)
+    }
+
+    @Transactional
+    fun failPlusPurchase(purchaseId: UUID) {
+        plusPurchaseRepository.findForUpdate(purchaseId)?.fail(clock.instant())
     }
 
     @Transactional
@@ -346,6 +412,33 @@ class WalletTransactionService(
                 now,
             )
             return WebhookOutcome("TOP_UP_CREDITED")
+        }
+
+        plusPurchaseRepository.findByProviderOrderIdForUpdate(capture.providerOrderId)?.let { purchase ->
+            if (purchase.status == PlusPurchaseStatus.PAID) return WebhookOutcome("ALREADY_PROCESSED")
+            if (purchase.status != PlusPurchaseStatus.PENDING) return WebhookOutcome("IGNORED")
+            if (capture.amountMinor != purchase.amountMinor) {
+                throw PaymentConflict("Captured Plus purchase amount does not match the provider order")
+            }
+            purchase.paid(capture.providerPaymentId, now)
+            outboxWriter.append(
+                purchase.walletId,
+                "PlusSubscriptionPurchased",
+                mapOf(
+                    "purchaseId" to purchase.id,
+                    "walletId" to purchase.walletId,
+                    "customerId" to purchase.customerId,
+                    "planCode" to purchase.planCode,
+                    "amountMinor" to purchase.amountMinor,
+                    "durationDays" to purchase.durationDays,
+                    "passCount" to purchase.passCount,
+                    "passDiscountMinor" to purchase.passDiscountMinor,
+                    "serviceCode" to (purchase.serviceCode ?: ""),
+                    "providerPaymentId" to capture.providerPaymentId,
+                ),
+                now,
+            )
+            return WebhookOutcome("PLUS_SUBSCRIPTION_PURCHASED")
         }
 
         paymentRepository.findByProviderOrderIdForUpdate(capture.providerOrderId)?.let { payment ->
@@ -612,6 +705,16 @@ class WalletTransactionService(
         amountMinor = topUp.amountMinor,
         status = topUp.status.name,
         providerOrderId = topUp.providerOrderId,
+    )
+
+    private fun plusPurchaseSnapshot(purchase: PlusPurchase) = PlusPurchaseSnapshot(
+        purchase.id,
+        purchase.walletId,
+        purchase.customerId,
+        purchase.planCode,
+        purchase.amountMinor,
+        purchase.status.name,
+        purchase.providerOrderId,
     )
 
     private fun refundSnapshot(refund: PaymentRefund) = RefundSnapshot(

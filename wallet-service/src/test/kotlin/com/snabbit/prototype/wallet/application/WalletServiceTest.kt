@@ -3,6 +3,7 @@ package com.snabbit.prototype.wallet.application
 import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.payment.PaymentProvider
+import com.snabbit.prototype.wallet.payment.ProviderOrder
 import com.snabbit.prototype.wallet.support.PaymentConflict
 import io.mockk.every
 import io.mockk.mockk
@@ -84,6 +85,33 @@ class WalletServiceTest {
         assertEquals(existing, result)
         verify(exactly = 0) { quotes.get(any()) }
         verify(exactly = 0) { transactions.prepareBookingPayment(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `Plus purchase creates provider order from server supplied plan terms`() {
+        val walletId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val creating = PlusPurchaseSnapshot(
+            UUID.randomUUID(), walletId, customerId, "MONTHLY", 19_900, "CREATING_ORDER", null,
+        )
+        val pending = creating.copy(status = "PENDING", providerOrderId = "order_plus")
+        every {
+            transactions.preparePlusPurchase(
+                walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-once",
+            )
+        } returns creating
+        every { provider.createOrder(19_900, "plus_${creating.purchaseId}") } returns
+            ProviderOrder("order_plus", 19_900, "INR")
+        every {
+            transactions.attachPlusPurchaseOrder(creating.purchaseId, any())
+        } returns pending
+
+        val result = service.createPlusPurchase(
+            walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-once",
+        )
+
+        assertEquals(pending, result)
+        verify(exactly = 1) { provider.createOrder(19_900, "plus_${creating.purchaseId}") }
     }
 
     private fun quote(

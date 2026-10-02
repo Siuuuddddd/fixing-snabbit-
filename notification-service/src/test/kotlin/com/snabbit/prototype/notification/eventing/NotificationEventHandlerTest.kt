@@ -48,6 +48,7 @@ class NotificationEventHandlerTest {
 
         assertTrue(templates.forEvent(event("BookingPlatformCancelled"))!!.critical)
         assertTrue(templates.forEvent(event("WalletRefundCompleted"))!!.critical)
+        assertTrue(templates.forEvent(event("PlusSubscriptionPurchased"))!!.critical)
         assertEquals(null, templates.forEvent(event("UnknownEvent")))
     }
 

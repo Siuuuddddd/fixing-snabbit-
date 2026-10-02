@@ -7,6 +7,8 @@ import com.snabbit.prototype.wallet.domain.BookingPayment
 import com.snabbit.prototype.wallet.domain.BookingPaymentStatus
 import com.snabbit.prototype.wallet.domain.TopUpOrder
 import com.snabbit.prototype.wallet.domain.TopUpStatus
+import com.snabbit.prototype.wallet.domain.PlusPurchase
+import com.snabbit.prototype.wallet.domain.PlusPurchaseStatus
 import com.snabbit.prototype.wallet.domain.WalletAccount
 import com.snabbit.prototype.wallet.domain.WalletLedgerEntry
 import com.snabbit.prototype.wallet.domain.WalletReservation
@@ -15,6 +17,7 @@ import com.snabbit.prototype.wallet.persistence.BookingPaymentRepository
 import com.snabbit.prototype.wallet.persistence.PaymentRefundRepository
 import com.snabbit.prototype.wallet.persistence.ProcessedWebhookStore
 import com.snabbit.prototype.wallet.persistence.TopUpOrderRepository
+import com.snabbit.prototype.wallet.persistence.PlusPurchaseRepository
 import com.snabbit.prototype.wallet.persistence.WalletAccountRepository
 import com.snabbit.prototype.wallet.persistence.WalletLedgerRepository
 import com.snabbit.prototype.wallet.persistence.WalletOutboxRepository
@@ -39,6 +42,7 @@ class WalletTransactionServiceTest {
     private val ledgerRepository = mockk<WalletLedgerRepository>()
     private val reservationRepository = mockk<WalletReservationRepository>()
     private val topUpRepository = mockk<TopUpOrderRepository>()
+    private val plusPurchaseRepository = mockk<PlusPurchaseRepository>()
     private val paymentRepository = mockk<BookingPaymentRepository>()
     private val refundRepository = mockk<PaymentRefundRepository>()
     private val webhookStore = mockk<ProcessedWebhookStore>()
@@ -56,6 +60,7 @@ class WalletTransactionServiceTest {
         ledgerRepository,
         reservationRepository,
         topUpRepository,
+        plusPurchaseRepository,
         paymentRepository,
         refundRepository,
         webhookStore,
@@ -177,6 +182,7 @@ class WalletTransactionServiceTest {
         val capture = ProviderCapture("event_late", "payment.captured", "order_late", "pay_late", 5_000)
         every { webhookStore.claim("RAZORPAY", "event_late", "payment.captured", now) } returns true
         every { topUpRepository.findByProviderOrderIdForUpdate("order_late") } returns null
+        every { plusPurchaseRepository.findByProviderOrderIdForUpdate("order_late") } returns null
         every { paymentRepository.findByProviderOrderIdForUpdate("order_late") } returns payment
         every { refundRepository.findByBookingPaymentId(payment.id) } returns null
         every { refundRepository.save(any()) } answers { firstArg() }
@@ -188,6 +194,32 @@ class WalletTransactionServiceTest {
         assertEquals(BookingPaymentStatus.REFUND_PENDING, payment.status)
         assertEquals("pay_late", payment.providerPaymentId)
         verify(exactly = 1) { refundRepository.save(any<PaymentRefund>()) }
+    }
+
+    @Test
+    fun `verified Plus capture publishes one entitlement event without crediting wallet`() {
+        val wallet = wallet()
+        val purchase = PlusPurchase(
+            UUID.randomUUID(), wallet.id, wallet.customerId, "MONTHLY", 19_900,
+            30, 4, 3_000, null, PlusPurchaseStatus.PENDING, "RAZORPAY",
+            providerOrderId = "order_plus", idempotencyKey = "plus-once",
+            createdAt = now, updatedAt = now,
+        )
+        val capture = ProviderCapture("event_plus", "payment.captured", "order_plus", "pay_plus", 19_900)
+        every { webhookStore.claim("RAZORPAY", "event_plus", "payment.captured", now) } returns true
+        every { topUpRepository.findByProviderOrderIdForUpdate("order_plus") } returns null
+        every { plusPurchaseRepository.findByProviderOrderIdForUpdate("order_plus") } returns purchase
+        every { outboxRepository.save(any()) } answers { firstArg() }
+
+        val result = service.processCapture(capture)
+
+        assertEquals("PLUS_SUBSCRIPTION_PURCHASED", result.result)
+        assertEquals(PlusPurchaseStatus.PAID, purchase.status)
+        assertEquals("pay_plus", purchase.providerPaymentId)
+        verify(exactly = 0) { ledgerRepository.save(any()) }
+        verify(exactly = 1) {
+            outboxRepository.save(match { it.eventType == "PlusSubscriptionPurchased" })
+        }
     }
 
     @Test

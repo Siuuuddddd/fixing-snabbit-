@@ -13,7 +13,10 @@ import java.time.Clock
 import java.util.UUID
 
 @ConfigurationProperties("integrations")
-data class UserIntegrationProperties(val bookingServiceUrl: String)
+data class UserIntegrationProperties(
+    val bookingServiceUrl: String,
+    val walletServiceUrl: String = "http://localhost:8084",
+)
 
 data class BookingRatingContext(
     val bookingId: UUID,

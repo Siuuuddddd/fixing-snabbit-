@@ -38,6 +38,7 @@ auth:
 
 integrations:
   booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
+  wallet-service-url: ${WALLET_SERVICE_URL:http://localhost:8084}
 
 service-auth:
   token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
@@ -48,3 +49,14 @@ plus-events:
 
 plus:
   reconciliation-delay: PT1M
+  plans:
+    monthly:
+      price-minor: 19900
+      duration-days: 30
+      pass-count: 4
+      pass-discount-minor: 3000
+      service-code: null
+
+plus-purchase-events:
+  consumer-topic: wallet-events
+  consumer-group: user-service-plus-purchases

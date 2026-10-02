@@ -99,6 +99,30 @@ class WalletLedgerIntegrationTest {
     }
 
     @Test
+    fun `Plus purchase activates only through verified capture without changing wallet balance`() {
+        val purchase = walletService.createPlusPurchase(
+            walletId, customerId, "MONTHLY", 19_900, 30, 4, 3_000, null, "plus-integration",
+        )
+        assertEquals("PENDING", purchase.status)
+        assertEquals(0, walletService.balance(walletId).availableMinor)
+
+        val first = deliverCapture("evt_plus_1", purchase.providerOrderId!!, "pay_plus_1", 19_900)
+        val replay = deliverCapture("evt_plus_1", purchase.providerOrderId!!, "pay_plus_1", 19_900)
+
+        assertEquals("PLUS_SUBSCRIPTION_PURCHASED", first)
+        assertEquals("DUPLICATE", replay)
+        assertEquals(0, walletService.balance(walletId).availableMinor)
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM wallet_ledger_entry", Long::class.java))
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM outbox_event WHERE event_type = 'PlusSubscriptionPurchased'",
+                Long::class.java,
+            ),
+        )
+    }
+
+    @Test
     fun `split payment captures reservation and full refund restores wallet portion`() {
         creditWallet(10_000)
         val bookingId = UUID.randomUUID()

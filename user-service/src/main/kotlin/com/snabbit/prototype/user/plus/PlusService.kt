@@ -64,22 +64,66 @@ class PlusService(
     fun activate(userId: UUID, command: ActivatePlusCommand): PlusStatusSnapshot {
         validateActivation(command)
         val sourceReference = command.sourceReference.trim()
+        val user = users.findForUpdate(userId) ?: throw UserNotFound(userId)
         subscriptions.findBySourceReference(sourceReference)?.let { existing ->
             if (existing.userId != userId) throw PlusRequestRejected("Subscription reference belongs to another customer")
             return status(userId)
         }
-        val user = users.findForUpdate(userId) ?: throw UserNotFound(userId)
         val now = clock.instant()
+        persistActivation(user, sourceReference, command, now)
+        return status(userId)
+    }
+
+    @Transactional
+    fun activatePurchase(
+        userId: UUID,
+        purchaseId: UUID,
+        purchasedAt: Instant,
+        durationDays: Int,
+        passCount: Int,
+        passDiscountMinor: Long,
+        serviceCode: String?,
+    ): PlusStatusSnapshot {
+        if (durationDays !in 1..365) throw PlusRequestRejected("Subscription duration must be between 1 and 365 days")
+        if (passCount !in 0..20) throw PlusRequestRejected("Pass count must be between 0 and 20")
+        if (passCount > 0 && passDiscountMinor <= 0) {
+            throw PlusRequestRejected("Pass discount must be positive when passes are granted")
+        }
+        val sourceReference = "plus-purchase:$purchaseId"
+        val user = users.findForUpdate(userId) ?: throw UserNotFound(userId)
+        subscriptions.findBySourceReference(sourceReference)?.let { existing ->
+            if (existing.userId != userId) throw PlusRequestRejected("Subscription reference belongs to another customer")
+            return status(userId)
+        }
+        val startsAt = maxOf(purchasedAt, user.plusExpiresAt ?: purchasedAt)
+        val command = ActivatePlusCommand(
+            sourceReference,
+            startsAt,
+            startsAt.plusSeconds(durationDays.toLong() * 86_400),
+            passCount,
+            passDiscountMinor,
+            serviceCode,
+        )
+        persistActivation(user, sourceReference, command, clock.instant())
+        return status(userId)
+    }
+
+    private fun persistActivation(
+        user: com.snabbit.prototype.user.domain.UserProfile,
+        sourceReference: String,
+        command: ActivatePlusCommand,
+        now: Instant,
+    ) {
         val subscription = subscriptions.save(
             PlusSubscription(
-                UUID.randomUUID(), userId, sourceReference, command.startsAt, command.expiresAt, now,
+                UUID.randomUUID(), user.id, sourceReference, command.startsAt, command.expiresAt, now,
             ),
         )
         if (command.passCount > 0) {
             passes.saveAll(
                 (1..command.passCount).map {
                     PlusPass(
-                        UUID.randomUUID(), subscription.id, userId,
+                        UUID.randomUUID(), subscription.id, user.id,
                         command.serviceCode?.trim()?.uppercase()?.takeIf(String::isNotBlank),
                         command.passDiscountMinor, PlusPassStatus.AVAILABLE, null, null, null,
                         command.expiresAt, now,
@@ -90,7 +134,6 @@ class PlusService(
         user.plusActive = true
         user.plusExpiresAt = maxOf(user.plusExpiresAt ?: command.expiresAt, command.expiresAt)
         user.updatedAt = now
-        return status(userId)
     }
 
     @Transactional
