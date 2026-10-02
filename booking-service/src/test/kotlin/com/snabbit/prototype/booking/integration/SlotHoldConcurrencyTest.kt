@@ -1,10 +1,10 @@
 package com.snabbit.prototype.booking.integration
 
-import com.snabbit.prototype.booking.application.BookingLifecycleService
-import com.snabbit.prototype.booking.application.CreateBookingCommand
-import com.snabbit.prototype.booking.application.VisitCommand
+import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.service.CreateBookingCommand
+import com.snabbit.prototype.booking.service.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
-import com.snabbit.prototype.booking.eventing.OutboxDeliveryStore
+import com.snabbit.prototype.booking.events.OutboxDeliveryStore
 import com.snabbit.prototype.booking.support.SlotUnavailable
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -1,0 +1,35 @@
+package com.snabbit.prototype.wallet.events
+
+import com.snabbit.prototype.wallet.service.WalletTransactionService
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
+import java.util.UUID
+
+@Service
+class BookingEventHandler(
+    private val processedMessages: ProcessedMessageStore,
+    private val transactions: WalletTransactionService,
+    private val properties: EventingProperties,
+    private val clock: Clock,
+) {
+    @Transactional
+    fun handle(event: EventEnvelope): UUID? {
+        if (!processedMessages.claim(properties.consumerGroup, event.eventId, clock.instant())) return null
+        if (event.eventType != "BookingExpired" &&
+            event.eventType != "BookingCancelled" &&
+            event.eventType != "BookingCustomerCancelled" &&
+            event.eventType != "BookingPlatformCancelled"
+        ) return null
+        val bookingId = UUID.fromString(event.aggregateId)
+        val requestedRefundMinor = if (
+            event.eventType == "BookingCustomerCancelled" || event.eventType == "BookingPlatformCancelled"
+        ) {
+            event.payload.path("refundAmountMinor").takeUnless { it.isMissingNode || it.isNull }?.asLong()
+                ?: error("BookingCustomerCancelled is missing refundAmountMinor")
+        } else {
+            null
+        }
+        return transactions.terminateBookingPayment(bookingId, event.eventId, requestedRefundMinor)
+    }
+}

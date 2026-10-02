@@ -1,8 +1,8 @@
 package com.snabbit.prototype.worker.rating
 
 import com.snabbit.prototype.worker.domain.WorkerRating
-import com.snabbit.prototype.worker.persistence.WorkerProfileRepository
-import com.snabbit.prototype.worker.persistence.WorkerRatingRepository
+import com.snabbit.prototype.worker.repository.WorkerProfileRepository
+import com.snabbit.prototype.worker.repository.WorkerRatingRepository
 import com.snabbit.prototype.worker.security.InternalServiceClientFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component

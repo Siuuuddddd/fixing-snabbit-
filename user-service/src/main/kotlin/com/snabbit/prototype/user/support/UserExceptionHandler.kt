@@ -1,7 +1,7 @@
 package com.snabbit.prototype.user.support
 
-import com.snabbit.prototype.user.application.FavouriteLimitReached
-import com.snabbit.prototype.user.application.UserNotFound
+import com.snabbit.prototype.user.service.FavouriteLimitReached
+import com.snabbit.prototype.user.service.UserNotFound
 import com.snabbit.prototype.user.auth.InvalidOtp
 import com.snabbit.prototype.user.auth.OtpRateLimited
 import com.snabbit.prototype.user.rating.CustomerRatingRejected

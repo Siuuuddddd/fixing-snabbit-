@@ -4,9 +4,9 @@ import com.snabbit.prototype.user.domain.PlusPass
 import com.snabbit.prototype.user.domain.PlusPassStatus
 import com.snabbit.prototype.user.domain.UserProfile
 import com.snabbit.prototype.user.domain.UserStatus
-import com.snabbit.prototype.user.persistence.PlusPassRepository
-import com.snabbit.prototype.user.persistence.PlusSubscriptionRepository
-import com.snabbit.prototype.user.persistence.UserProfileRepository
+import com.snabbit.prototype.user.repository.PlusPassRepository
+import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
+import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

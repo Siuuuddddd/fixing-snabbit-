@@ -1,7 +1,7 @@
 package com.snabbit.prototype.user.plus
 
 import com.snabbit.prototype.user.domain.PlusPassStatus
-import com.snabbit.prototype.user.persistence.PlusPassRepository
+import com.snabbit.prototype.user.repository.PlusPassRepository
 import com.snabbit.prototype.user.rating.UserIntegrationProperties
 import com.snabbit.prototype.user.security.InternalServiceClientFactory
 import org.slf4j.LoggerFactory

@@ -1,0 +1,132 @@
+package com.snabbit.prototype.booking.service
+
+import com.snabbit.prototype.booking.catalog.ServiceOfferingRepository
+import com.snabbit.prototype.booking.domain.BookingRequirements
+import com.snabbit.prototype.booking.domain.JobStatus
+import com.snabbit.prototype.booking.domain.SlotHoldStatus
+import com.snabbit.prototype.booking.domain.WorkerOfferStatus
+import com.snabbit.prototype.booking.repository.BookingRepository
+import com.snabbit.prototype.booking.repository.SlotHoldRepository
+import com.snabbit.prototype.booking.repository.WorkerOfferRepository
+import org.springframework.data.domain.PageRequest
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
+
+data class WorkerOfferFeedItem(
+    val offerId: UUID,
+    val bookingId: UUID,
+    val visitIndex: Int,
+    val serviceId: UUID,
+    val serviceCode: String,
+    val serviceName: String,
+    val startsAt: Instant,
+    val endsAt: Instant,
+    val durationMinutes: Int,
+    val offerExpiresAt: Instant,
+    val requirements: BookingRequirements,
+)
+
+data class WorkerJobFeedItem(
+    val bookingId: UUID,
+    val visitIndex: Int,
+    val serviceId: UUID,
+    val serviceCode: String,
+    val serviceName: String,
+    val startsAt: Instant,
+    val endsAt: Instant,
+    val durationMinutes: Int,
+    val jobStatus: JobStatus,
+    val requirements: BookingRequirements,
+    val serviceLatitude: BigDecimal?,
+    val serviceLongitude: BigDecimal?,
+)
+
+@Service
+class WorkerFeedService(
+    private val offers: WorkerOfferRepository,
+    private val holds: SlotHoldRepository,
+    private val bookings: BookingRepository,
+    private val services: ServiceOfferingRepository,
+    private val clock: Clock,
+) {
+    @Transactional(readOnly = true)
+    fun pendingOffers(workerId: UUID): List<WorkerOfferFeedItem> {
+        val now = clock.instant()
+        val openOffers = offers.findByWorkerIdAndStatusAndExpiresAtAfterOrderByExpiresAtAsc(
+            workerId,
+            WorkerOfferStatus.OFFERED,
+            now,
+            FEED_LIMIT,
+        )
+        val holdsById = holds.findAllById(openOffers.map { it.slotHoldId }).associateBy { it.id }
+        val bookingsById = bookings.findAllById(openOffers.map { it.bookingId }).associateBy { it.id }
+        val servicesById = services.findAllById(holdsById.values.map { it.serviceId }).associateBy { it.id }
+
+        return openOffers.mapNotNull { offer ->
+            val hold = holdsById[offer.slotHoldId]
+                ?.takeIf { it.workerId == workerId && it.status == SlotHoldStatus.HELD && it.isActive(now) }
+                ?: return@mapNotNull null
+            val booking = bookingsById[offer.bookingId] ?: return@mapNotNull null
+            val service = servicesById[hold.serviceId] ?: return@mapNotNull null
+            WorkerOfferFeedItem(
+                offer.id,
+                offer.bookingId,
+                hold.visitIndex,
+                hold.serviceId,
+                service.code,
+                service.displayName,
+                hold.startsAt,
+                hold.endsAt,
+                booking.durationMinutes,
+                offer.expiresAt,
+                booking.requirements,
+            )
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun assignedJobs(workerId: UUID): List<WorkerJobFeedItem> {
+        val now = clock.instant()
+        val assignedHolds = holds.findByWorkerIdAndStatusAndJobStatusInAndStartsAtAfterOrderByStartsAtAsc(
+            workerId,
+            SlotHoldStatus.CONFIRMED,
+            ACTIVE_JOB_STATUSES,
+            now.minus(JOB_LOOKBACK),
+            FEED_LIMIT,
+        )
+        val bookingsById = bookings.findAllById(assignedHolds.map { it.bookingId }).associateBy { it.id }
+        val servicesById = services.findAllById(assignedHolds.map { it.serviceId }).associateBy { it.id }
+
+        return assignedHolds.mapNotNull { hold ->
+            val booking = bookingsById[hold.bookingId] ?: return@mapNotNull null
+            val service = servicesById[hold.serviceId] ?: return@mapNotNull null
+            val revealLocation = !now.isBefore(hold.startsAt.minus(LOCATION_REVEAL_WINDOW))
+            WorkerJobFeedItem(
+                hold.bookingId,
+                hold.visitIndex,
+                hold.serviceId,
+                service.code,
+                service.displayName,
+                hold.startsAt,
+                hold.endsAt,
+                booking.durationMinutes,
+                requireNotNull(hold.jobStatus),
+                booking.requirements,
+                booking.serviceLatitude.takeIf { revealLocation },
+                booking.serviceLongitude.takeIf { revealLocation },
+            )
+        }
+    }
+
+    private companion object {
+        val FEED_LIMIT: PageRequest = PageRequest.of(0, 100)
+        val JOB_LOOKBACK: Duration = Duration.ofHours(12)
+        val LOCATION_REVEAL_WINDOW: Duration = Duration.ofHours(2)
+        val ACTIVE_JOB_STATUSES = setOf(JobStatus.ASSIGNED, JobStatus.ARRIVED, JobStatus.IN_PROGRESS)
+    }
+}

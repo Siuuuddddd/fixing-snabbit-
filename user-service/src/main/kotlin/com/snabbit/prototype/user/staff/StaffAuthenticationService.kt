@@ -8,7 +8,7 @@ import com.snabbit.prototype.user.auth.OtpDelivery
 import com.snabbit.prototype.user.auth.OtpRateLimited
 import com.snabbit.prototype.user.auth.OtpRequestResult
 import com.snabbit.prototype.user.domain.StaffStatus
-import com.snabbit.prototype.user.persistence.StaffAccountRepository
+import com.snabbit.prototype.user.repository.StaffAccountRepository
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.jwt.JwtClaimsSet

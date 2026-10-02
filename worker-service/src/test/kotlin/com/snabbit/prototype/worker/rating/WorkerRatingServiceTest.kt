@@ -4,8 +4,8 @@ import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.domain.WorkerRating
 import com.snabbit.prototype.worker.domain.WorkerStatus
 import com.snabbit.prototype.worker.domain.WorkerTier
-import com.snabbit.prototype.worker.persistence.WorkerProfileRepository
-import com.snabbit.prototype.worker.persistence.WorkerRatingRepository
+import com.snabbit.prototype.worker.repository.WorkerProfileRepository
+import com.snabbit.prototype.worker.repository.WorkerRatingRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

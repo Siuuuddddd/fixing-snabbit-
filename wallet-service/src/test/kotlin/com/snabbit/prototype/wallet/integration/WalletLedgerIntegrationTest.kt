@@ -1,7 +1,7 @@
 package com.snabbit.prototype.wallet.integration
 
-import com.snabbit.prototype.wallet.application.RazorpayWebhookService
-import com.snabbit.prototype.wallet.application.WalletService
+import com.snabbit.prototype.wallet.service.RazorpayWebhookService
+import com.snabbit.prototype.wallet.service.WalletService
 import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.support.InvalidWebhook

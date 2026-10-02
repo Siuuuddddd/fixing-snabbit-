@@ -1,7 +1,7 @@
 package com.snabbit.prototype.user.auth
 
 import com.snabbit.prototype.user.domain.UserStatus
-import com.snabbit.prototype.user.persistence.UserProfileRepository
+import com.snabbit.prototype.user.repository.UserProfileRepository
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.jwt.JwtClaimsSet

@@ -7,7 +7,7 @@ import com.snabbit.prototype.user.auth.OtpDelivery
 import com.snabbit.prototype.user.domain.StaffAccount
 import com.snabbit.prototype.user.domain.StaffRole
 import com.snabbit.prototype.user.domain.StaffStatus
-import com.snabbit.prototype.user.persistence.StaffAccountRepository
+import com.snabbit.prototype.user.repository.StaffAccountRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

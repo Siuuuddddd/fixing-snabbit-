@@ -1,12 +1,12 @@
 package com.snabbit.prototype.user.plus
 
-import com.snabbit.prototype.user.application.UserNotFound
+import com.snabbit.prototype.user.service.UserNotFound
 import com.snabbit.prototype.user.domain.PlusPass
 import com.snabbit.prototype.user.domain.PlusPassStatus
 import com.snabbit.prototype.user.domain.PlusSubscription
-import com.snabbit.prototype.user.persistence.PlusPassRepository
-import com.snabbit.prototype.user.persistence.PlusSubscriptionRepository
-import com.snabbit.prototype.user.persistence.UserProfileRepository
+import com.snabbit.prototype.user.repository.PlusPassRepository
+import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
+import com.snabbit.prototype.user.repository.UserProfileRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock

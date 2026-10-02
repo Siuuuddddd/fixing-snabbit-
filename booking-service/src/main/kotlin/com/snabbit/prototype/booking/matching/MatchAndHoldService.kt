@@ -1,9 +1,9 @@
 package com.snabbit.prototype.booking.matching
 
-import com.snabbit.prototype.booking.application.BookingLifecycleService
-import com.snabbit.prototype.booking.application.BookingSnapshot
-import com.snabbit.prototype.booking.application.CreateBookingCommand
-import com.snabbit.prototype.booking.application.VisitCommand
+import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.service.BookingSnapshot
+import com.snabbit.prototype.booking.service.CreateBookingCommand
+import com.snabbit.prototype.booking.service.VisitCommand
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.BookingType

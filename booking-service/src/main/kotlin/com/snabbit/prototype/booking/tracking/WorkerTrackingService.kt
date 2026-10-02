@@ -1,8 +1,8 @@
 package com.snabbit.prototype.booking.tracking
 
-import com.snabbit.prototype.booking.application.BookingLifecycleService
-import com.snabbit.prototype.booking.application.BookingSnapshot
-import com.snabbit.prototype.booking.application.VisitSnapshot
+import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.service.BookingSnapshot
+import com.snabbit.prototype.booking.service.VisitSnapshot
 import com.snabbit.prototype.booking.config.IntegrationProperties
 import com.snabbit.prototype.booking.security.InternalServiceClientFactory
 import com.snabbit.prototype.booking.support.CustomerAccessDenied

@@ -1,7 +1,7 @@
 package com.snabbit.prototype.worker.auth
 
 import com.snabbit.prototype.worker.domain.WorkerStatus
-import com.snabbit.prototype.worker.persistence.WorkerProfileRepository
+import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwsHeader

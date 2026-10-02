@@ -1,8 +1,8 @@
 package com.snabbit.prototype.notification.delivery
 
-import com.snabbit.prototype.notification.application.NotificationProperties
-import com.snabbit.prototype.notification.eventing.NotificationIntegrationProperties
-import com.snabbit.prototype.notification.persistence.DeviceRegistrationRepository
+import com.snabbit.prototype.notification.service.NotificationProperties
+import com.snabbit.prototype.notification.events.NotificationIntegrationProperties
+import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import com.snabbit.prototype.notification.security.InternalServiceClientFactory
 import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate

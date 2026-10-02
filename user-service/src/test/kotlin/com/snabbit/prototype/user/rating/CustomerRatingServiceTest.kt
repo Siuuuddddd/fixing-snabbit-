@@ -3,8 +3,8 @@ package com.snabbit.prototype.user.rating
 import com.snabbit.prototype.user.domain.CustomerRating
 import com.snabbit.prototype.user.domain.UserProfile
 import com.snabbit.prototype.user.domain.UserStatus
-import com.snabbit.prototype.user.persistence.CustomerRatingRepository
-import com.snabbit.prototype.user.persistence.UserProfileRepository
+import com.snabbit.prototype.user.repository.CustomerRatingRepository
+import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

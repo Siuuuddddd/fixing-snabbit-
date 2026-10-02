@@ -1,8 +1,8 @@
 package com.snabbit.prototype.user.rating
 
 import com.snabbit.prototype.user.domain.CustomerRating
-import com.snabbit.prototype.user.persistence.CustomerRatingRepository
-import com.snabbit.prototype.user.persistence.UserProfileRepository
+import com.snabbit.prototype.user.repository.CustomerRatingRepository
+import com.snabbit.prototype.user.repository.UserProfileRepository
 import com.snabbit.prototype.user.security.InternalServiceClientFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component

@@ -1,7 +1,7 @@
 package com.snabbit.prototype.notification.integration
 
-import com.snabbit.prototype.notification.application.NotificationTemplate
-import com.snabbit.prototype.notification.application.NotificationTransaction
+import com.snabbit.prototype.notification.service.NotificationTemplate
+import com.snabbit.prototype.notification.service.NotificationTransaction
 import com.snabbit.prototype.notification.delivery.NotificationDeliveryStore
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach

@@ -1,6 +1,6 @@
 package com.snabbit.prototype.notification.delivery
 
-import com.snabbit.prototype.notification.application.NotificationProperties
+import com.snabbit.prototype.notification.service.NotificationProperties
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
