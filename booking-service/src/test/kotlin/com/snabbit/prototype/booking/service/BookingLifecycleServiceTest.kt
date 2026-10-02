@@ -336,6 +336,31 @@ class BookingLifecycleServiceTest {
     }
 
     @Test
+    fun `arrival rejects a point beyond the configured two hundred metre boundary`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_outside_geofence", clock.instant())
+        }
+        val workerId = UUID.randomUUID()
+        val hold = hold(booking.id, workerId).apply { confirm() }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findVisitForUpdate(booking.id, 0) } returns hold
+
+        assertEquals(200.0, properties.arrivalRadiusMeters)
+        assertThrows(com.snabbit.prototype.booking.support.BookingRuleViolation::class.java) {
+            service.workerArrive(
+                booking.id,
+                0,
+                workerId,
+                WorkerLocationCommand(BigDecimal("19.076090"), BigDecimal("72.879426"), BigDecimal("10")),
+            )
+        }
+
+        assertEquals(JobStatus.ASSIGNED, hold.jobStatus)
+        verify(exactly = 0) { outboxRepository.save(any()) }
+    }
+
+    @Test
     fun `rating context exposes only authoritative completed visits`() {
         val booking = booking(UUID.randomUUID())
         val workerId = UUID.randomUUID()

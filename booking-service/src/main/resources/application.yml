@@ -35,7 +35,7 @@ booking:
   expiry-scan-delay: PT30S
   expiry-batch-size: 100
   arrival-accuracy-meters: 100
-  arrival-radius-meters: 250
+  arrival-radius-meters: 200
 
 cancellation:
   late-window: PT2H
