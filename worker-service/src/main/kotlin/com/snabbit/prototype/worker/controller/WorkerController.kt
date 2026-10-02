@@ -8,6 +8,8 @@ import com.snabbit.prototype.worker.service.InvalidWorkerLocation
 import com.snabbit.prototype.worker.service.WorkerLocationCommand
 import com.snabbit.prototype.worker.service.WorkerLocationService
 import com.snabbit.prototype.worker.service.WorkerLocationSnapshot
+import com.snabbit.prototype.worker.service.WorkerDirectoryService
+import com.snabbit.prototype.worker.service.WorkerContactSnapshot
 import com.snabbit.prototype.worker.auth.InvalidWorkerOtp
 import com.snabbit.prototype.worker.auth.WorkerOtpRateLimited
 import com.snabbit.prototype.worker.rating.WorkerRatingRejected
@@ -72,6 +74,7 @@ data class WorkerLocationRequest(
 class InternalWorkerController(
     private val matchingService: WorkerMatchingService,
     private val locations: WorkerLocationService,
+    private val directory: WorkerDirectoryService,
 ) {
     @PostMapping("/matches")
     fun match(@Valid @RequestBody request: MatchWorkersRequest): List<WorkerMatch> = matchingService.match(
@@ -100,6 +103,12 @@ class InternalWorkerController(
     @GetMapping("/{workerId}/location")
     fun latestLocation(@PathVariable workerId: UUID): org.springframework.http.ResponseEntity<WorkerLocationSnapshot> =
         locations.latest(workerId)
+            ?.let { org.springframework.http.ResponseEntity.ok(it) }
+            ?: org.springframework.http.ResponseEntity.notFound().build()
+
+    @GetMapping("/{workerId}/contact")
+    fun contact(@PathVariable workerId: UUID): org.springframework.http.ResponseEntity<WorkerContactSnapshot> =
+        directory.contact(workerId)
             ?.let { org.springframework.http.ResponseEntity.ok(it) }
             ?: org.springframework.http.ResponseEntity.notFound().build()
 }

@@ -31,6 +31,8 @@ Authenticated worker routes are:
 
 The offers feed returns at most 100 unexpired offers in expiry order. It includes the service, schedule, duration and household compatibility requirements needed for an informed decision, but never the customer ID or service coordinates. The jobs feed returns up to 100 active assigned visits in start-time order. Exact service coordinates remain absent until two hours before the visit; the booking service applies that rule rather than trusting an Android client to hide the data.
 
+Booking also emits a transactional `WorkerOffersCreated` fact. Notification Service fans it out to the worker's registered device and live stream so a 60-second offer does not depend on aggressive polling. See [notifications-api.md](notifications-api.md) for the worker notification endpoints; accepting an offer still goes through Booking and rechecks its expiry under a row lock.
+
 The server derives the worker ID from the JWT and checks it against the offer or visit. After payment confirmation, each visit follows:
 
 ```text

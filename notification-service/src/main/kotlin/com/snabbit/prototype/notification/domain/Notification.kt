@@ -14,12 +14,16 @@ import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
 
+enum class RecipientType { CUSTOMER, WORKER }
+
 @Entity
 @Table(name = "notification")
 class Notification(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) val id: Long = 0,
     @Column(name = "event_id", nullable = false, unique = true) val eventId: UUID,
-    @Column(name = "customer_id", nullable = false) val customerId: UUID,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recipient_type", nullable = false) val recipientType: RecipientType,
+    @Column(name = "recipient_id", nullable = false) val recipientId: UUID,
     @Column(name = "event_type", nullable = false) val eventType: String,
     @Column(nullable = false) val title: String,
     @Column(nullable = false) val body: String,
@@ -40,7 +44,9 @@ enum class DevicePlatform { ANDROID }
 @Table(name = "device_registration")
 class DeviceRegistration(
     @Id val id: UUID,
-    @Column(name = "customer_id", nullable = false) var customerId: UUID,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recipient_type", nullable = false) var recipientType: RecipientType,
+    @Column(name = "recipient_id", nullable = false) var recipientId: UUID,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false) val platform: DevicePlatform,
     @Column(name = "push_token", nullable = false, unique = true) val pushToken: String,
@@ -49,8 +55,9 @@ class DeviceRegistration(
     @Column(name = "updated_at", nullable = false) var updatedAt: Instant,
     @Version var version: Long = 0,
 ) {
-    fun activateFor(customerId: UUID, now: Instant) {
-        this.customerId = customerId
+    fun activateFor(recipientType: RecipientType, recipientId: UUID, now: Instant) {
+        this.recipientType = recipientType
+        this.recipientId = recipientId
         active = true
         updatedAt = now
     }

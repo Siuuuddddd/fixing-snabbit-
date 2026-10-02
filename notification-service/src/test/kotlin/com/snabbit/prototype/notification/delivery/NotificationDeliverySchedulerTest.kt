@@ -10,6 +10,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import com.snabbit.prototype.notification.domain.RecipientType
 
 class NotificationDeliverySchedulerTest {
     private val store = mockk<NotificationDeliveryStore>(relaxed = true)
@@ -28,9 +29,12 @@ class NotificationDeliverySchedulerTest {
 
     @Test
     fun `leased push delivery uses active devices and is acknowledged`() {
-        val delivery = ClaimedDelivery(UUID.randomUUID(), 1, UUID.randomUUID(), "PUSH", "Confirmed", "Ready", 1)
+        val delivery = ClaimedDelivery(
+            UUID.randomUUID(), 1, RecipientType.CUSTOMER, UUID.randomUUID(), "PUSH", "Confirmed", "Ready", 1,
+        )
         every { store.claimBatch(any(), now, now.plusSeconds(30), 50) } returns listOf(delivery)
-        every { query.pushTokens(delivery.customerId) } returns listOf("a-valid-device-token-12345")
+        every { query.pushTokens(delivery.recipientType, delivery.recipientId) } returns
+            listOf("a-valid-device-token-12345")
 
         scheduler.deliverPending()
 
@@ -40,9 +44,11 @@ class NotificationDeliverySchedulerTest {
 
     @Test
     fun `delivery failure is released for bounded retry`() {
-        val delivery = ClaimedDelivery(UUID.randomUUID(), 1, UUID.randomUUID(), "PUSH", "Confirmed", "Ready", 2)
+        val delivery = ClaimedDelivery(
+            UUID.randomUUID(), 1, RecipientType.WORKER, UUID.randomUUID(), "PUSH", "Confirmed", "Ready", 2,
+        )
         every { store.claimBatch(any(), now, now.plusSeconds(30), 50) } returns listOf(delivery)
-        every { query.pushTokens(delivery.customerId) } returns emptyList()
+        every { query.pushTokens(delivery.recipientType, delivery.recipientId) } returns emptyList()
         every { push.send(emptyList(), any(), any()) } throws IllegalStateException("no device")
 
         scheduler.deliverPending()

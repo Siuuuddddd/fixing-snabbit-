@@ -36,6 +36,7 @@ data class NotificationIntegrationProperties(
     val bookingServiceUrl: String,
     val walletServiceUrl: String,
     val userServiceUrl: String,
+    val workerServiceUrl: String,
 )
 
 data class BookingOwner(val bookingId: UUID, val customerId: UUID)
@@ -73,6 +74,7 @@ class EventRecipientResolver(factory: InternalServiceClientFactory, properties: 
 class NotificationTemplates {
     fun forEvent(event: EventEnvelope): NotificationTemplate? = when (event.eventType) {
         "BookingHeld" -> NotificationTemplate("Slot held", "Your service slot is held while a worker responds.", false)
+        "WorkerOffersCreated" -> NotificationTemplate("New job offer", "A new home-service job is waiting for your response.", true)
         "BookingAwaitingPayment" -> NotificationTemplate("Worker accepted", "Complete payment before the slot hold expires.", true)
         "WorkerOfferRejected", "WorkerOfferExpired" ->
             NotificationTemplate("Worker unavailable", "We could not confirm this worker. Your held slot was released.", true)
@@ -118,9 +120,21 @@ class NotificationEventHandler(
     private val clock: Clock,
 ) {
     @Transactional
-    fun handle(event: EventEnvelope, customerId: UUID, template: NotificationTemplate) {
+    fun handle(
+        event: EventEnvelope,
+        recipientType: com.snabbit.prototype.notification.domain.RecipientType,
+        recipientId: UUID,
+        template: NotificationTemplate,
+    ) {
         if (!processed.claim(properties.consumerGroup, event.eventId, clock.instant())) return
-        transactions.record(event.eventId, customerId, event.eventType, template, mapper.writeValueAsString(event.payload))
+        transactions.record(
+            event.eventId,
+            recipientType,
+            recipientId,
+            event.eventType,
+            template,
+            mapper.writeValueAsString(event.payload),
+        )
     }
 }
 
@@ -146,7 +160,35 @@ class NotificationEventListener(
     fun consume(rawEvent: String) {
         val event = mapper.readValue(rawEvent, EventEnvelope::class.java)
         val template = templates.forEvent(event) ?: return
-        handler.handle(event, resolver.customerId(event), template)
+        if (event.eventType == "WorkerOffersCreated") {
+            fanOutWorkerOffers(event, template)
+        } else {
+            handler.handle(
+                event,
+                com.snabbit.prototype.notification.domain.RecipientType.CUSTOMER,
+                resolver.customerId(event),
+                template,
+            )
+        }
+    }
+
+    private fun fanOutWorkerOffers(event: EventEnvelope, template: NotificationTemplate) {
+        val offersByWorker = event.payload.path("offers")
+            .filter { it.path("workerId").asText().isNotBlank() }
+            .groupBy { UUID.fromString(it.path("workerId").asText()) }
+        offersByWorker.forEach { (workerId, offers) ->
+            val recipientEventId = UUID.nameUUIDFromBytes("${event.eventId}:$workerId".toByteArray(Charsets.UTF_8))
+            val recipientPayload = mapper.createObjectNode().apply {
+                set<com.fasterxml.jackson.databind.JsonNode>("bookingId", event.payload.path("bookingId"))
+                set<com.fasterxml.jackson.databind.JsonNode>("offers", mapper.valueToTree(offers))
+            }
+            handler.handle(
+                event.copy(eventId = recipientEventId, payload = recipientPayload),
+                com.snabbit.prototype.notification.domain.RecipientType.WORKER,
+                workerId,
+                template,
+            )
+        }
     }
 
     @DltHandler

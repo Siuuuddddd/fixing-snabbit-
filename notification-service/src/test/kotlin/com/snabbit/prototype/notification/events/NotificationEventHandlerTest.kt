@@ -15,9 +15,10 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import com.snabbit.prototype.notification.domain.RecipientType
 
 class NotificationEventHandlerTest {
-    private val mapper = ObjectMapper()
+    private val mapper = ObjectMapper().findAndRegisterModules()
     private val processed = mockk<ProcessedEventStore>()
     private val transactions = mockk<NotificationTransaction>(relaxed = true)
     private val properties = NotificationProperties(
@@ -36,10 +37,12 @@ class NotificationEventHandlerTest {
         val template = NotificationTemplate("Confirmed", "Ready", true)
         every { processed.claim("notification-service", event.eventId, now) } returns true andThen false
 
-        handler.handle(event, customerId, template)
-        handler.handle(event, customerId, template)
+        handler.handle(event, RecipientType.CUSTOMER, customerId, template)
+        handler.handle(event, RecipientType.CUSTOMER, customerId, template)
 
-        verify(exactly = 1) { transactions.record(event.eventId, customerId, event.eventType, template, any()) }
+        verify(exactly = 1) {
+            transactions.record(event.eventId, RecipientType.CUSTOMER, customerId, event.eventType, template, any())
+        }
     }
 
     @Test
@@ -49,7 +52,47 @@ class NotificationEventHandlerTest {
         assertTrue(templates.forEvent(event("BookingPlatformCancelled"))!!.critical)
         assertTrue(templates.forEvent(event("WalletRefundCompleted"))!!.critical)
         assertTrue(templates.forEvent(event("PlusSubscriptionPurchased"))!!.critical)
+        assertTrue(templates.forEvent(event("WorkerOffersCreated"))!!.critical)
         assertEquals(null, templates.forEvent(event("UnknownEvent")))
+    }
+
+    @Test
+    fun `worker offer event fans out one privacy-filtered notification per worker`() {
+        val resolver = mockk<EventRecipientResolver>()
+        val fanoutHandler = mockk<NotificationEventHandler>(relaxed = true)
+        val listener = NotificationEventListener(mapper, resolver, NotificationTemplates(), fanoutHandler)
+        val firstWorker = UUID.randomUUID()
+        val secondWorker = UUID.randomUUID()
+        val bookingId = UUID.randomUUID()
+        val payload = mapper.createObjectNode().apply {
+            put("bookingId", bookingId.toString())
+            set<com.fasterxml.jackson.databind.JsonNode>(
+                "offers",
+                mapper.valueToTree(
+                    listOf(
+                        mapOf("offerId" to UUID.randomUUID(), "workerId" to firstWorker),
+                        mapOf("offerId" to UUID.randomUUID(), "workerId" to firstWorker),
+                        mapOf("offerId" to UUID.randomUUID(), "workerId" to secondWorker),
+                    ),
+                ),
+            )
+        }
+        val event = EventEnvelope(UUID.randomUUID(), "WorkerOffersCreated", "Booking", bookingId.toString(), now, payload)
+        val capturedEvents = mutableListOf<EventEnvelope>()
+        val capturedWorkers = mutableListOf<UUID>()
+
+        listener.consume(mapper.writeValueAsString(event))
+
+        verify(exactly = 2) {
+            fanoutHandler.handle(
+                capture(capturedEvents), RecipientType.WORKER, capture(capturedWorkers), any(),
+            )
+        }
+        capturedEvents.zip(capturedWorkers).forEach { (workerEvent, workerId) ->
+            assertTrue(workerEvent.payload.path("offers").all { it.path("workerId").asText() == workerId.toString() })
+        }
+        assertEquals(setOf(firstWorker, secondWorker), capturedWorkers.toSet())
+        verify(exactly = 0) { resolver.customerId(any()) }
     }
 
     private fun event(type: String) = EventEnvelope(

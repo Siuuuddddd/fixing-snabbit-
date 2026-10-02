@@ -6,6 +6,7 @@ import com.snabbit.prototype.notification.service.NotificationNotFound
 import com.snabbit.prototype.notification.service.NotificationRequestRejected
 import com.snabbit.prototype.notification.service.NotificationService
 import com.snabbit.prototype.notification.service.NotificationSnapshot
+import com.snabbit.prototype.notification.domain.RecipientType
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -39,26 +40,68 @@ class NotificationController(private val service: NotificationService) {
         @RequestHeader("X-Authenticated-User-Id") customerId: UUID,
         @RequestParam(defaultValue = "0") afterNotificationId: Long,
     ): List<NotificationSnapshot> = withContext(Dispatchers.IO) {
-        service.history(customerId, afterNotificationId)
+        service.history(RecipientType.CUSTOMER, customerId, afterNotificationId)
     }
 
     @PostMapping("/{notificationId}/read")
     suspend fun markRead(
         @PathVariable notificationId: Long,
         @RequestHeader("X-Authenticated-User-Id") customerId: UUID,
-    ): NotificationSnapshot = withContext(Dispatchers.IO) { service.markRead(customerId, notificationId) }
+    ): NotificationSnapshot = withContext(Dispatchers.IO) {
+        service.markRead(RecipientType.CUSTOMER, customerId, notificationId)
+    }
 
     @PostMapping("/devices")
     suspend fun registerDevice(
         @RequestHeader("X-Authenticated-User-Id") customerId: UUID,
         @Valid @RequestBody request: RegisterDeviceRequest,
-    ): DeviceSnapshot = withContext(Dispatchers.IO) { service.registerDevice(customerId, request.pushToken) }
+    ): DeviceSnapshot = withContext(Dispatchers.IO) {
+        service.registerDevice(RecipientType.CUSTOMER, customerId, request.pushToken)
+    }
 
     @DeleteMapping("/devices/{deviceId}")
     suspend fun unregisterDevice(
         @PathVariable deviceId: UUID,
         @RequestHeader("X-Authenticated-User-Id") customerId: UUID,
-    ): DeviceSnapshot = withContext(Dispatchers.IO) { service.unregisterDevice(customerId, deviceId) }
+    ): DeviceSnapshot = withContext(Dispatchers.IO) {
+        service.unregisterDevice(RecipientType.CUSTOMER, customerId, deviceId)
+    }
+}
+
+@RestController
+@RequestMapping("/api/v1/worker/notifications")
+class WorkerNotificationController(private val service: NotificationService) {
+    @GetMapping
+    suspend fun history(
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+        @RequestParam(defaultValue = "0") afterNotificationId: Long,
+    ): List<NotificationSnapshot> = withContext(Dispatchers.IO) {
+        service.history(RecipientType.WORKER, workerId, afterNotificationId)
+    }
+
+    @PostMapping("/{notificationId}/read")
+    suspend fun markRead(
+        @PathVariable notificationId: Long,
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+    ): NotificationSnapshot = withContext(Dispatchers.IO) {
+        service.markRead(RecipientType.WORKER, workerId, notificationId)
+    }
+
+    @PostMapping("/devices")
+    suspend fun registerDevice(
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+        @Valid @RequestBody request: RegisterDeviceRequest,
+    ): DeviceSnapshot = withContext(Dispatchers.IO) {
+        service.registerDevice(RecipientType.WORKER, workerId, request.pushToken)
+    }
+
+    @DeleteMapping("/devices/{deviceId}")
+    suspend fun unregisterDevice(
+        @PathVariable deviceId: UUID,
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+    ): DeviceSnapshot = withContext(Dispatchers.IO) {
+        service.unregisterDevice(RecipientType.WORKER, workerId, deviceId)
+    }
 }
 
 @RestControllerAdvice

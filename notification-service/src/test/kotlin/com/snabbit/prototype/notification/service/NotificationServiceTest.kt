@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import com.snabbit.prototype.notification.domain.RecipientType
 
 class NotificationServiceTest {
     private val transactions = mockk<NotificationTransaction>()
@@ -22,8 +23,8 @@ class NotificationServiceTest {
     fun `live stream resumes strictly after durable notification cursor`() = runBlocking {
         val customerId = UUID.randomUUID()
         val expected = NotificationSnapshot(11, "BookingConfirmed", "Confirmed", "Ready", true, Instant.now(), null)
-        every { transactions.history(customerId, 10) } returns listOf(expected)
+        every { transactions.history(RecipientType.CUSTOMER, customerId, 10) } returns listOf(expected)
 
-        assertEquals(expected, service.stream(customerId, 10).first())
+        assertEquals(expected, service.stream(RecipientType.CUSTOMER, customerId, 10).first())
     }
 }

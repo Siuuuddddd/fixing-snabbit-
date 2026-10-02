@@ -3,6 +3,7 @@ package com.snabbit.prototype.notification.service
 import com.snabbit.prototype.notification.domain.DeliveryChannel
 import com.snabbit.prototype.notification.domain.Notification
 import com.snabbit.prototype.notification.domain.NotificationDelivery
+import com.snabbit.prototype.notification.domain.RecipientType
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import com.snabbit.prototype.notification.repository.NotificationDeliveryRepository
 import com.snabbit.prototype.notification.repository.NotificationRepository
@@ -33,13 +34,16 @@ class NotificationTransactionTest {
         every { notifications.findByEventId(eventId) } returns null
         every { notifications.save(any()) } answers {
             firstArg<Notification>().let {
-                Notification(42, it.eventId, it.customerId, it.eventType, it.title, it.body, it.critical, it.payload, it.createdAt)
+                Notification(
+                    42, it.eventId, it.recipientType, it.recipientId, it.eventType, it.title, it.body,
+                    it.critical, it.payload, it.createdAt,
+                )
             }
         }
         every { deliveries.saveAll(capture(savedDeliveries)) } answers { firstArg() }
 
         val result = service.record(
-            eventId, customerId, "BookingConfirmed",
+            eventId, RecipientType.CUSTOMER, customerId, "BookingConfirmed",
             NotificationTemplate("Confirmed", "Worker assigned", true), "{}",
         )
 
@@ -50,12 +54,13 @@ class NotificationTransactionTest {
     @Test
     fun `customer cannot mark another customers notification read`() {
         val notification = Notification(
-            7, UUID.randomUUID(), UUID.randomUUID(), "BookingHeld", "Held", "Slot held", false, "{}", now,
+            7, UUID.randomUUID(), RecipientType.CUSTOMER, UUID.randomUUID(),
+            "BookingHeld", "Held", "Slot held", false, "{}", now,
         )
         every { notifications.findForUpdate(7) } returns notification
 
         assertThrows(NotificationAccessDenied::class.java) {
-            service.markRead(UUID.randomUUID(), 7)
+            service.markRead(RecipientType.CUSTOMER, UUID.randomUUID(), 7)
         }
 
         assertEquals(null, notification.readAt)

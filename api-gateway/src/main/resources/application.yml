@@ -25,6 +25,9 @@ spring:
         - id: worker-bookings
           uri: ${BOOKING_SERVICE_URL:http://localhost:8082}
           predicates: [Path=/api/v1/worker/bookings/**]
+        - id: worker-notifications
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+          predicates: [Path=/api/v1/worker/notifications/**]
         - id: customer-ratings
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates: [Path=/api/v1/worker/ratings/customers/**]

@@ -16,6 +16,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.util.UUID
 import java.time.Instant
+import com.snabbit.prototype.notification.domain.RecipientType
 
 @SpringBootTest(
     properties = [
@@ -38,11 +39,11 @@ class NotificationPersistenceIntegrationTest {
     fun `critical notification and delivery jobs commit atomically`() {
         val customerId = UUID.randomUUID()
         val result = notifications.record(
-            UUID.randomUUID(), customerId, "BookingConfirmed",
+            UUID.randomUUID(), RecipientType.CUSTOMER, customerId, "BookingConfirmed",
             NotificationTemplate("Confirmed", "Worker assigned", true), "{}",
         )
 
-        assertEquals(listOf(result), notifications.history(customerId, 0))
+        assertEquals(listOf(result), notifications.history(RecipientType.CUSTOMER, customerId, 0))
         assertEquals(
             2,
             jdbc.queryForObject(
@@ -55,6 +56,27 @@ class NotificationPersistenceIntegrationTest {
         assertEquals(
             2,
             deliveryStore.claimBatch(UUID.randomUUID(), claimTime, claimTime.plusSeconds(30), 10).size,
+        )
+    }
+
+    @Test
+    fun `worker and customer histories remain isolated after recipient migration`() {
+        val workerId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val workerNotification = notifications.record(
+            UUID.randomUUID(), RecipientType.WORKER, workerId, "WorkerOffersCreated",
+            NotificationTemplate("New job offer", "Respond now", true), "{}",
+        )
+
+        assertEquals(listOf(workerNotification), notifications.history(RecipientType.WORKER, workerId, 0))
+        assertEquals(emptyList<Any>(), notifications.history(RecipientType.CUSTOMER, customerId, 0))
+        assertEquals(
+            "WORKER",
+            jdbc.queryForObject(
+                "SELECT recipient_type FROM notification WHERE id = ?",
+                String::class.java,
+                workerNotification.notificationId,
+            ),
         )
     }
 

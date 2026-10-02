@@ -6,6 +6,7 @@ import com.snabbit.prototype.notification.domain.DeliveryChannel
 import com.snabbit.prototype.notification.domain.DeliveryStatus
 import com.snabbit.prototype.notification.domain.Notification
 import com.snabbit.prototype.notification.domain.NotificationDelivery
+import com.snabbit.prototype.notification.domain.RecipientType
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import com.snabbit.prototype.notification.repository.NotificationDeliveryRepository
 import com.snabbit.prototype.notification.repository.NotificationRepository
@@ -60,7 +61,7 @@ data class NotificationTemplate(
 )
 
 class NotificationNotFound(message: String) : RuntimeException(message)
-class NotificationAccessDenied : RuntimeException("Authenticated customer does not own this notification resource")
+class NotificationAccessDenied : RuntimeException("Authenticated recipient does not own this notification resource")
 class NotificationRequestRejected(message: String) : RuntimeException(message)
 
 @Service
@@ -73,7 +74,8 @@ class NotificationTransaction(
     @Transactional
     fun record(
         eventId: UUID,
-        customerId: UUID,
+        recipientType: RecipientType,
+        recipientId: UUID,
         eventType: String,
         template: NotificationTemplate,
         payload: String,
@@ -83,7 +85,8 @@ class NotificationTransaction(
         val notification = notifications.save(
             Notification(
                 eventId = eventId,
-                customerId = customerId,
+                recipientType = recipientType,
+                recipientId = recipientId,
                 eventType = eventType,
                 title = template.title,
                 body = template.body,
@@ -107,35 +110,45 @@ class NotificationTransaction(
     }
 
     @Transactional(readOnly = true)
-    fun history(customerId: UUID, afterId: Long): List<NotificationSnapshot> =
-        notifications.findTop100ByCustomerIdAndIdGreaterThanOrderByIdAsc(customerId, afterId.coerceAtLeast(0))
+    fun history(recipientType: RecipientType, recipientId: UUID, afterId: Long): List<NotificationSnapshot> =
+        notifications.findTop100ByRecipientTypeAndRecipientIdAndIdGreaterThanOrderByIdAsc(
+            recipientType,
+            recipientId,
+            afterId.coerceAtLeast(0),
+        )
             .map(::snapshot)
 
     @Transactional
-    fun markRead(customerId: UUID, notificationId: Long): NotificationSnapshot {
+    fun markRead(recipientType: RecipientType, recipientId: UUID, notificationId: Long): NotificationSnapshot {
         val notification = notifications.findForUpdate(notificationId)
             ?: throw NotificationNotFound("Notification was not found")
-        if (notification.customerId != customerId) throw NotificationAccessDenied()
+        if (notification.recipientType != recipientType || notification.recipientId != recipientId) {
+            throw NotificationAccessDenied()
+        }
         notification.markRead(clock.instant())
         return snapshot(notification)
     }
 
     @Transactional
-    fun registerDevice(customerId: UUID, rawToken: String): DeviceSnapshot {
+    fun registerDevice(recipientType: RecipientType, recipientId: UUID, rawToken: String): DeviceSnapshot {
         val token = rawToken.trim()
         if (token.length !in 20..512) throw NotificationRequestRejected("Push token must contain 20 to 512 characters")
         val now = clock.instant()
-        val device = devices.findByTokenForUpdate(token)?.apply { activateFor(customerId, now) }
+        val device = devices.findByTokenForUpdate(token)?.apply { activateFor(recipientType, recipientId, now) }
             ?: devices.save(
-                DeviceRegistration(UUID.randomUUID(), customerId, DevicePlatform.ANDROID, token, true, now, now),
+                DeviceRegistration(
+                    UUID.randomUUID(), recipientType, recipientId, DevicePlatform.ANDROID, token, true, now, now,
+                ),
             )
         return deviceSnapshot(device)
     }
 
     @Transactional
-    fun unregisterDevice(customerId: UUID, deviceId: UUID): DeviceSnapshot {
+    fun unregisterDevice(recipientType: RecipientType, recipientId: UUID, deviceId: UUID): DeviceSnapshot {
         val device = devices.findForUpdate(deviceId) ?: throw NotificationNotFound("Device registration was not found")
-        if (device.customerId != customerId) throw NotificationAccessDenied()
+        if (device.recipientType != recipientType || device.recipientId != recipientId) {
+            throw NotificationAccessDenied()
+        }
         device.deactivate(clock.instant())
         return deviceSnapshot(device)
     }
@@ -160,15 +173,19 @@ class NotificationService(
     private val transactions: NotificationTransaction,
     private val properties: NotificationProperties,
 ) {
-    fun history(customerId: UUID, afterId: Long) = transactions.history(customerId, afterId)
-    fun markRead(customerId: UUID, notificationId: Long) = transactions.markRead(customerId, notificationId)
-    fun registerDevice(customerId: UUID, token: String) = transactions.registerDevice(customerId, token)
-    fun unregisterDevice(customerId: UUID, deviceId: UUID) = transactions.unregisterDevice(customerId, deviceId)
+    fun history(recipientType: RecipientType, recipientId: UUID, afterId: Long) =
+        transactions.history(recipientType, recipientId, afterId)
+    fun markRead(recipientType: RecipientType, recipientId: UUID, notificationId: Long) =
+        transactions.markRead(recipientType, recipientId, notificationId)
+    fun registerDevice(recipientType: RecipientType, recipientId: UUID, token: String) =
+        transactions.registerDevice(recipientType, recipientId, token)
+    fun unregisterDevice(recipientType: RecipientType, recipientId: UUID, deviceId: UUID) =
+        transactions.unregisterDevice(recipientType, recipientId, deviceId)
 
-    fun stream(customerId: UUID, afterId: Long): Flow<NotificationSnapshot> = flow {
+    fun stream(recipientType: RecipientType, recipientId: UUID, afterId: Long): Flow<NotificationSnapshot> = flow {
         var cursor = afterId.coerceAtLeast(0)
         while (currentCoroutineContext().isActive) {
-            val batch = withContext(Dispatchers.IO) { transactions.history(customerId, cursor) }
+            val batch = withContext(Dispatchers.IO) { transactions.history(recipientType, recipientId, cursor) }
             batch.forEach { notification ->
                 emit(notification)
                 cursor = notification.notificationId

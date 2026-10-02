@@ -4,6 +4,7 @@ import com.snabbit.prototype.notification.service.NotificationProperties
 import com.snabbit.prototype.notification.events.NotificationIntegrationProperties
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import com.snabbit.prototype.notification.security.InternalServiceClientFactory
+import com.snabbit.prototype.notification.domain.RecipientType
 import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
@@ -21,14 +22,15 @@ import java.util.UUID
 data class ClaimedDelivery(
     val deliveryId: UUID,
     val notificationId: Long,
-    val customerId: UUID,
+    val recipientType: RecipientType,
+    val recipientId: UUID,
     val channel: String,
     val title: String,
     val body: String,
     val attempts: Int,
 )
 
-data class CustomerContact(val userId: UUID, val phoneNumber: String)
+data class RecipientContact(val phoneNumber: String)
 
 @Repository
 class NotificationDeliveryStore(private val jdbc: JdbcTemplate) {
@@ -50,14 +52,15 @@ class NotificationDeliveryStore(private val jdbc: JdbcTemplate) {
             SET status = 'PROCESSING', claimed_by = ?, claim_until = ?, attempts = delivery.attempts + 1
             FROM candidates, notification notification
             WHERE delivery.id = candidates.id AND notification.id = delivery.notification_id
-            RETURNING delivery.id, delivery.notification_id, notification.customer_id,
+            RETURNING delivery.id, delivery.notification_id, notification.recipient_type, notification.recipient_id,
                       delivery.channel, notification.title, notification.body, delivery.attempts
             """.trimIndent(),
             { result, _ ->
                 ClaimedDelivery(
                     UUID.fromString(result.getString("id")),
                     result.getLong("notification_id"),
-                    UUID.fromString(result.getString("customer_id")),
+                    RecipientType.valueOf(result.getString("recipient_type")),
+                    UUID.fromString(result.getString("recipient_id")),
                     result.getString("channel"),
                     result.getString("title"),
                     result.getString("body"),
@@ -106,19 +109,22 @@ class NotificationDeliveryStore(private val jdbc: JdbcTemplate) {
 @Service
 class NotificationDeliveryQuery(private val devices: DeviceRegistrationRepository) {
     @Transactional(readOnly = true)
-    fun pushTokens(customerId: UUID): List<String> =
-        devices.findAllByCustomerIdAndActiveTrue(customerId).map { it.pushToken }
+    fun pushTokens(recipientType: RecipientType, recipientId: UUID): List<String> =
+        devices.findAllByRecipientTypeAndRecipientIdAndActiveTrue(recipientType, recipientId).map { it.pushToken }
 }
 
 @Component
 class NotificationContactClient(factory: InternalServiceClientFactory, properties: NotificationIntegrationProperties) {
-    private val client = factory.create(properties.userServiceUrl)
+    private val userClient = factory.create(properties.userServiceUrl)
+    private val workerClient = factory.create(properties.workerServiceUrl)
 
-    fun contact(customerId: UUID): CustomerContact = client.get()
-        .uri("/internal/v1/users/{userId}/contact", customerId)
+    fun contact(recipientType: RecipientType, recipientId: UUID): RecipientContact = when (recipientType) {
+        RecipientType.CUSTOMER -> userClient.get().uri("/internal/v1/users/{userId}/contact", recipientId)
+        RecipientType.WORKER -> workerClient.get().uri("/internal/v1/workers/{workerId}/contact", recipientId)
+    }
         .retrieve()
-        .body(CustomerContact::class.java)
-        ?: error("User Service returned an empty customer contact")
+        .body(RecipientContact::class.java)
+        ?: error("Recipient service returned an empty contact")
 }
 
 interface PushDeliveryAdapter {
@@ -134,7 +140,7 @@ interface SmsDeliveryAdapter {
 class LoggingPushDeliveryAdapter : PushDeliveryAdapter {
     private val logger = LoggerFactory.getLogger(javaClass)
     override fun send(tokens: List<String>, title: String, body: String) {
-        if (tokens.isEmpty()) error("Customer has no active push device")
+        if (tokens.isEmpty()) error("Recipient has no active push device")
         logger.info("Development push delivered to {} device(s): {}", tokens.size, title)
     }
 }
@@ -172,8 +178,12 @@ class NotificationDeliveryScheduler(
     private fun deliverOne(delivery: ClaimedDelivery, claimId: UUID) {
         try {
             when (delivery.channel) {
-                "PUSH" -> push.send(query.pushTokens(delivery.customerId), delivery.title, delivery.body)
-                "SMS" -> sms.send(contacts.contact(delivery.customerId).phoneNumber, delivery.body)
+                "PUSH" -> push.send(
+                    query.pushTokens(delivery.recipientType, delivery.recipientId), delivery.title, delivery.body,
+                )
+                "SMS" -> sms.send(
+                    contacts.contact(delivery.recipientType, delivery.recipientId).phoneNumber, delivery.body,
+                )
                 else -> error("Unsupported delivery channel ${delivery.channel}")
             }
             store.markDelivered(delivery.deliveryId, claimId, clock.instant())
