@@ -1,6 +1,6 @@
 # Booking event contracts
 
-Booking writes these facts to `outbox_event` in the same PostgreSQL transaction as booking state. The leased outbox publisher sends every Kafka record with `bookingId` as its key and a unique event ID in its envelope. Consumers claim that ID in their own database transaction before applying a side effect.
+Booking writes these facts to `outbox_event` in the same PostgreSQL transaction as booking state. The leased outbox publisher sends every Kafka record with `bookingId` as its key and a unique event ID plus explicit `schemaVersion` in its envelope. Consumers claim that ID in their own database transaction before applying a side effect and reject unsupported schema versions to the retry/dead-letter path.
 
 | Event type | Meaning | Expected consumers |
 | --- | --- | --- |

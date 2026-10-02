@@ -13,6 +13,7 @@ Retry topics use the source topic plus `-retry` suffixes. Records exhausted afte
 
 ```json
 {
+  "schemaVersion": 1,
   "eventId": "uuid",
   "eventType": "WalletPaymentSucceeded",
   "aggregateType": "Wallet",
@@ -22,7 +23,7 @@ Retry topics use the source topic plus `-retry` suffixes. Records exhausted afte
 }
 ```
 
-The Kafka key is always `aggregateId`, preserving order for one booking or wallet.
+The Kafka key is always `aggregateId`, preserving order for one booking or wallet. Producers currently emit schema version `1`. A missing version is interpreted as version `1` for rolling-upgrade compatibility; an explicitly unsupported version fails consumption and follows the normal retry/dead-letter path instead of being applied with ambiguous semantics.
 
 ## Outbox delivery
 
