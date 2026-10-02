@@ -17,6 +17,13 @@ Prototype worker phones are `+919900000001` and `+919900000002`. OTPs are logged
 
 Booking Service reads the latest durable point through the protected `GET /internal/v1/workers/{workerId}/location` API. The worker credential never reaches the customer application, and Booking applies ownership, visit-state and time-window checks before disclosing a point.
 
+## Availability
+
+- `GET /api/v1/workers/me/availability?from=YYYY-MM-DD&to=YYYY-MM-DD` returns the authenticated worker's schedule. The default range is today through the next seven days.
+- `PUT /api/v1/workers/me/availability/{serviceDate}` creates or replaces one day. `AVAILABLE` requires `availableFrom` and `availableUntil` within 08:00–19:00; `UNAVAILABLE` needs no times.
+
+Workers can manage today through the next 30 days. The service derives worker identity from the JWT, locks that worker while upserting the unique day row and never accepts a worker ID from the request body.
+
 ## Job flow
 
 Authenticated worker routes are:

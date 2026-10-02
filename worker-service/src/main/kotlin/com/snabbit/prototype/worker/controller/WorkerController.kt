@@ -5,6 +5,7 @@ import com.snabbit.prototype.worker.service.MatchWorkersCommand
 import com.snabbit.prototype.worker.service.WorkerMatch
 import com.snabbit.prototype.worker.service.WorkerMatchingService
 import com.snabbit.prototype.worker.service.InvalidWorkerLocation
+import com.snabbit.prototype.worker.service.InvalidWorkerAvailability
 import com.snabbit.prototype.worker.service.WorkerLocationCommand
 import com.snabbit.prototype.worker.service.WorkerLocationService
 import com.snabbit.prototype.worker.service.WorkerLocationSnapshot
@@ -146,6 +147,10 @@ class WorkerExceptionHandler {
 
     @ExceptionHandler(InvalidWorkerLocation::class)
     fun invalidLocation(error: InvalidWorkerLocation): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
+
+    @ExceptionHandler(InvalidWorkerAvailability::class)
+    fun invalidAvailability(error: InvalidWorkerAvailability): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
 
     @ExceptionHandler(WorkerRatingRejected::class)

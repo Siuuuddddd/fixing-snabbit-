@@ -40,6 +40,12 @@ interface WorkerSkillRepository : JpaRepository<WorkerSkill, WorkerSkillId> {
 
 interface WorkerAvailabilityRepository : JpaRepository<WorkerAvailability, UUID> {
     fun findAllByServiceDateAndStatus(date: LocalDate, status: AvailabilityStatus): List<WorkerAvailability>
+    fun findByWorkerIdAndServiceDate(workerId: UUID, serviceDate: LocalDate): WorkerAvailability?
+    fun findAllByWorkerIdAndServiceDateBetweenOrderByServiceDate(
+        workerId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<WorkerAvailability>
 }
 
 interface WorkerCompatibilityRepository : JpaRepository<WorkerCompatibility, UUID> {
