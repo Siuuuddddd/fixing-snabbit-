@@ -48,6 +48,18 @@ data class WorkerLocationCommand(
     val accuracyMeters: BigDecimal,
 )
 
+data class RatingContextSnapshot(
+    val bookingId: UUID,
+    val customerId: UUID,
+    val visits: List<RatingVisitSnapshot>,
+)
+
+data class RatingVisitSnapshot(
+    val visitIndex: Int,
+    val workerId: UUID,
+    val completed: Boolean,
+)
+
 data class VisitSnapshot(
     val visitIndex: Int,
     val workerId: UUID,

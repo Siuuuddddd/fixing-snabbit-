@@ -7,6 +7,7 @@ import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.domain.WorkerSkill
 import com.snabbit.prototype.worker.domain.WorkerSkillId
 import com.snabbit.prototype.worker.domain.WorkerLocationPoint
+import com.snabbit.prototype.worker.domain.WorkerRating
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
@@ -26,6 +27,10 @@ interface WorkerProfileRepository : JpaRepository<WorkerProfile, UUID> {
 }
 
 interface WorkerLocationRepository : JpaRepository<WorkerLocationPoint, UUID>
+
+interface WorkerRatingRepository : JpaRepository<WorkerRating, UUID> {
+    fun findByBookingIdAndVisitIndex(bookingId: UUID, visitIndex: Int): WorkerRating?
+}
 
 interface WorkerSkillRepository : JpaRepository<WorkerSkill, WorkerSkillId> {
     fun findAllByIdServiceCodeAndEnabledTrue(serviceCode: String): List<WorkerSkill>

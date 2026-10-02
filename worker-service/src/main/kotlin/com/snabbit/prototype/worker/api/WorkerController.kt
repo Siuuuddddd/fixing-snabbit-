@@ -10,6 +10,7 @@ import com.snabbit.prototype.worker.application.WorkerLocationService
 import com.snabbit.prototype.worker.application.WorkerLocationSnapshot
 import com.snabbit.prototype.worker.auth.InvalidWorkerOtp
 import com.snabbit.prototype.worker.auth.WorkerOtpRateLimited
+import com.snabbit.prototype.worker.rating.WorkerRatingRejected
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
@@ -119,4 +120,8 @@ class WorkerExceptionHandler {
     @ExceptionHandler(InvalidWorkerLocation::class)
     fun invalidLocation(error: InvalidWorkerLocation): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
+
+    @ExceptionHandler(WorkerRatingRejected::class)
+    fun ratingRejected(error: WorkerRatingRejected): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
 }

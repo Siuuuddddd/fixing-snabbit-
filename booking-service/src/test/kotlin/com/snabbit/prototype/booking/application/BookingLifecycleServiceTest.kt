@@ -250,6 +250,26 @@ class BookingLifecycleServiceTest {
         verify(exactly = 0) { outboxRepository.save(any()) }
     }
 
+    @Test
+    fun `rating context exposes only authoritative completed visits`() {
+        val booking = booking(UUID.randomUUID())
+        val workerId = UUID.randomUUID()
+        val hold = hold(booking.id, workerId).apply {
+            confirm()
+            arrive(BigDecimal("19.076090"), BigDecimal("72.877426"), BigDecimal.TEN, clock.instant())
+            start(clock.instant())
+            complete(clock.instant())
+        }
+        every { bookingRepository.findById(booking.id) } returns Optional.of(booking)
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(booking.id) } returns listOf(hold)
+
+        val context = service.ratingContext(booking.id)
+
+        assertEquals(booking.customerId, context.customerId)
+        assertEquals(workerId, context.visits.single().workerId)
+        assertEquals(true, context.visits.single().completed)
+    }
+
     private fun multiDayCommand(workerId: UUID) = CreateBookingCommand(
         customerId = UUID.randomUUID(),
         serviceId = UUID.randomUUID(),

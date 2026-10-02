@@ -4,6 +4,7 @@ import com.snabbit.prototype.user.domain.FavouriteWorker
 import com.snabbit.prototype.user.domain.FavouriteWorkerId
 import com.snabbit.prototype.user.domain.HouseholdPreference
 import com.snabbit.prototype.user.domain.UserProfile
+import com.snabbit.prototype.user.domain.CustomerRating
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
@@ -23,4 +24,8 @@ interface HouseholdPreferenceRepository : JpaRepository<HouseholdPreference, UUI
 
 interface FavouriteWorkerRepository : JpaRepository<FavouriteWorker, FavouriteWorkerId> {
     fun findAllByIdUserIdOrderByPriority(userId: UUID): List<FavouriteWorker>
+}
+
+interface CustomerRatingRepository : JpaRepository<CustomerRating, UUID> {
+    fun findByBookingIdAndVisitIndex(bookingId: UUID, visitIndex: Int): CustomerRating?
 }

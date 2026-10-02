@@ -9,6 +9,8 @@ import jakarta.persistence.Table
 import jakarta.persistence.Version
 import java.time.Instant
 import java.util.UUID
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 enum class UserStatus { ACTIVE, SUSPENDED, DELETED }
 
@@ -32,9 +34,19 @@ class UserProfile(
     val createdAt: Instant,
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant,
+    @Column(name = "rating_sum", nullable = false)
+    var ratingSum: Int = 0,
+    @Column(name = "rating_count", nullable = false)
+    var ratingCount: Int = 0,
     @Version
     var version: Long = 0,
 ) {
     fun hasActivePlus(now: Instant): Boolean =
         plusActive && (plusExpiresAt == null || plusExpiresAt!!.isAfter(now))
+
+    fun averageRating(): BigDecimal = if (ratingCount == 0) {
+        BigDecimal.ZERO
+    } else {
+        BigDecimal(ratingSum).divide(BigDecimal(ratingCount), 2, RoundingMode.HALF_UP)
+    }
 }

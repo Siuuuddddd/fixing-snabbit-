@@ -32,3 +32,5 @@ ASSIGNED -> ARRIVED -> IN_PROGRESS -> COMPLETED
 ```
 
 Arrival requires a GPS sample accurate to 100 metres and within 250 metres of the booking's stored service location. Every transition uses Booking's row locks and emits an outbox event. When all visits are complete, the parent booking moves from `CONFIRMED` to `COMPLETED` and emits `BookingCompleted`.
+
+After completion, workers and customers can rate each other through the role-protected APIs in [ratings.md](ratings.md).

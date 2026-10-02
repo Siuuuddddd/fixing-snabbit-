@@ -157,6 +157,19 @@ class BookingLifecycleService(
         )
     }
 
+    @Transactional(readOnly = true)
+    fun ratingContext(bookingId: UUID): RatingContextSnapshot {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        val holds = requireHolds(bookingId)
+        return RatingContextSnapshot(
+            booking.id,
+            booking.customerId,
+            holds.map { hold ->
+                RatingVisitSnapshot(hold.visitIndex, hold.workerId, hold.jobStatus == JobStatus.COMPLETED)
+            },
+        )
+    }
+
     @Transactional
     fun acceptOffer(bookingId: UUID, offerId: UUID, workerId: UUID): BookingSnapshot {
         val now = clock.instant()

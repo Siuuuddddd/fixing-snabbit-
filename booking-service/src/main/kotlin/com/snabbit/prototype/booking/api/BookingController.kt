@@ -3,6 +3,7 @@ package com.snabbit.prototype.booking.api
 import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.PaymentQuoteSnapshot
+import com.snabbit.prototype.booking.application.RatingContextSnapshot
 import com.snabbit.prototype.booking.application.CreateBookingCommand
 import com.snabbit.prototype.booking.application.VisitCommand
 import com.snabbit.prototype.booking.domain.BookingType
@@ -145,6 +146,9 @@ data class ConfirmPaymentRequest(
 @RestController
 @RequestMapping("/internal/v1/bookings")
 class InternalBookingController(private val service: BookingLifecycleService) {
+    @GetMapping("/{bookingId}/rating-context")
+    fun ratingContext(@PathVariable bookingId: UUID): RatingContextSnapshot = service.ratingContext(bookingId)
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@Valid @RequestBody request: CreateBookingRequest): BookingSnapshot =

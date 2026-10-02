@@ -16,6 +16,12 @@ spring:
         - id: worker-bookings
           uri: ${BOOKING_SERVICE_URL:http://localhost:8082}
           predicates: [Path=/api/v1/worker/bookings/**]
+        - id: customer-ratings
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates: [Path=/api/v1/worker/ratings/customers/**]
+        - id: worker-ratings
+          uri: ${WORKER_SERVICE_URL:http://localhost:8083}
+          predicates: [Path=/api/v1/ratings/workers/**]
         - id: users
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates: [Path=/api/v1/users/**]
