@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.data.domain.Pageable
 import java.time.Instant
 import java.util.UUID
 
@@ -21,6 +22,13 @@ interface WorkerOfferRepository : JpaRepository<WorkerOffer, UUID> {
     fun findAllByBookingIdOrderByCreatedAt(bookingId: UUID): List<WorkerOffer>
 
     fun countByBookingIdAndStatusNot(bookingId: UUID, status: WorkerOfferStatus): Long
+
+    fun findByWorkerIdAndStatusAndExpiresAtAfterOrderByExpiresAtAsc(
+        workerId: UUID,
+        status: WorkerOfferStatus,
+        expiresAt: Instant,
+        pageable: Pageable,
+    ): List<WorkerOffer>
 
     @Query(
         value = """

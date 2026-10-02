@@ -1,16 +1,27 @@
 package com.snabbit.prototype.booking.persistence
 
 import com.snabbit.prototype.booking.domain.SlotHold
+import com.snabbit.prototype.booking.domain.JobStatus
+import com.snabbit.prototype.booking.domain.SlotHoldStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.data.domain.Pageable
 import java.time.Instant
 import java.util.UUID
 
 interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
     fun findAllByBookingIdOrderByVisitIndex(bookingId: UUID): List<SlotHold>
+
+    fun findByWorkerIdAndStatusAndJobStatusInAndStartsAtAfterOrderByStartsAtAsc(
+        workerId: UUID,
+        status: SlotHoldStatus,
+        jobStatuses: Collection<JobStatus>,
+        startsAt: Instant,
+        pageable: Pageable,
+    ): List<SlotHold>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select hold from SlotHold hold where hold.id = :id")

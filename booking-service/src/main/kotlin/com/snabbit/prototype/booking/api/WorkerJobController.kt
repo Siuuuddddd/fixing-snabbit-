@@ -3,11 +3,15 @@ package com.snabbit.prototype.booking.api
 import com.snabbit.prototype.booking.application.BookingLifecycleService
 import com.snabbit.prototype.booking.application.BookingSnapshot
 import com.snabbit.prototype.booking.application.WorkerLocationCommand
+import com.snabbit.prototype.booking.application.WorkerFeedService
+import com.snabbit.prototype.booking.application.WorkerJobFeedItem
+import com.snabbit.prototype.booking.application.WorkerOfferFeedItem
 import jakarta.validation.Valid
 import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Positive
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -27,7 +31,20 @@ data class WorkerArrivalRequest(
 
 @RestController
 @RequestMapping("/api/v1/worker/bookings")
-class WorkerJobController(private val bookings: BookingLifecycleService) {
+class WorkerJobController(
+    private val bookings: BookingLifecycleService,
+    private val feed: WorkerFeedService,
+) {
+    @GetMapping("/offers")
+    fun offers(
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+    ): List<WorkerOfferFeedItem> = feed.pendingOffers(workerId)
+
+    @GetMapping("/jobs")
+    fun jobs(
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+    ): List<WorkerJobFeedItem> = feed.assignedJobs(workerId)
+
     @PostMapping("/{bookingId}/offers/{offerId}/accept")
     fun accept(
         @PathVariable bookingId: UUID,

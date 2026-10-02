@@ -21,11 +21,15 @@ Booking Service reads the latest durable point through the protected `GET /inter
 
 Authenticated worker routes are:
 
+- `GET /api/v1/worker/bookings/offers`
+- `GET /api/v1/worker/bookings/jobs`
 - `POST /api/v1/worker/bookings/{bookingId}/offers/{offerId}/accept`
 - `POST /api/v1/worker/bookings/{bookingId}/offers/{offerId}/reject`
 - `POST /api/v1/worker/bookings/{bookingId}/visits/{visitIndex}/arrive`
 - `POST /api/v1/worker/bookings/{bookingId}/visits/{visitIndex}/start`
 - `POST /api/v1/worker/bookings/{bookingId}/visits/{visitIndex}/complete`
+
+The offers feed returns at most 100 unexpired offers in expiry order. It includes the service, schedule, duration and household compatibility requirements needed for an informed decision, but never the customer ID or service coordinates. The jobs feed returns up to 100 active assigned visits in start-time order. Exact service coordinates remain absent until two hours before the visit; the booking service applies that rule rather than trusting an Android client to hide the data.
 
 The server derives the worker ID from the JWT and checks it against the offer or visit. After payment confirmation, each visit follows:
 
