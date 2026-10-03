@@ -1,5 +1,9 @@
 package com.snabbit.prototype.worker.domain
 
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
+
+import com.snabbit.prototype.worker.domain.enums.WorkerStatus
+
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -11,14 +15,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
 import java.util.UUID
-
-enum class WorkerTier(val surchargeMinor: Long) {
-    STANDARD(0),
-    VETERAN(3_000),
-    EXPERT(5_000),
-}
-
-enum class WorkerStatus { ACTIVE, PAUSED, SUSPENDED }
 
 @Entity
 @Table(name = "worker_profile")

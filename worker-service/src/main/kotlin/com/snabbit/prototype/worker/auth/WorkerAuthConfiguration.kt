@@ -12,18 +12,6 @@ import java.time.Clock
 import java.time.Duration
 import javax.crypto.spec.SecretKeySpec
 
-@ConfigurationProperties("auth")
-data class WorkerAuthProperties(
-    val issuer: String,
-    val jwtSecret: String,
-    val otpPepper: String,
-    val otpTtl: Duration,
-    val requestCooldown: Duration,
-    val accessTokenTtl: Duration,
-    val maxAttempts: Int,
-    val exposeCode: Boolean,
-)
-
 @Configuration
 class WorkerAuthConfiguration {
     @Bean

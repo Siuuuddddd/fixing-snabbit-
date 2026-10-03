@@ -10,26 +10,6 @@ import org.springframework.web.filter.OncePerRequestFilter
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
-@ConfigurationProperties("service-auth")
-data class ServiceAuthProperties(val token: String) {
-    init {
-        require(token.toByteArray(StandardCharsets.UTF_8).size >= 32) {
-            "Service authentication token must contain at least 32 bytes"
-        }
-    }
-}
-
-@Component
-class InternalServiceClientFactory(
-    private val builder: RestClient.Builder,
-    private val properties: ServiceAuthProperties,
-) {
-    fun create(baseUrl: String): RestClient = builder.clone()
-        .baseUrl(baseUrl)
-        .defaultHeader(ServiceAuthFilter.HEADER, properties.token)
-        .build()
-}
-
 @Component
 class ServiceAuthFilter(private val properties: ServiceAuthProperties) : OncePerRequestFilter() {
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
@@ -56,4 +36,3 @@ class ServiceAuthFilter(private val properties: ServiceAuthProperties) : OncePer
         const val HEADER = "X-Service-Token"
     }
 }
-

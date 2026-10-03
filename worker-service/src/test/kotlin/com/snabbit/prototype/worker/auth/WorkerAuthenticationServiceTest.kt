@@ -1,8 +1,10 @@
 package com.snabbit.prototype.worker.auth
 
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
+
+import com.snabbit.prototype.worker.domain.enums.WorkerStatus
+
 import com.snabbit.prototype.worker.domain.WorkerProfile
-import com.snabbit.prototype.worker.domain.WorkerStatus
-import com.snabbit.prototype.worker.domain.WorkerTier
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every
 import io.mockk.mockk

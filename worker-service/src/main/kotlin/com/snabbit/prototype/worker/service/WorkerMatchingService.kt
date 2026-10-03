@@ -1,9 +1,15 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.domain.AvailabilityStatus
+import com.snabbit.prototype.worker.dto.response.WorkerMatch
+
+import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
+
+import com.snabbit.prototype.worker.domain.enums.WorkerStatus
+
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+
 import com.snabbit.prototype.worker.domain.WorkerCompatibility
 import com.snabbit.prototype.worker.domain.WorkerProfile
-import com.snabbit.prototype.worker.domain.WorkerStatus
 import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
@@ -19,41 +25,6 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
-
-data class MatchWorkersCommand(
-    val serviceCode: String,
-    val basePricePerHourMinor: Long,
-    val startsAt: Instant,
-    val durationMinutes: Int,
-    val latitude: Double,
-    val longitude: Double,
-    val maxDistanceKm: Double,
-    val hasPets: Boolean,
-    val foodContext: String?,
-    val utensilPreferences: List<String>,
-    val preferredLanguages: List<String>,
-    val allergies: List<String>,
-    val religiousFoodRestrictions: List<String>,
-    val workerConstraints: List<String>,
-    val heavyLiftingRequired: Boolean,
-    val disallowedChemicals: List<String>,
-    val requiredEquipment: List<String>,
-    val accessibilityNeeds: List<String>,
-    val favouriteWorkerIds: List<UUID>,
-    val plusActive: Boolean,
-)
-
-data class WorkerMatch(
-    val workerId: UUID,
-    val displayName: String,
-    val tier: String,
-    val averageRating: BigDecimal,
-    val distanceKm: BigDecimal,
-    val favourite: Boolean,
-    val priceMinor: Long,
-)
-
-class InvalidMatchRequest(message: String) : RuntimeException(message)
 
 @Service
 class WorkerMatchingService(

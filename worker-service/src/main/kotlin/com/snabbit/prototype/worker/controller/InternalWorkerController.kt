@@ -1,16 +1,23 @@
 package com.snabbit.prototype.worker.controller
 
+import com.snabbit.prototype.worker.dto.response.WorkerMatch
+
+import com.snabbit.prototype.worker.dto.response.WorkerLocationSnapshot
+
+import com.snabbit.prototype.worker.dto.response.WorkerContactSnapshot
+
+import com.snabbit.prototype.worker.dto.request.MatchWorkersRequest
+
+import com.snabbit.prototype.worker.dto.request.WorkerLocationCommand
+
+import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
+
 import com.snabbit.prototype.worker.service.InvalidMatchRequest
-import com.snabbit.prototype.worker.service.MatchWorkersCommand
-import com.snabbit.prototype.worker.service.WorkerMatch
 import com.snabbit.prototype.worker.service.WorkerMatchingService
 import com.snabbit.prototype.worker.service.InvalidWorkerLocation
 import com.snabbit.prototype.worker.service.InvalidWorkerAvailability
-import com.snabbit.prototype.worker.service.WorkerLocationCommand
 import com.snabbit.prototype.worker.service.WorkerLocationService
-import com.snabbit.prototype.worker.service.WorkerLocationSnapshot
 import com.snabbit.prototype.worker.service.WorkerDirectoryService
-import com.snabbit.prototype.worker.service.WorkerContactSnapshot
 import com.snabbit.prototype.worker.auth.InvalidWorkerOtp
 import com.snabbit.prototype.worker.auth.WorkerOtpRateLimited
 import com.snabbit.prototype.worker.rating.WorkerRatingRejected
@@ -35,42 +42,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.time.Instant
 import java.math.BigDecimal
 import java.util.UUID
-
-data class MatchWorkersRequest(
-    @field:NotBlank
-    val serviceCode: String,
-    @field:Min(1)
-    val basePricePerHourMinor: Long,
-    val startsAt: Instant,
-    @field:Min(60) @field:Max(240)
-    val durationMinutes: Int,
-    val latitude: Double,
-    val longitude: Double,
-    val maxDistanceKm: Double = 15.0,
-    val hasPets: Boolean = false,
-    val foodContext: String? = null,
-    val utensilPreferences: List<String> = emptyList(),
-    val preferredLanguages: List<String> = emptyList(),
-    val allergies: List<String> = emptyList(),
-    val religiousFoodRestrictions: List<String> = emptyList(),
-    val workerConstraints: List<String> = emptyList(),
-    val heavyLiftingRequired: Boolean = false,
-    val disallowedChemicals: List<String> = emptyList(),
-    val requiredEquipment: List<String> = emptyList(),
-    val accessibilityNeeds: List<String> = emptyList(),
-    val favouriteWorkerIds: List<UUID> = emptyList(),
-    val plusActive: Boolean = false,
-)
-
-data class WorkerLocationRequest(
-    @field:DecimalMin("-90.0") @field:DecimalMax("90.0")
-    val latitude: BigDecimal,
-    @field:DecimalMin("-180.0") @field:DecimalMax("180.0")
-    val longitude: BigDecimal,
-    @field:Positive
-    val accuracyMeters: BigDecimal,
-    val capturedAt: Instant,
-)
 
 @RestController
 @RequestMapping("/internal/v1/workers")
@@ -116,44 +87,4 @@ class InternalWorkerController(
         directory.contact(workerId)
             ?.let { org.springframework.http.ResponseEntity.ok(it) }
             ?: org.springframework.http.ResponseEntity.notFound().build()
-}
-
-@RestController
-@RequestMapping("/api/v1/workers/me")
-class WorkerLocationController(private val locations: WorkerLocationService) {
-    @PostMapping("/location")
-    fun updateLocation(
-        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
-        @Valid @RequestBody request: WorkerLocationRequest,
-    ): WorkerLocationSnapshot = locations.update(
-        workerId,
-        WorkerLocationCommand(request.latitude, request.longitude, request.accuracyMeters, request.capturedAt),
-    )
-}
-
-@RestControllerAdvice
-class WorkerExceptionHandler {
-    @ExceptionHandler(InvalidMatchRequest::class)
-    fun invalidRequest(error: InvalidMatchRequest): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
-
-    @ExceptionHandler(InvalidWorkerOtp::class)
-    fun invalidOtp(error: InvalidWorkerOtp): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, error.message.orEmpty())
-
-    @ExceptionHandler(WorkerOtpRateLimited::class)
-    fun otpRateLimited(error: WorkerOtpRateLimited): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, error.message.orEmpty())
-
-    @ExceptionHandler(InvalidWorkerLocation::class)
-    fun invalidLocation(error: InvalidWorkerLocation): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
-
-    @ExceptionHandler(InvalidWorkerAvailability::class)
-    fun invalidAvailability(error: InvalidWorkerAvailability): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
-
-    @ExceptionHandler(WorkerRatingRejected::class)
-    fun ratingRejected(error: WorkerRatingRejected): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
 }

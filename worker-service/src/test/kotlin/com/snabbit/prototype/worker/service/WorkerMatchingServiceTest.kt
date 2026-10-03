@@ -1,13 +1,18 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.domain.AvailabilityStatus
+import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
+
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
+
+import com.snabbit.prototype.worker.domain.enums.WorkerStatus
+
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+
 import com.snabbit.prototype.worker.domain.WorkerAvailability
 import com.snabbit.prototype.worker.domain.WorkerCompatibility
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.domain.WorkerSkill
 import com.snabbit.prototype.worker.domain.WorkerSkillId
-import com.snabbit.prototype.worker.domain.WorkerStatus
-import com.snabbit.prototype.worker.domain.WorkerTier
 import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository

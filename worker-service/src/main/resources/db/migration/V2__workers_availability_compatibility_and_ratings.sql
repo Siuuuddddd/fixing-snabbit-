@@ -61,7 +61,7 @@ CREATE TABLE worker_rating (
     booking_id UUID NOT NULL UNIQUE,
     worker_id UUID NOT NULL REFERENCES worker_profile(id),
     customer_id UUID NOT NULL,
-    stars SMALLINT NOT NULL,
+    stars INTEGER NOT NULL,
     comment VARCHAR(500) NULL,
     created_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT ck_worker_rating_stars CHECK (stars BETWEEN 1 AND 5)

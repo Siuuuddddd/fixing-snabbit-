@@ -1,6 +1,9 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.domain.AvailabilityStatus
+import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
+
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+
 import com.snabbit.prototype.worker.domain.WorkerAvailability
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository

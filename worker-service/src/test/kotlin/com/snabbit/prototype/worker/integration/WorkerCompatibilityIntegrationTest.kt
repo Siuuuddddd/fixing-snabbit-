@@ -1,8 +1,10 @@
 package com.snabbit.prototype.worker.integration
 
+import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
+
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
-import com.snabbit.prototype.worker.domain.AvailabilityStatus
-import com.snabbit.prototype.worker.service.WorkerAvailabilityCommand
 import com.snabbit.prototype.worker.service.WorkerAvailabilityService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

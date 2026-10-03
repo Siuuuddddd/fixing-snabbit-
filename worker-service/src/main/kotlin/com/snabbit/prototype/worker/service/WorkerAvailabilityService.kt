@@ -1,6 +1,11 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.domain.AvailabilityStatus
+import com.snabbit.prototype.worker.dto.response.WorkerAvailabilitySnapshot
+
+import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
+
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+
 import com.snabbit.prototype.worker.domain.WorkerAvailability
 import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
@@ -12,21 +17,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
-
-data class WorkerAvailabilityCommand(
-    val status: AvailabilityStatus,
-    val availableFrom: LocalTime?,
-    val availableUntil: LocalTime?,
-)
-
-data class WorkerAvailabilitySnapshot(
-    val serviceDate: LocalDate,
-    val availableFrom: LocalTime,
-    val availableUntil: LocalTime,
-    val status: AvailabilityStatus,
-)
-
-class InvalidWorkerAvailability(message: String) : RuntimeException(message)
 
 @Service
 class WorkerAvailabilityService(

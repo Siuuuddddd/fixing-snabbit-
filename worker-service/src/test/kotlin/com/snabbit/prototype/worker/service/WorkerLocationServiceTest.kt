@@ -1,9 +1,13 @@
 package com.snabbit.prototype.worker.service
 
+import com.snabbit.prototype.worker.dto.request.WorkerLocationCommand
+
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
+
+import com.snabbit.prototype.worker.domain.enums.WorkerStatus
+
 import com.snabbit.prototype.worker.domain.WorkerLocationPoint
 import com.snabbit.prototype.worker.domain.WorkerProfile
-import com.snabbit.prototype.worker.domain.WorkerStatus
-import com.snabbit.prototype.worker.domain.WorkerTier
 import com.snabbit.prototype.worker.repository.WorkerLocationRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every

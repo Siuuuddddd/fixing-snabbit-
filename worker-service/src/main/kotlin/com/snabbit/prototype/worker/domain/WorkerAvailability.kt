@@ -1,5 +1,7 @@
 package com.snabbit.prototype.worker.domain
 
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -10,8 +12,6 @@ import jakarta.persistence.Version
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
-
-enum class AvailabilityStatus { AVAILABLE, UNAVAILABLE }
 
 @Entity
 @Table(name = "worker_availability")

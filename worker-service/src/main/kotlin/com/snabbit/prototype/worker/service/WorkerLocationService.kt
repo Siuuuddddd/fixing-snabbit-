@@ -1,5 +1,9 @@
 package com.snabbit.prototype.worker.service
 
+import com.snabbit.prototype.worker.dto.response.WorkerLocationSnapshot
+
+import com.snabbit.prototype.worker.dto.request.WorkerLocationCommand
+
 import com.snabbit.prototype.worker.domain.WorkerLocationPoint
 import com.snabbit.prototype.worker.repository.WorkerLocationRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
@@ -11,25 +15,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-
-data class WorkerLocationCommand(
-    val latitude: BigDecimal,
-    val longitude: BigDecimal,
-    val accuracyMeters: BigDecimal,
-    val capturedAt: Instant,
-)
-
-data class WorkerLocationSnapshot(
-    val locationId: UUID,
-    val workerId: UUID,
-    val latitude: BigDecimal,
-    val longitude: BigDecimal,
-    val accuracyMeters: BigDecimal,
-    val capturedAt: Instant,
-    val receivedAt: Instant,
-)
-
-class InvalidWorkerLocation(message: String) : RuntimeException(message)
 
 @Service
 class WorkerLocationService(

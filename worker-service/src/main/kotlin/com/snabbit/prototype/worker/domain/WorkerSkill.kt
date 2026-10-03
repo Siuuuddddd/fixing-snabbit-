@@ -8,14 +8,6 @@ import jakarta.persistence.Table
 import java.io.Serializable
 import java.util.UUID
 
-@Embeddable
-data class WorkerSkillId(
-    @Column(name = "worker_id")
-    val workerId: UUID = UUID(0, 0),
-    @Column(name = "service_code")
-    val serviceCode: String = "",
-) : Serializable
-
 @Entity
 @Table(name = "worker_skill")
 class WorkerSkill(
