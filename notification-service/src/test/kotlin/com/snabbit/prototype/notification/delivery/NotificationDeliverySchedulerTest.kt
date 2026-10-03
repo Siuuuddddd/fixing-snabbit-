@@ -1,19 +1,17 @@
 package com.snabbit.prototype.notification.delivery
 
-import com.snabbit.prototype.notification.dto.response.ClaimedDelivery
-
 import com.snabbit.prototype.notification.domain.enums.RecipientType
-
+import com.snabbit.prototype.notification.dto.response.ClaimedDelivery
 import com.snabbit.prototype.notification.service.NotificationProperties
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Test
 
 class NotificationDeliverySchedulerTest {
     private val store = mockk<NotificationDeliveryStore>(relaxed = true)

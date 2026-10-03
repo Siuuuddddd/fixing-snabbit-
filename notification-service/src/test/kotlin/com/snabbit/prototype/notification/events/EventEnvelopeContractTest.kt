@@ -1,12 +1,12 @@
 package com.snabbit.prototype.notification.events
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.Test
 
 class EventEnvelopeContractTest {
     private val mapper = ObjectMapper().findAndRegisterModules()

@@ -1,29 +1,27 @@
 package com.snabbit.prototype.notification.integration
 
-import com.snabbit.prototype.notification.dto.response.NotificationTemplate
-
-import com.snabbit.prototype.notification.domain.enums.RecipientType
-
-import com.snabbit.prototype.notification.service.NotificationTransaction
 import com.snabbit.prototype.notification.delivery.NotificationDeliveryStore
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+import com.snabbit.prototype.notification.service.NotificationTransaction
+import java.time.Instant
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.client.RestClient
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.util.UUID
-import java.time.Instant
 
 @SpringBootTest(
     properties = [

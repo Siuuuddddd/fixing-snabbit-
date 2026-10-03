@@ -1,13 +1,11 @@
 package com.snabbit.prototype.notification.service
 
-import com.snabbit.prototype.notification.dto.response.NotificationTemplate
-
-import com.snabbit.prototype.notification.domain.enums.RecipientType
-
 import com.snabbit.prototype.notification.domain.enums.DeliveryChannel
-
+import com.snabbit.prototype.notification.domain.enums.RecipientType
 import com.snabbit.prototype.notification.domain.Notification
 import com.snabbit.prototype.notification.domain.NotificationDelivery
+import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+import com.snabbit.prototype.notification.exception.NotificationAccessDenied
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import com.snabbit.prototype.notification.repository.NotificationDeliveryRepository
 import com.snabbit.prototype.notification.repository.NotificationRepository
@@ -15,13 +13,13 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class NotificationTransactionTest {
     private val notifications = mockk<NotificationRepository>()

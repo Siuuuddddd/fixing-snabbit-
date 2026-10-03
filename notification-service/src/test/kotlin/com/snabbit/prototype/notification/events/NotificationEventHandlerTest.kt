@@ -1,23 +1,21 @@
 package com.snabbit.prototype.notification.events
 
-import com.snabbit.prototype.notification.dto.response.NotificationTemplate
-
-import com.snabbit.prototype.notification.domain.enums.RecipientType
-
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+import com.snabbit.prototype.notification.dto.response.NotificationTemplate
 import com.snabbit.prototype.notification.service.NotificationProperties
 import com.snabbit.prototype.notification.service.NotificationTransaction
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class NotificationEventHandlerTest {
     private val mapper = ObjectMapper().findAndRegisterModules()
