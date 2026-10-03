@@ -14,7 +14,12 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import java.time.Instant
 import java.util.UUID
 
-@SpringBootTest(properties = ["spring.kafka.listener.auto-startup=false"])
+@SpringBootTest(
+    properties = [
+        "spring.kafka.listener.auto-startup=false",
+        "spring.task.scheduling.enabled=false",
+    ],
+)
 @Testcontainers(disabledWithoutDocker = true)
 class PlusPersistenceIntegrationTest {
     @Autowired private lateinit var plus: PlusService

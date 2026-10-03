@@ -4,6 +4,7 @@ import com.snabbit.prototype.worker.domain.WorkerRating
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerRatingRepository
 import com.snabbit.prototype.worker.security.InternalServiceClientFactory
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
@@ -83,6 +84,7 @@ class WorkerRatingTransaction(
     private val workers: WorkerProfileRepository,
     private val ratings: WorkerRatingRepository,
     private val clock: Clock,
+    private val outbox: WorkerOutboxWriter,
 ) {
     @Transactional
     fun record(
@@ -104,11 +106,21 @@ class WorkerRatingTransaction(
             }
             return snapshot(existing, worker.averageRating())
         }
+        val now = clock.instant()
         val rating = ratings.save(
-            WorkerRating(UUID.randomUUID(), bookingId, visitIndex, workerId, customerId, stars, comment, clock.instant()),
+            WorkerRating(UUID.randomUUID(), bookingId, visitIndex, workerId, customerId, stars, comment, now),
         )
         worker.ratingSum += stars
         worker.ratingCount += 1
+        outbox.append(
+            workerId,
+            "WorkerRated",
+            mapOf(
+                "workerId" to workerId, "bookingId" to bookingId, "visitIndex" to visitIndex,
+                "customerId" to customerId, "stars" to stars,
+            ),
+            now,
+        )
         return snapshot(rating, worker.averageRating())
     }
 

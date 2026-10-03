@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.jdbc.core.JdbcTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -22,6 +23,7 @@ import java.time.ZoneId
 @SpringBootTest(
     properties = [
         "spring.kafka.listener.auto-startup=false",
+        "spring.task.scheduling.enabled=false",
     ],
 )
 @Testcontainers(disabledWithoutDocker = true)
@@ -31,6 +33,9 @@ class WorkerCompatibilityIntegrationTest {
 
     @Autowired
     private lateinit var workerAvailability: WorkerAvailabilityService
+
+    @Autowired
+    private lateinit var jdbc: JdbcTemplate
 
     @Test
     fun `migrations seed explicit allergy and religious food capabilities`() {
@@ -60,6 +65,14 @@ class WorkerCompatibilityIntegrationTest {
 
         assertEquals(LocalTime.of(10, 0), updated.availableFrom)
         assertEquals(listOf(updated), listed)
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'WorkerAvailabilityUpdated'",
+                Int::class.java,
+                seededWorkerId.toString(),
+            ),
+        )
     }
 
     class KPostgreSQLContainer(imageName: String) : PostgreSQLContainer<KPostgreSQLContainer>(imageName)

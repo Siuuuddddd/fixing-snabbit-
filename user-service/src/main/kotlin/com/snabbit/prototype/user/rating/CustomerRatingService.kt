@@ -4,6 +4,7 @@ import com.snabbit.prototype.user.domain.CustomerRating
 import com.snabbit.prototype.user.repository.CustomerRatingRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import com.snabbit.prototype.user.security.InternalServiceClientFactory
+import com.snabbit.prototype.user.events.UserOutboxWriter
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
@@ -79,6 +80,7 @@ class CustomerRatingTransaction(
     private val users: UserProfileRepository,
     private val ratings: CustomerRatingRepository,
     private val clock: Clock,
+    private val outbox: UserOutboxWriter,
 ) {
     @Transactional
     fun record(
@@ -100,11 +102,21 @@ class CustomerRatingTransaction(
             }
             return snapshot(existing, customer.averageRating())
         }
+        val now = clock.instant()
         val rating = ratings.save(
-            CustomerRating(UUID.randomUUID(), bookingId, visitIndex, customerId, workerId, stars, comment, clock.instant()),
+            CustomerRating(UUID.randomUUID(), bookingId, visitIndex, customerId, workerId, stars, comment, now),
         )
         customer.ratingSum += stars
         customer.ratingCount += 1
+        outbox.append(
+            customerId,
+            "CustomerRated",
+            mapOf(
+                "userId" to customerId, "bookingId" to bookingId, "visitIndex" to visitIndex,
+                "workerId" to workerId, "stars" to stars,
+            ),
+            now,
+        )
         return snapshot(rating, customer.averageRating())
     }
 

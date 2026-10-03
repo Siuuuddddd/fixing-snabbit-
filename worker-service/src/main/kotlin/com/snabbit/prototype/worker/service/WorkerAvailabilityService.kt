@@ -4,6 +4,7 @@ import com.snabbit.prototype.worker.domain.AvailabilityStatus
 import com.snabbit.prototype.worker.domain.WorkerAvailability
 import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -32,6 +33,7 @@ class WorkerAvailabilityService(
     private val workers: WorkerProfileRepository,
     private val availability: WorkerAvailabilityRepository,
     private val clock: Clock,
+    private val outbox: WorkerOutboxWriter,
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
     private val openingTime = LocalTime.of(8, 0)
@@ -77,7 +79,18 @@ class WorkerAvailabilityService(
                 availableUntil = availableUntil,
                 status = command.status,
             )
-        return snapshot(availability.save(row))
+        val saved = availability.save(row)
+        val occurredAt = clock.instant()
+        outbox.append(
+            workerId,
+            "WorkerAvailabilityUpdated",
+            mapOf(
+                "workerId" to workerId, "serviceDate" to serviceDate, "status" to saved.status.name,
+                "availableFrom" to saved.availableFrom, "availableUntil" to saved.availableUntil,
+            ),
+            occurredAt,
+        )
+        return snapshot(saved)
     }
 
     private fun validateRange(from: LocalDate, to: LocalDate, today: LocalDate) {

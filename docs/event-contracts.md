@@ -36,3 +36,23 @@ Event payloads contain identifiers, lifecycle timestamps and references needed t
 | `PlusSubscriptionPurchased` | A signed capture paid an authoritative Plus plan order | User, notification, analytics |
 
 Wallet events use `walletId` for top-up and Plus-purchase aggregates and `bookingId` for booking-payment aggregates. Raw Razorpay webhook bodies, signatures and credentials are never included.
+
+## User events
+
+User Service writes these schema-version-1 facts to its own `outbox_event` table in the same transaction as the aggregate change and publishes them to `user-events` with `userId` as the Kafka key:
+
+- `UserAddressCreated` and `UserAddressDeleted`
+- `HouseholdPreferencesUpdated`
+- `FavouriteWorkerAdded` and `FavouriteWorkerRemoved`
+- `PlusSubscriptionActivated`
+- `CustomerRated`
+
+## Worker events
+
+Worker Service uses the same leased transactional-outbox envelope and publishes to `worker-events` with `workerId` as the Kafka key:
+
+- `WorkerAvailabilityUpdated`
+- `WorkerLocationUpdated`
+- `WorkerRated`
+
+All four producer services use an explicit `schemaVersion`, reject unsupported future versions in their contract models and retain unpublished rows until Kafka acknowledges the record.

@@ -8,6 +8,7 @@ import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerRatingRepository
 import io.mockk.every
 import io.mockk.mockk
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -23,7 +24,9 @@ class WorkerRatingServiceTest {
     private val workers = mockk<WorkerProfileRepository>()
     private val ratings = mockk<WorkerRatingRepository>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val transactions = WorkerRatingTransaction(workers, ratings, Clock.fixed(now, ZoneOffset.UTC))
+    private val transactions = WorkerRatingTransaction(
+        workers, ratings, Clock.fixed(now, ZoneOffset.UTC), mockk<WorkerOutboxWriter>(relaxed = true),
+    )
 
     @Test
     fun `rating updates worker aggregate once and replay is idempotent`() {

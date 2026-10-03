@@ -1,6 +1,8 @@
 server:
   port: 8082
 spring:
+  profiles:
+    default: local
   application:
     name: booking-service
   datasource:
@@ -59,6 +61,16 @@ integrations:
 
 service-auth:
   token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
+
+deployment.production.required-properties:
+  - spring.datasource.url
+  - spring.datasource.password
+  - spring.data.redis.host
+  - spring.kafka.bootstrap-servers
+  - integrations.user-service-url
+  - integrations.worker-service-url
+  - integrations.wallet-service-url
+  - service-auth.token
 
 tracking:
   visibility-lead-time: PT2H

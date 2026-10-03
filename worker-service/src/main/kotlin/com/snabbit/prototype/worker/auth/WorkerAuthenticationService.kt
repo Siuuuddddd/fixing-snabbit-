@@ -1,5 +1,6 @@
 package com.snabbit.prototype.worker.auth
 
+import com.snabbit.prototype.platform.SmsGateway
 import com.snabbit.prototype.worker.domain.WorkerStatus
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import org.slf4j.LoggerFactory
@@ -45,6 +46,14 @@ class LoggingWorkerOtpDelivery : WorkerOtpDelivery {
 
     override fun deliver(phoneE164: String, code: String) {
         logger.info("Prototype worker OTP generated for {}: {}", phoneE164.takeLast(4).padStart(phoneE164.length, '*'), code)
+    }
+}
+
+@Component
+@Profile("!local & !test")
+class SmsWorkerOtpDelivery(private val sms: SmsGateway) : WorkerOtpDelivery {
+    override fun deliver(phoneE164: String, code: String) {
+        sms.send(phoneE164, "Your Snabbit worker verification code is $code. It expires in 5 minutes.")
     }
 }
 

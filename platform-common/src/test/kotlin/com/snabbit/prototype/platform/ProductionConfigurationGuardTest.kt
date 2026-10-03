@@ -1,0 +1,67 @@
+package com.snabbit.prototype.platform
+
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+import org.springframework.mock.env.MockEnvironment
+
+class ProductionConfigurationGuardTest {
+    @Test
+    fun `accepts explicitly supplied production values`() {
+        val environment = MockEnvironment()
+            .withProperty("spring.datasource.url", "jdbc:postgresql://database.internal/users")
+            .withProperty("service-auth.token", "a-secure-secret-injected-by-the-runtime")
+
+        assertDoesNotThrow {
+            ProductionConfigurationGuard(
+                environment,
+                ProductionGuardProperties(listOf("spring.datasource.url", "service-auth.token")),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects missing and checked-in development values`() {
+        val environment = MockEnvironment()
+            .withProperty("spring.datasource.url", "jdbc:postgresql://localhost:5433/users")
+            .withProperty("service-auth.token", "local-only-service-token-change-me")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(
+                environment,
+                ProductionGuardProperties(
+                    listOf("spring.datasource.url", "service-auth.token", "spring.datasource.password"),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `requires live Razorpay mode in production`() {
+        val environment = MockEnvironment().withProperty("wallet.razorpay.mode", "fake")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(
+                environment,
+                ProductionGuardProperties(listOf("wallet.razorpay.mode")),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects disabled production providers`() {
+        val environment = MockEnvironment()
+            .withProperty("geocoding.provider", "disabled")
+            .withProperty("notifications.push.provider", "logging")
+            .withProperty("sms.provider", "logging")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(
+                environment,
+                ProductionGuardProperties(
+                    listOf("geocoding.provider", "notifications.push.provider", "sms.provider"),
+                ),
+            )
+        }
+    }
+}

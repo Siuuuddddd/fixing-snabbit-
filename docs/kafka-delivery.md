@@ -6,6 +6,8 @@
 | --- | --- | --- | --- |
 | `booking-events` | Booking Service | Wallet, Worker, Notification | `bookingId` |
 | `wallet-events` | Wallet Service | Booking, Notification | `bookingId` for payments; `walletId` for top-ups |
+| `user-events` | User Service | Future read models and notification integrations | `userId` |
+| `worker-events` | Worker Service | Future read models and notification integrations | `workerId` |
 
 Retry topics use the source topic plus `-retry` suffixes. Records exhausted after four attempts move to a `-dlt` dead-letter topic.
 
@@ -23,7 +25,7 @@ Retry topics use the source topic plus `-retry` suffixes. Records exhausted afte
 }
 ```
 
-The Kafka key is always `aggregateId`, preserving order for one booking or wallet. Producers currently emit schema version `1`, persisted with the payload in the transactional outbox so delayed publication cannot relabel an older contract. A missing envelope version is interpreted as version `1` for rolling-upgrade compatibility; an explicitly unsupported version fails consumption and follows the normal retry/dead-letter path instead of being applied with ambiguous semantics.
+The Kafka key is always `aggregateId`, preserving order for one booking, wallet, user or worker. Producers currently emit schema version `1`, persisted with the payload in the transactional outbox so delayed publication cannot relabel an older contract. A missing envelope version is interpreted as version `1` for rolling-upgrade compatibility; an explicitly unsupported version fails consumption and follows the normal retry/dead-letter path instead of being applied with ambiguous semantics.
 
 ## Outbox delivery
 

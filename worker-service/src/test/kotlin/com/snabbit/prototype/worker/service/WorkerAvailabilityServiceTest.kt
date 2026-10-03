@@ -7,6 +7,7 @@ import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every
 import io.mockk.mockk
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -22,7 +23,9 @@ class WorkerAvailabilityServiceTest {
     private val workers = mockk<WorkerProfileRepository>()
     private val availability = mockk<WorkerAvailabilityRepository>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val service = WorkerAvailabilityService(workers, availability, Clock.fixed(now, ZoneOffset.UTC))
+    private val service = WorkerAvailabilityService(
+        workers, availability, Clock.fixed(now, ZoneOffset.UTC), mockk<WorkerOutboxWriter>(relaxed = true),
+    )
     private val workerId = UUID.randomUUID()
 
     @Test

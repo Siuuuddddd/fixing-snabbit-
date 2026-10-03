@@ -64,10 +64,10 @@ the provider call, so no database transaction remains open while Razorpay is con
 
 ## Razorpay configuration
 
-Local development defaults to fake provider mode. Real mode requires environment variables:
+Local development defaults to deterministic `fake` mode. `test` and `live` both call Razorpay's provider API; choose `test` with Razorpay test credentials for end-to-end validation and `live` only with production credentials. The production Spring profile requires `live`.
 
 ```text
-RAZORPAY_MODE=real
+RAZORPAY_MODE=live
 RAZORPAY_KEY_ID=...
 RAZORPAY_KEY_SECRET=...
 RAZORPAY_WEBHOOK_SECRET=...

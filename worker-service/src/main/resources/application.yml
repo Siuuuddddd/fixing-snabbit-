@@ -17,7 +17,11 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-  kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
@@ -37,3 +41,32 @@ integrations:
 
 service-auth:
   token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
+
+sms:
+  enabled: true
+  provider: ${SMS_PROVIDER:twilio}
+  base-url: ${TWILIO_BASE_URL:https://api.twilio.com}
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  from-number: ${TWILIO_FROM_NUMBER:}
+
+worker-eventing:
+  topic: worker-events
+  poll-delay: PT1S
+  claim-duration: PT30S
+  batch-size: 50
+
+deployment.production.required-properties:
+  - spring.datasource.url
+  - spring.datasource.password
+  - spring.data.redis.host
+  - spring.kafka.bootstrap-servers
+  - auth.issuer
+  - auth.jwt-secret
+  - auth.otp-pepper
+  - integrations.booking-service-url
+  - service-auth.token
+  - sms.provider
+  - sms.account-sid
+  - sms.auth-token
+  - sms.from-number

@@ -9,6 +9,7 @@ plugins {
 java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
 dependencies {
+    implementation(project(":platform-common"))
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")

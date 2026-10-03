@@ -17,7 +17,7 @@ class RazorpayPaymentProvider(
     private val client = restClientBuilder
         .baseUrl(properties.razorpay.baseUrl)
         .defaultHeaders { headers ->
-            if (properties.razorpay.mode.equals("real", ignoreCase = true)) {
+            if (properties.razorpay.usesProviderApi()) {
                 headers.setBasicAuth(properties.razorpay.keyId, properties.razorpay.keySecret)
             }
         }
@@ -25,7 +25,7 @@ class RazorpayPaymentProvider(
 
     override fun findOrderByReceipt(receipt: String): ProviderOrder? {
         requireValidReceipt(receipt)
-        if (!properties.razorpay.mode.equals("real", ignoreCase = true)) {
+        if (!properties.razorpay.usesProviderApi()) {
             return fakeOrders[receipt]
         }
         requireCredentials()
@@ -56,7 +56,7 @@ class RazorpayPaymentProvider(
 
     override fun createOrder(amountMinor: Long, receipt: String): ProviderOrder {
         requireValidReceipt(receipt)
-        if (!properties.razorpay.mode.equals("real", ignoreCase = true)) {
+        if (!properties.razorpay.usesProviderApi()) {
             return fakeOrders.computeIfAbsent(receipt) {
                 ProviderOrder("order_fake_${UUID.randomUUID()}", amountMinor, properties.currency)
             }
@@ -87,7 +87,7 @@ class RazorpayPaymentProvider(
         require(reference.length >= 10 && REFUND_REFERENCE_PATTERN.matches(reference)) {
             "Refund reference must use at least 10 letters, numbers, hyphens or underscores"
         }
-        if (!properties.razorpay.mode.equals("real", ignoreCase = true)) {
+        if (!properties.razorpay.usesProviderApi()) {
             val deterministicId = UUID.nameUUIDFromBytes(reference.toByteArray(StandardCharsets.UTF_8))
             return ProviderRefund("rfnd_fake_$deterministicId", amountMinor)
         }

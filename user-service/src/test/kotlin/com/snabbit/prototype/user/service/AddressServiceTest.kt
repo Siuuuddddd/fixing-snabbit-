@@ -5,6 +5,8 @@ import com.snabbit.prototype.user.repository.UserAddressRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
+import com.snabbit.prototype.user.events.UserOutboxWriter
+import com.snabbit.prototype.user.location.AddressLocationVerifier
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -20,7 +22,12 @@ class AddressServiceTest {
     private val users = mockk<UserProfileRepository>()
     private val addresses = mockk<UserAddressRepository>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val service = AddressService(users, addresses, Clock.fixed(now, ZoneOffset.UTC))
+    private val clock = Clock.fixed(now, ZoneOffset.UTC)
+    private val outbox = mockk<UserOutboxWriter>(relaxed = true)
+    private val service = AddressService(
+        users, addresses, clock,
+        AddressWriteTransaction(users, addresses, outbox, clock), mockk<AddressLocationVerifier>(relaxed = true),
+    )
 
     @Test
     fun `fresh accurate Mumbai location creates verified owned address`() {

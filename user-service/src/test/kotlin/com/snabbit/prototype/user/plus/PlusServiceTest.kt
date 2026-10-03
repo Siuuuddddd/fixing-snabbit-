@@ -9,6 +9,7 @@ import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
+import com.snabbit.prototype.user.events.UserOutboxWriter
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -22,7 +23,9 @@ class PlusServiceTest {
     private val subscriptions = mockk<PlusSubscriptionRepository>()
     private val passes = mockk<PlusPassRepository>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val service = PlusService(users, subscriptions, passes, Clock.fixed(now, ZoneOffset.UTC))
+    private val service = PlusService(
+        users, subscriptions, passes, Clock.fixed(now, ZoneOffset.UTC), mockk<UserOutboxWriter>(relaxed = true),
+    )
 
     @Test
     fun `active member reserves an eligible pass and receives server-side discount`() {

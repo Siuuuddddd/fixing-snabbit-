@@ -58,4 +58,6 @@ The requirement-to-code handoff matrix and owner-supplied launch inputs are trac
 
 Build and integration-test expectations are documented in [docs/testing.md](docs/testing.md). GitHub Actions packages every service and requires the Docker-backed safety tests to execute without skips on each push and pull request.
 
+A concise single-server production runbook with managed PostgreSQL and provider configuration is available in [DEPLOY.md](DEPLOY.md).
+
 Operational endpoints and privacy rules are documented in [docs/observability.md](docs/observability.md). Every service includes a real Prometheus registry rather than merely listing an unavailable endpoint.

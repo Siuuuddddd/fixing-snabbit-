@@ -8,6 +8,7 @@ import com.snabbit.prototype.worker.repository.WorkerLocationRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every
 import io.mockk.mockk
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -23,7 +24,9 @@ class WorkerLocationServiceTest {
     private val workers = mockk<WorkerProfileRepository>()
     private val locations = mockk<WorkerLocationRepository>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val service = WorkerLocationService(workers, locations, Clock.fixed(now, ZoneOffset.UTC))
+    private val service = WorkerLocationService(
+        workers, locations, Clock.fixed(now, ZoneOffset.UTC), mockk<WorkerOutboxWriter>(relaxed = true),
+    )
 
     @Test
     fun `accurate fresh point updates current location and appends history`() {

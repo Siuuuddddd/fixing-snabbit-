@@ -3,6 +3,7 @@ package com.snabbit.prototype.worker.service
 import com.snabbit.prototype.worker.domain.WorkerLocationPoint
 import com.snabbit.prototype.worker.repository.WorkerLocationRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -35,6 +36,7 @@ class WorkerLocationService(
     private val workers: WorkerProfileRepository,
     private val locations: WorkerLocationRepository,
     private val clock: Clock,
+    private val outbox: WorkerOutboxWriter,
 ) {
     @Transactional
     fun update(workerId: UUID, command: WorkerLocationCommand): WorkerLocationSnapshot {
@@ -54,6 +56,16 @@ class WorkerLocationService(
                 command.capturedAt,
                 now,
             ),
+        )
+        outbox.append(
+            workerId,
+            "WorkerLocationUpdated",
+            mapOf(
+                "workerId" to workerId, "locationId" to point.id, "latitude" to command.latitude,
+                "longitude" to command.longitude, "accuracyMeters" to command.accuracyMeters,
+                "capturedAt" to command.capturedAt,
+            ),
+            now,
         )
         return WorkerLocationSnapshot(
             point.id,

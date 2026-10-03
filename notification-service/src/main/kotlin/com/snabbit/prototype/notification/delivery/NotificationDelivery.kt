@@ -1,5 +1,6 @@
 package com.snabbit.prototype.notification.delivery
 
+import com.snabbit.prototype.platform.SmsGateway
 import com.snabbit.prototype.notification.service.NotificationProperties
 import com.snabbit.prototype.notification.events.NotificationIntegrationProperties
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
@@ -152,6 +153,12 @@ class LoggingSmsDeliveryAdapter : SmsDeliveryAdapter {
     override fun send(phoneNumber: String, body: String) {
         logger.info("Development SMS delivered to ******{}", phoneNumber.takeLast(4))
     }
+}
+
+@Component
+@Profile("!local & !test")
+class TwilioSmsDeliveryAdapter(private val gateway: SmsGateway) : SmsDeliveryAdapter {
+    override fun send(phoneNumber: String, body: String) = gateway.send(phoneNumber, body)
 }
 
 @Component

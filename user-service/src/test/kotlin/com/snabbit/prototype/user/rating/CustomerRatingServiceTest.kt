@@ -7,6 +7,7 @@ import com.snabbit.prototype.user.repository.CustomerRatingRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
+import com.snabbit.prototype.user.events.UserOutboxWriter
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,7 +23,9 @@ class CustomerRatingServiceTest {
     private val users = mockk<UserProfileRepository>()
     private val ratings = mockk<CustomerRatingRepository>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val transactions = CustomerRatingTransaction(users, ratings, Clock.fixed(now, ZoneOffset.UTC))
+    private val transactions = CustomerRatingTransaction(
+        users, ratings, Clock.fixed(now, ZoneOffset.UTC), mockk<UserOutboxWriter>(relaxed = true),
+    )
 
     @Test
     fun `rating updates customer aggregate once and replay is idempotent`() {

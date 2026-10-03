@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    default: local
   application:
     name: api-gateway
   cloud:
@@ -86,3 +88,8 @@ management:
 auth:
   issuer: https://auth.snabbit.local
   jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}
+
+deployment.production.required-properties:
+  - auth.issuer
+  - auth.jwt-secret
+  - spring.data.redis.host

@@ -8,4 +8,5 @@ include(
     "wallet-service",
     "support-service",
     "notification-service",
+    "platform-common",
 )

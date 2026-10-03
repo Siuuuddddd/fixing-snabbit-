@@ -10,6 +10,7 @@ import com.snabbit.prototype.user.auth.OtpRateLimited
 import com.snabbit.prototype.user.rating.CustomerRatingRejected
 import com.snabbit.prototype.user.plus.PlusRequestRejected
 import com.snabbit.prototype.user.plus.PlusPurchaseUnavailable
+import com.snabbit.prototype.user.location.LocationVerificationRejected
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -33,6 +34,10 @@ class UserExceptionHandler {
 
     @ExceptionHandler(AddressRejected::class)
     fun addressRejected(error: AddressRejected): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
+
+    @ExceptionHandler(LocationVerificationRejected::class)
+    fun locationRejected(error: LocationVerificationRejected): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
 
     @ExceptionHandler(FavouriteLimitReached::class)

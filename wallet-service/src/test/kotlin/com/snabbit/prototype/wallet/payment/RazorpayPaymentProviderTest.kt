@@ -25,7 +25,7 @@ class RazorpayPaymentProviderTest {
         builder,
         WalletProperties(
             "INR", Duration.ofMinutes(5), Duration.ofMinutes(1), Duration.ofMinutes(5),
-            RazorpayProperties("real", "https://api.razorpay.com", "key", "secret", "webhook"),
+            RazorpayProperties("test", "https://api.razorpay.com", "key", "secret", "webhook"),
         ),
     )
 

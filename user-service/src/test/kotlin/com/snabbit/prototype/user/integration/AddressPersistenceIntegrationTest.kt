@@ -17,7 +17,12 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
-@SpringBootTest(properties = ["spring.kafka.listener.auto-startup=false"])
+@SpringBootTest(
+    properties = [
+        "spring.kafka.listener.auto-startup=false",
+        "spring.task.scheduling.enabled=false",
+    ],
+)
 @Testcontainers(disabledWithoutDocker = true)
 class AddressPersistenceIntegrationTest {
     @Autowired private lateinit var addresses: AddressService
@@ -26,6 +31,7 @@ class AddressPersistenceIntegrationTest {
     @BeforeEach
     fun cleanCreatedAddresses() {
         jdbc.update("DELETE FROM user_address WHERE id <> ?::uuid", SEEDED_ADDRESS_ID.toString())
+        jdbc.update("DELETE FROM outbox_event")
     }
 
     @Test
@@ -47,6 +53,14 @@ class AddressPersistenceIntegrationTest {
         assertEquals(created, addresses.requireOwnedVerified(SEEDED_USER_ID, created.addressId))
         assertEquals(true, created.verified)
         assertEquals(2, addresses.list(SEEDED_USER_ID).size)
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'UserAddressCreated'",
+                Int::class.java,
+                SEEDED_USER_ID.toString(),
+            ),
+        )
     }
 
     companion object {

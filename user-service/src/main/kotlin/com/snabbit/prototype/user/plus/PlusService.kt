@@ -7,6 +7,7 @@ import com.snabbit.prototype.user.domain.PlusSubscription
 import com.snabbit.prototype.user.repository.PlusPassRepository
 import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
+import com.snabbit.prototype.user.events.UserOutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -47,6 +48,7 @@ class PlusService(
     private val subscriptions: PlusSubscriptionRepository,
     private val passes: PlusPassRepository,
     private val clock: Clock,
+    private val outbox: UserOutboxWriter,
 ) {
     @Transactional
     fun status(userId: UUID): PlusStatusSnapshot {
@@ -136,6 +138,18 @@ class PlusService(
         user.plusActive = true
         user.plusExpiresAt = maxOf(user.plusExpiresAt ?: command.expiresAt, command.expiresAt)
         user.updatedAt = now
+        outbox.append(
+            user.id,
+            "PlusSubscriptionActivated",
+            mapOf(
+                "userId" to user.id,
+                "subscriptionId" to subscription.id,
+                "startsAt" to command.startsAt,
+                "expiresAt" to command.expiresAt,
+                "passCount" to command.passCount,
+            ),
+            now,
+        )
     }
 
     @Transactional

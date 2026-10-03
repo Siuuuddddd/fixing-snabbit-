@@ -35,6 +35,31 @@ integrations:
 service-auth:
   token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
 
+sms:
+  enabled: true
+  provider: ${SMS_PROVIDER:twilio}
+  base-url: ${TWILIO_BASE_URL:https://api.twilio.com}
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  from-number: ${TWILIO_FROM_NUMBER:}
+
+deployment.production.required-properties:
+  - spring.datasource.url
+  - spring.datasource.password
+  - spring.kafka.bootstrap-servers
+  - integrations.booking-service-url
+  - integrations.wallet-service-url
+  - integrations.user-service-url
+  - integrations.worker-service-url
+  - service-auth.token
+  - sms.provider
+  - sms.account-sid
+  - sms.auth-token
+  - sms.from-number
+  - notifications.push.provider
+  - notifications.push.fcm.project-id
+  - notifications.push.fcm.service-account-file
+
 notifications:
   consumer-group: notification-service
   booking-topic: booking-events
@@ -44,3 +69,9 @@ notifications:
   delivery-claim-duration: PT30S
   delivery-batch-size: 50
   delivery-max-attempts: 5
+  push:
+    provider: ${PUSH_PROVIDER:fcm}
+    fcm:
+      project-id: ${FCM_PROJECT_ID:}
+      service-account-file: ${FCM_SERVICE_ACCOUNT_FILE:}
+      base-url: ${FCM_BASE_URL:https://fcm.googleapis.com}

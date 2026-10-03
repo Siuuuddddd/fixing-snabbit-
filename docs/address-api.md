@@ -6,7 +6,7 @@ User Service owns customer addresses. Customer routes require a JWT subject matc
 - `POST /api/v1/users/{userId}/addresses`
 - `DELETE /api/v1/users/{userId}/addresses/{addressId}`
 
-Saving an address requires a Mumbai address and pincode plus a consented device-location sample captured within five minutes, no more than 30 seconds in the future and accurate to 100 metres. Coordinates must fall inside the configured prototype Mumbai service area. A customer can retain at most ten addresses.
+Saving an address requires a Mumbai address and pincode plus a consented device-location sample captured within five minutes, no more than 30 seconds in the future and accurate to 100 metres. Coordinates must fall inside the configured prototype Mumbai service area. In production, User Service asks the configured Google provider to forward-geocode the entered address and reverse-geocode the captured GPS point; both must confirm the submitted Mumbai pincode and the two coordinates must be within the configured 250 m threshold. Local tests can use the provider interface without external credentials. A customer can retain at most ten addresses.
 
 Booking requests submit `addressId`, not latitude/longitude. Booking Service calls protected `GET /internal/v1/users/{userId}/addresses/{addressId}`; User Service verifies ownership and verification status. Booking then persists the address ID, label, line, pincode and coordinates as an immutable booking snapshot. Deleting the saved address later does not change an existing job.
 

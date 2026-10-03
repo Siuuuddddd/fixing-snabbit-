@@ -3,6 +3,7 @@ package com.snabbit.prototype.user.service
 import com.snabbit.prototype.user.domain.FavouriteWorker
 import com.snabbit.prototype.user.domain.FavouriteWorkerId
 import com.snabbit.prototype.user.domain.HouseholdPreference
+import com.snabbit.prototype.user.events.UserOutboxWriter
 import com.snabbit.prototype.user.repository.FavouriteWorkerRepository
 import com.snabbit.prototype.user.repository.HouseholdPreferenceRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
@@ -53,6 +54,7 @@ class HouseholdService(
     private val preferenceRepository: HouseholdPreferenceRepository,
     private val favouriteRepository: FavouriteWorkerRepository,
     private val clock: Clock,
+    private val outbox: UserOutboxWriter,
 ) {
     @Transactional(readOnly = true)
     fun snapshot(userId: UUID): HouseholdSnapshot {
@@ -80,6 +82,12 @@ class HouseholdService(
             updatedAt = clock.instant()
         }
         preferenceRepository.save(preference)
+        outbox.append(
+            userId,
+            "HouseholdPreferencesUpdated",
+            mapOf("userId" to userId, "updatedAt" to preference.updatedAt),
+            preference.updatedAt,
+        )
         return snapshot(user.id, user.hasActivePlus(clock.instant()), preference)
     }
 
@@ -94,6 +102,12 @@ class HouseholdService(
         favouriteRepository.save(
             FavouriteWorker(FavouriteWorkerId(userId, workerId), priority, clock.instant()),
         )
+        outbox.append(
+            userId,
+            "FavouriteWorkerAdded",
+            mapOf("userId" to userId, "workerId" to workerId, "priority" to priority),
+            clock.instant(),
+        )
         val preference = preferenceRepository.findById(userId).orElse(defaultPreference(userId))
         return snapshot(user.id, user.hasActivePlus(clock.instant()), preference)
     }
@@ -102,6 +116,12 @@ class HouseholdService(
     fun removeFavourite(userId: UUID, workerId: UUID): HouseholdSnapshot {
         val user = userRepository.findForUpdate(userId) ?: throw UserNotFound(userId)
         favouriteRepository.deleteById(FavouriteWorkerId(userId, workerId))
+        outbox.append(
+            userId,
+            "FavouriteWorkerRemoved",
+            mapOf("userId" to userId, "workerId" to workerId),
+            clock.instant(),
+        )
         val preference = preferenceRepository.findById(userId).orElse(defaultPreference(userId))
         return snapshot(user.id, user.hasActivePlus(clock.instant()), preference)
     }
