@@ -1,9 +1,10 @@
 package com.snabbit.prototype.notification.repository
 
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+
 import com.snabbit.prototype.notification.domain.DeviceRegistration
 import com.snabbit.prototype.notification.domain.Notification
 import com.snabbit.prototype.notification.domain.NotificationDelivery
-import com.snabbit.prototype.notification.domain.RecipientType
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
@@ -23,20 +24,3 @@ interface NotificationRepository : JpaRepository<Notification, Long> {
     @Query("select notification from Notification notification where notification.id = :id")
     fun findForUpdate(@Param("id") id: Long): Notification?
 }
-
-interface DeviceRegistrationRepository : JpaRepository<DeviceRegistration, UUID> {
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select device from DeviceRegistration device where device.pushToken = :token")
-    fun findByTokenForUpdate(@Param("token") token: String): DeviceRegistration?
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select device from DeviceRegistration device where device.id = :id")
-    fun findForUpdate(@Param("id") id: UUID): DeviceRegistration?
-
-    fun findAllByRecipientTypeAndRecipientIdAndActiveTrue(
-        recipientType: RecipientType,
-        recipientId: UUID,
-    ): List<DeviceRegistration>
-}
-
-interface NotificationDeliveryRepository : JpaRepository<NotificationDelivery, UUID>

@@ -1,9 +1,13 @@
 package com.snabbit.prototype.notification.service
 
-import com.snabbit.prototype.notification.domain.DeliveryChannel
+import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+
+import com.snabbit.prototype.notification.domain.enums.DeliveryChannel
+
 import com.snabbit.prototype.notification.domain.Notification
 import com.snabbit.prototype.notification.domain.NotificationDelivery
-import com.snabbit.prototype.notification.domain.RecipientType
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import com.snabbit.prototype.notification.repository.NotificationDeliveryRepository
 import com.snabbit.prototype.notification.repository.NotificationRepository

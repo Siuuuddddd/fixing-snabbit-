@@ -1,12 +1,17 @@
 package com.snabbit.prototype.notification.controller
 
-import com.snabbit.prototype.notification.service.DeviceSnapshot
+import com.snabbit.prototype.notification.dto.response.NotificationSnapshot
+
+import com.snabbit.prototype.notification.dto.response.DeviceSnapshot
+
+import com.snabbit.prototype.notification.dto.request.RegisterDeviceRequest
+
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+
 import com.snabbit.prototype.notification.service.NotificationAccessDenied
 import com.snabbit.prototype.notification.service.NotificationNotFound
 import com.snabbit.prototype.notification.service.NotificationRequestRejected
 import com.snabbit.prototype.notification.service.NotificationService
-import com.snabbit.prototype.notification.service.NotificationSnapshot
-import com.snabbit.prototype.notification.domain.RecipientType
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -26,11 +31,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.UUID
-
-data class RegisterDeviceRequest(
-    @field:NotBlank @field:Size(min = 20, max = 512)
-    val pushToken: String,
-)
 
 @RestController
 @RequestMapping("/api/v1/notifications")
@@ -66,55 +66,4 @@ class NotificationController(private val service: NotificationService) {
     ): DeviceSnapshot = withContext(Dispatchers.IO) {
         service.unregisterDevice(RecipientType.CUSTOMER, customerId, deviceId)
     }
-}
-
-@RestController
-@RequestMapping("/api/v1/worker/notifications")
-class WorkerNotificationController(private val service: NotificationService) {
-    @GetMapping
-    suspend fun history(
-        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
-        @RequestParam(defaultValue = "0") afterNotificationId: Long,
-    ): List<NotificationSnapshot> = withContext(Dispatchers.IO) {
-        service.history(RecipientType.WORKER, workerId, afterNotificationId)
-    }
-
-    @PostMapping("/{notificationId}/read")
-    suspend fun markRead(
-        @PathVariable notificationId: Long,
-        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
-    ): NotificationSnapshot = withContext(Dispatchers.IO) {
-        service.markRead(RecipientType.WORKER, workerId, notificationId)
-    }
-
-    @PostMapping("/devices")
-    suspend fun registerDevice(
-        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
-        @Valid @RequestBody request: RegisterDeviceRequest,
-    ): DeviceSnapshot = withContext(Dispatchers.IO) {
-        service.registerDevice(RecipientType.WORKER, workerId, request.pushToken)
-    }
-
-    @DeleteMapping("/devices/{deviceId}")
-    suspend fun unregisterDevice(
-        @PathVariable deviceId: UUID,
-        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
-    ): DeviceSnapshot = withContext(Dispatchers.IO) {
-        service.unregisterDevice(RecipientType.WORKER, workerId, deviceId)
-    }
-}
-
-@RestControllerAdvice
-class NotificationExceptionHandler {
-    @ExceptionHandler(NotificationNotFound::class)
-    fun notFound(error: NotificationNotFound): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, error.message.orEmpty())
-
-    @ExceptionHandler(NotificationAccessDenied::class)
-    fun forbidden(error: NotificationAccessDenied): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty())
-
-    @ExceptionHandler(NotificationRequestRejected::class)
-    fun rejected(error: NotificationRequestRejected): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
 }

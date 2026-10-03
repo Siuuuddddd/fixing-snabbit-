@@ -1,8 +1,11 @@
 package com.snabbit.prototype.notification.events
 
+import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.notification.service.NotificationProperties
-import com.snabbit.prototype.notification.service.NotificationTemplate
 import com.snabbit.prototype.notification.service.NotificationTransaction
 import io.mockk.every
 import io.mockk.mockk
@@ -15,7 +18,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
-import com.snabbit.prototype.notification.domain.RecipientType
 
 class NotificationEventHandlerTest {
     private val mapper = ObjectMapper().findAndRegisterModules()

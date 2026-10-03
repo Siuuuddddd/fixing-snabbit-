@@ -1,5 +1,9 @@
 package com.snabbit.prototype.notification.service
 
+import com.snabbit.prototype.notification.dto.response.NotificationSnapshot
+
+import com.snabbit.prototype.notification.domain.enums.RecipientType
+
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
@@ -9,7 +13,6 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-import com.snabbit.prototype.notification.domain.RecipientType
 
 class NotificationServiceTest {
     private val transactions = mockk<NotificationTransaction>()
