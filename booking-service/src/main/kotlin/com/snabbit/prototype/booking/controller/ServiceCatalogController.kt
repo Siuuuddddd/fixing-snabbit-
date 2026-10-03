@@ -1,7 +1,8 @@
 package com.snabbit.prototype.booking.controller
 
+import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
+
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
-import com.snabbit.prototype.booking.catalog.ServiceOfferingSnapshot
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController

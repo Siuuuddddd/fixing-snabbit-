@@ -1,5 +1,7 @@
 package com.snabbit.prototype.booking.tracking
 
+import com.snabbit.prototype.booking.dto.response.WorkerTrackingSnapshot
+
 import kotlinx.coroutines.flow.Flow
 import org.springframework.http.MediaType
 import org.springframework.http.codec.ServerSentEvent

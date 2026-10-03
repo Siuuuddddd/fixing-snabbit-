@@ -1,8 +1,10 @@
 package com.snabbit.prototype.booking.repository
 
+import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
+
+import com.snabbit.prototype.booking.domain.enums.JobStatus
+
 import com.snabbit.prototype.booking.domain.SlotHold
-import com.snabbit.prototype.booking.domain.JobStatus
-import com.snabbit.prototype.booking.domain.SlotHoldStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

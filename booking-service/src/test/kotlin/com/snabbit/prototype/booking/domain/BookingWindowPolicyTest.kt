@@ -1,5 +1,7 @@
 package com.snabbit.prototype.booking.domain
 
+import com.snabbit.prototype.booking.domain.enums.BookingType
+
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.support.BookingRuleViolation
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow

@@ -1,5 +1,9 @@
 package com.snabbit.prototype.booking.domain
 
+import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
+
+import com.snabbit.prototype.booking.domain.enums.JobStatus
+
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -12,15 +16,6 @@ import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.math.BigDecimal
 import java.util.UUID
-
-enum class SlotHoldStatus {
-    HELD,
-    CONFIRMED,
-    EXPIRED,
-    RELEASED,
-}
-
-enum class JobStatus { ASSIGNED, ARRIVED, IN_PROGRESS, COMPLETED }
 
 @Entity
 @Table(name = "slot_hold")

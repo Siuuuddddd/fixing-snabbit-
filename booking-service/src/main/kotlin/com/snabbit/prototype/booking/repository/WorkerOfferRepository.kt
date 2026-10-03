@@ -1,7 +1,8 @@
 package com.snabbit.prototype.booking.repository
 
+import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
+
 import com.snabbit.prototype.booking.domain.WorkerOffer
-import com.snabbit.prototype.booking.domain.WorkerOfferStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

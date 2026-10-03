@@ -1,5 +1,7 @@
 package com.snabbit.prototype.booking.domain
 
+import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
+
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

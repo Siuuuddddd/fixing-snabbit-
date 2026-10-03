@@ -9,15 +9,6 @@ import com.snabbit.prototype.booking.tracking.WorkerTrackingUnavailable
 import com.snabbit.prototype.booking.tracking.WorkerLocationServiceUnavailable
 import java.util.UUID
 
-class BookingRuleViolation(message: String) : RuntimeException(message)
-class SlotUnavailable(message: String) : RuntimeException(message)
-class BookingNotFound(id: UUID) : RuntimeException("Booking $id was not found")
-class OfferUnavailable(message: String) : RuntimeException(message)
-class InvalidBookingState(message: String) : RuntimeException(message)
-class PaymentRequestRejected(val status: HttpStatusCode, message: String) : RuntimeException(message)
-class PaymentServiceUnavailable(message: String, cause: Throwable) : RuntimeException(message, cause)
-class CustomerAccessDenied : RuntimeException("Authenticated customer does not own this resource")
-
 @RestControllerAdvice
 class ApiExceptionHandler {
     @ExceptionHandler(BookingRuleViolation::class)

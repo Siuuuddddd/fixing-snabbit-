@@ -1,8 +1,12 @@
 package com.snabbit.prototype.booking.tracking
 
+import com.snabbit.prototype.booking.dto.response.VisitSnapshot
+
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+
+import com.snabbit.prototype.booking.dto.response.WorkerLocationResponse
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.BookingSnapshot
-import com.snabbit.prototype.booking.service.VisitSnapshot
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import io.mockk.every

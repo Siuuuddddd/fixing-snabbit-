@@ -1,13 +1,31 @@
 package com.snabbit.prototype.booking.matching
 
+import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
+
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+
+import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
+
+import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
+
+import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
+
+import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
+
+import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
+
+import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
+
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+
+import com.snabbit.prototype.booking.dto.request.MatchAndHoldCommand
+
+import com.snabbit.prototype.booking.domain.enums.BookingType
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.BookingSnapshot
-import com.snabbit.prototype.booking.service.CreateBookingCommand
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
-import com.snabbit.prototype.booking.catalog.ServiceOfferingSnapshot
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.BookingRequirements
-import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
 import io.mockk.coEvery
 import io.mockk.coVerify

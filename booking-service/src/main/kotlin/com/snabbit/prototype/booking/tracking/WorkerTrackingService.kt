@@ -1,8 +1,14 @@
 package com.snabbit.prototype.booking.tracking
 
+import com.snabbit.prototype.booking.dto.response.VisitSnapshot
+
+import com.snabbit.prototype.booking.dto.response.WorkerTrackingSnapshot
+
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+
+import com.snabbit.prototype.booking.dto.response.WorkerLocationResponse
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.BookingSnapshot
-import com.snabbit.prototype.booking.service.VisitSnapshot
 import com.snabbit.prototype.booking.config.IntegrationProperties
 import com.snabbit.prototype.booking.security.InternalServiceClientFactory
 import com.snabbit.prototype.booking.support.CustomerAccessDenied
@@ -23,70 +29,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-
-@ConfigurationProperties("tracking")
-data class WorkerTrackingProperties(
-    val visibilityLeadTime: Duration = Duration.ofHours(2),
-    val pollInterval: Duration = Duration.ofSeconds(5),
-    val maxLocationAge: Duration = Duration.ofMinutes(2),
-) {
-    init {
-        require(!visibilityLeadTime.isNegative) { "Tracking visibility lead time cannot be negative" }
-        require(!pollInterval.isNegative && !pollInterval.isZero) { "Tracking poll interval must be positive" }
-        require(!maxLocationAge.isNegative && !maxLocationAge.isZero) { "Tracking maximum location age must be positive" }
-    }
-}
-
-data class WorkerTrackingSnapshot(
-    val locationId: UUID,
-    val bookingId: UUID,
-    val visitIndex: Int,
-    val workerId: UUID,
-    val latitude: BigDecimal,
-    val longitude: BigDecimal,
-    val accuracyMeters: BigDecimal,
-    val capturedAt: Instant,
-    val receivedAt: Instant,
-)
-
-data class WorkerLocationResponse(
-    val locationId: UUID,
-    val workerId: UUID,
-    val latitude: BigDecimal,
-    val longitude: BigDecimal,
-    val accuracyMeters: BigDecimal,
-    val capturedAt: Instant,
-    val receivedAt: Instant,
-)
-
-class WorkerTrackingUnavailable(message: String) : RuntimeException(message)
-class WorkerLocationServiceUnavailable(cause: Throwable) :
-    RuntimeException("Worker location service is temporarily unavailable", cause)
-
-interface WorkerLocationClient {
-    fun latest(workerId: UUID): WorkerLocationResponse?
-}
-
-@Component
-class HttpWorkerLocationClient(
-    factory: InternalServiceClientFactory,
-    properties: IntegrationProperties,
-) : WorkerLocationClient {
-    private val client: RestClient = factory.create(properties.workerServiceUrl)
-
-    override fun latest(workerId: UUID): WorkerLocationResponse? = try {
-        client.get()
-            .uri("/internal/v1/workers/{workerId}/location", workerId)
-            .retrieve()
-            .body(WorkerLocationResponse::class.java)
-    } catch (_: HttpClientErrorException.NotFound) {
-        null
-    } catch (error: RestClientException) {
-        throw WorkerLocationServiceUnavailable(error)
-    }
-}
-
-private data class TrackingContext(val bookingId: UUID, val visit: VisitSnapshot)
 
 @Service
 class WorkerTrackingService(

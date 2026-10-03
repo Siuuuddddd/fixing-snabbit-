@@ -1,4 +1,4 @@
-package com.snabbit.prototype.booking.domain
+package com.snabbit.prototype.booking.domain.enums
 
 enum class BookingType {
     INSTANT,

@@ -1,7 +1,10 @@
 package com.snabbit.prototype.booking.controller
 
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+
+import com.snabbit.prototype.booking.dto.request.PlatformCancellationRequest
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.BookingSnapshot
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping

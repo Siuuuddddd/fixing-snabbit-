@@ -1,7 +1,12 @@
 package com.snabbit.prototype.booking.payment
 
+import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
+
+import com.snabbit.prototype.booking.dto.response.BookingPaymentSnapshot
+
+import com.snabbit.prototype.booking.dto.request.StartBookingPaymentCommand
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.support.InvalidBookingState
 import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import io.mockk.every

@@ -1,9 +1,12 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.domain.BookingStatus
+import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
+
+import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
+
+import com.snabbit.prototype.booking.domain.enums.BookingStatus
+
 import com.snabbit.prototype.booking.domain.SlotHold
-import com.snabbit.prototype.booking.domain.SlotHoldStatus
-import com.snabbit.prototype.booking.domain.WorkerOfferStatus
 import com.snabbit.prototype.booking.repository.BookingRepository
 import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository

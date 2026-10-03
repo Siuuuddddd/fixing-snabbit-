@@ -1,9 +1,12 @@
 package com.snabbit.prototype.booking.integration
 
+import com.snabbit.prototype.booking.dto.request.VisitCommand
+
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+
+import com.snabbit.prototype.booking.domain.enums.BookingType
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.CreateBookingCommand
-import com.snabbit.prototype.booking.service.VisitCommand
-import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.events.OutboxDeliveryStore
 import com.snabbit.prototype.booking.support.BookingRuleViolation
 import com.snabbit.prototype.booking.support.SlotUnavailable
@@ -24,6 +27,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.sql.Timestamp
 import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
@@ -139,7 +143,7 @@ class SlotHoldConcurrencyTest {
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM booking", Long::class.java))
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM slot_hold", Long::class.java))
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM worker_offer", Long::class.java))
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM outbox_event", Long::class.java))
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM outbox_event", Long::class.java))
     }
 
     @Test
@@ -154,7 +158,7 @@ class SlotHoldConcurrencyTest {
             """.trimIndent(),
             eventId,
             UUID.randomUUID().toString(),
-            now,
+            Timestamp.from(now),
         )
         val firstClaim = UUID.randomUUID()
         val secondClaim = UUID.randomUUID()

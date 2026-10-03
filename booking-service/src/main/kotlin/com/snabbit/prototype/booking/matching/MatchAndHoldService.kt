@@ -1,12 +1,32 @@
 package com.snabbit.prototype.booking.matching
 
+import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
+
+import com.snabbit.prototype.booking.dto.response.VisitAvailabilitySnapshot
+
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+
+import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
+
+import com.snabbit.prototype.booking.dto.response.BookingAvailabilitySnapshot
+
+import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
+
+import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
+
+import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
+
+import com.snabbit.prototype.booking.dto.request.VisitCommand
+
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+
+import com.snabbit.prototype.booking.dto.request.MatchAndHoldCommand
+
+import com.snabbit.prototype.booking.domain.enums.BookingType
+
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.service.BookingSnapshot
-import com.snabbit.prototype.booking.service.CreateBookingCommand
-import com.snabbit.prototype.booking.service.VisitCommand
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.config.BookingProperties
-import com.snabbit.prototype.booking.domain.BookingType
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
 import com.snabbit.prototype.booking.support.BookingRuleViolation
@@ -22,31 +42,6 @@ import java.math.BigDecimal
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
-
-data class MatchAndHoldCommand(
-    val customerId: UUID,
-    val serviceId: UUID,
-    val bookingType: BookingType,
-    val duration: Duration,
-    val addressId: UUID,
-    val startsAt: List<Instant>,
-    val idempotencyKey: String? = null,
-)
-
-data class VisitAvailabilitySnapshot(
-    val startsAt: Instant,
-    val available: Boolean,
-    val compatibleWorkerCount: Int,
-    val lowestPriceMinor: Long?,
-)
-
-data class BookingAvailabilitySnapshot(
-    val serviceId: UUID,
-    val durationMinutes: Int,
-    val allVisitsAvailable: Boolean,
-    val sameWorkerAvailableForAllVisits: Boolean,
-    val visits: List<VisitAvailabilitySnapshot>,
-)
 
 @Service
 class MatchAndHoldService(
