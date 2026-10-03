@@ -1,6 +1,11 @@
 package com.snabbit.prototype.wallet.service
 
-import com.snabbit.prototype.wallet.domain.RefundStatus
+import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundSnapshot
+
+import com.snabbit.prototype.wallet.domain.enums.RefundStatus
+
 import com.snabbit.prototype.wallet.payment.PaymentProviderException
 import io.mockk.every
 import io.mockk.just

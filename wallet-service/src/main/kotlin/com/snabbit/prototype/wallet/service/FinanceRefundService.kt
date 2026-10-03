@@ -1,6 +1,11 @@
 package com.snabbit.prototype.wallet.service
 
-import com.snabbit.prototype.wallet.domain.RefundStatus
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundRetryResult
+
+import com.snabbit.prototype.wallet.domain.enums.RefundStatus
+
 import org.springframework.stereotype.Service
 import java.util.UUID
 

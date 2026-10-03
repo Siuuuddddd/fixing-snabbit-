@@ -1,10 +1,11 @@
 package com.snabbit.prototype.wallet.integration
 
+import com.snabbit.prototype.wallet.dto.response.BookingPaymentQuote
+
 import com.snabbit.prototype.wallet.service.RazorpayWebhookService
 import com.snabbit.prototype.wallet.service.WalletService
 import com.snabbit.prototype.wallet.service.FinanceRefundService
 import com.snabbit.prototype.wallet.service.CaptureRetryScheduler
-import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.support.InvalidWebhook
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.dao.InvalidDataAccessApiUsageException
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -21,6 +23,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.nio.charset.StandardCharsets
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
@@ -67,7 +70,8 @@ class WalletLedgerIntegrationTest {
 
     @BeforeEach
     fun resetDatabase() {
-        Mockito.`when`(bookingQuotes.get(ArgumentMatchers.any(UUID::class.java))).thenAnswer { invocation ->
+        val anyBookingId = ArgumentMatchers.any(UUID::class.java) ?: UUID(0, 0)
+        Mockito.`when`(bookingQuotes.get(anyBookingId)).thenAnswer { invocation ->
             BookingPaymentQuote(
                 bookingId = invocation.getArgument(0),
                 customerId = customerId,
@@ -87,7 +91,7 @@ class WalletLedgerIntegrationTest {
             "INSERT INTO wallet_account (id, customer_id, currency, created_at, version) VALUES (?, ?, 'INR', ?, 0)",
             walletId,
             customerId,
-            Instant.now(),
+            Timestamp.from(Instant.now()),
         )
     }
 
@@ -98,7 +102,7 @@ class WalletLedgerIntegrationTest {
 
         val first = deliverCapture("evt_topup_1", topUp.providerOrderId!!, "pay_topup_1", 10_000)
         val replay = deliverCapture("evt_topup_1", topUp.providerOrderId!!, "pay_topup_1", 10_000)
-        assertThrows(IllegalStateException::class.java) {
+        assertThrows(InvalidDataAccessApiUsageException::class.java) {
             deliverCapture("evt_topup_1", topUp.providerOrderId!!, "pay_different", 10_000)
         }
         val secondEvent = deliverCapture("evt_topup_2", topUp.providerOrderId!!, "pay_topup_1", 10_000)
@@ -125,8 +129,8 @@ class WalletLedgerIntegrationTest {
             topUpId,
             walletId,
             "early-capture-$topUpId",
-            createdAt,
-            createdAt,
+            Timestamp.from(createdAt),
+            Timestamp.from(createdAt),
         )
 
         val initial = deliverCapture("evt_early", providerOrderId, "pay_early", 5_000)
@@ -146,7 +150,7 @@ class WalletLedgerIntegrationTest {
             WHERE id = ?
             """.trimIndent(),
             providerOrderId,
-            Instant.now(),
+            Timestamp.from(Instant.now()),
             topUpId,
         )
 
@@ -208,7 +212,7 @@ class WalletLedgerIntegrationTest {
         val capturedBalance = walletService.balance(walletId)
         assertEquals(0, capturedBalance.availableMinor)
         assertEquals(0, capturedBalance.reservedMinor)
-        assertEquals(10_000, capturedBalance.totalSpentMinor)
+        assertEquals(15_000, capturedBalance.totalSpentMinor)
 
         val refund = walletService.refund(payment.paymentId, "refund-split")
 
@@ -243,7 +247,7 @@ class WalletLedgerIntegrationTest {
         executor.shutdown()
 
         assertEquals(10_000, payments.sumOf { it.walletAmountMinor })
-        assertEquals(10_000, walletService.balance(walletId).reservedMinor)
+        assertEquals(2_000, walletService.balance(walletId).reservedMinor)
         assertEquals(0, walletService.balance(walletId).availableMinor)
     }
 

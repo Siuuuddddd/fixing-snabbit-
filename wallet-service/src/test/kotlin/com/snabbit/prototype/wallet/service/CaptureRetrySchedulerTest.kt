@@ -1,5 +1,9 @@
 package com.snabbit.prototype.wallet.service
 
+import com.snabbit.prototype.wallet.dto.response.WebhookOutcome
+
+import com.snabbit.prototype.wallet.dto.response.ProviderCapture
+
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

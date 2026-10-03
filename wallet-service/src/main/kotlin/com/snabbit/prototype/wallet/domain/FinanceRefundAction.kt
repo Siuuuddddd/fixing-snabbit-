@@ -1,5 +1,7 @@
 package com.snabbit.prototype.wallet.domain
 
+import com.snabbit.prototype.wallet.domain.enums.FinanceRefundActionStatus
+
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -8,8 +10,6 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
-
-enum class FinanceRefundActionStatus { REQUESTED, SUCCEEDED, FAILED }
 
 @Entity
 @Table(name = "finance_refund_action")

@@ -1,7 +1,8 @@
 package com.snabbit.prototype.wallet.service
 
+import com.snabbit.prototype.wallet.domain.enums.FinanceRefundActionStatus
+
 import com.snabbit.prototype.wallet.domain.FinanceRefundAction
-import com.snabbit.prototype.wallet.domain.FinanceRefundActionStatus
 import com.snabbit.prototype.wallet.repository.FinanceRefundActionRepository
 import io.mockk.every
 import io.mockk.mockk

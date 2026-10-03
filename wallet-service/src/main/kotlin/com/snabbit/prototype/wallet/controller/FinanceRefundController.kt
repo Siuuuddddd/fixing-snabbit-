@@ -1,9 +1,12 @@
 package com.snabbit.prototype.wallet.controller
 
-import com.snabbit.prototype.wallet.domain.RefundStatus
-import com.snabbit.prototype.wallet.service.FinanceRefundRetryResult
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundRetryResult
+
+import com.snabbit.prototype.wallet.domain.enums.RefundStatus
+
 import com.snabbit.prototype.wallet.service.FinanceRefundService
-import com.snabbit.prototype.wallet.service.FinanceRefundSnapshot
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping

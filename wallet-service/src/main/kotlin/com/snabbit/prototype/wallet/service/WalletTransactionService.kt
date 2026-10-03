@@ -1,20 +1,50 @@
 package com.snabbit.prototype.wallet.service
 
+import com.snabbit.prototype.wallet.dto.response.WebhookOutcome
+
+import com.snabbit.prototype.wallet.dto.response.WalletOwnershipSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.WalletBalance
+
+import com.snabbit.prototype.wallet.dto.response.TopUpSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.RefundExecution
+
+import com.snabbit.prototype.wallet.dto.response.ProviderCapture
+
+import com.snabbit.prototype.wallet.dto.response.PreparedRefund
+
+import com.snabbit.prototype.wallet.dto.response.ProviderRefund
+
+import com.snabbit.prototype.wallet.dto.response.PlusPurchaseSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.ProviderOrder
+
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.BookingPaymentSnapshot
+
+import com.snabbit.prototype.wallet.domain.enums.TopUpStatus
+
+import com.snabbit.prototype.wallet.domain.enums.ReservationStatus
+
+import com.snabbit.prototype.wallet.domain.enums.RefundStatus
+
+import com.snabbit.prototype.wallet.domain.enums.PlusPurchaseStatus
+
+import com.snabbit.prototype.wallet.domain.enums.LedgerEntryType
+
+import com.snabbit.prototype.wallet.domain.enums.BookingPaymentStatus
+
 import com.snabbit.prototype.wallet.config.WalletProperties
 import com.snabbit.prototype.wallet.domain.BookingPayment
-import com.snabbit.prototype.wallet.domain.BookingPaymentStatus
-import com.snabbit.prototype.wallet.domain.LedgerEntryType
 import com.snabbit.prototype.wallet.domain.PaymentRefund
-import com.snabbit.prototype.wallet.domain.RefundStatus
-import com.snabbit.prototype.wallet.domain.ReservationStatus
 import com.snabbit.prototype.wallet.domain.TopUpOrder
-import com.snabbit.prototype.wallet.domain.TopUpStatus
 import com.snabbit.prototype.wallet.domain.PlusPurchase
-import com.snabbit.prototype.wallet.domain.PlusPurchaseStatus
 import com.snabbit.prototype.wallet.domain.WalletLedgerEntry
 import com.snabbit.prototype.wallet.domain.WalletReservation
-import com.snabbit.prototype.wallet.payment.ProviderOrder
-import com.snabbit.prototype.wallet.payment.ProviderRefund
 import com.snabbit.prototype.wallet.repository.BookingPaymentRepository
 import com.snabbit.prototype.wallet.repository.PaymentRefundRepository
 import com.snabbit.prototype.wallet.repository.ProcessedWebhookStore
@@ -35,32 +65,6 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import kotlin.math.min
-
-data class ProviderCapture(
-    val eventId: String,
-    val eventType: String,
-    val providerOrderId: String,
-    val providerPaymentId: String,
-    val amountMinor: Long,
-)
-
-data class WebhookOutcome(
-    val result: String,
-    val compensationRefundId: UUID? = null,
-    val providerPaymentId: String? = null,
-    val refundAmountMinor: Long = 0,
-)
-
-data class PreparedRefund(
-    val snapshot: RefundSnapshot,
-    val providerPaymentId: String?,
-)
-
-data class RefundExecution(
-    val refundId: UUID,
-    val providerPaymentId: String?,
-    val onlineAmountMinor: Long,
-)
 
 @Service
 class WalletTransactionService(

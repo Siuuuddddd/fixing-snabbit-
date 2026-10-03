@@ -1,7 +1,8 @@
 package com.snabbit.prototype.wallet.repository
 
+import com.snabbit.prototype.wallet.domain.enums.RefundStatus
+
 import com.snabbit.prototype.wallet.domain.PaymentRefund
-import com.snabbit.prototype.wallet.domain.RefundStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

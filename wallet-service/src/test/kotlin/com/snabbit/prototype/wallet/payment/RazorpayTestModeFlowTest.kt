@@ -1,5 +1,7 @@
 package com.snabbit.prototype.wallet.payment
 
+import com.snabbit.prototype.wallet.dto.response.ProviderRefund
+
 import com.snabbit.prototype.wallet.config.RazorpayProperties
 import com.snabbit.prototype.wallet.config.WalletProperties
 import org.junit.jupiter.api.Assertions.assertEquals

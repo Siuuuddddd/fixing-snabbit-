@@ -2,15 +2,8 @@ package com.snabbit.prototype.wallet.repository
 
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
+import java.sql.Timestamp
 import java.time.Instant
-
-data class StoredWebhookCapture(
-    val eventId: String,
-    val eventType: String,
-    val providerOrderId: String,
-    val providerPaymentId: String,
-    val amountMinor: Long,
-)
 
 @Repository
 class ProcessedWebhookStore(private val jdbcTemplate: JdbcTemplate) {
@@ -35,7 +28,7 @@ class ProcessedWebhookStore(private val jdbcTemplate: JdbcTemplate) {
             provider,
             eventId,
             eventType,
-            now,
+            Timestamp.from(now),
             providerOrderId,
             providerPaymentId,
             amountMinor,
@@ -71,7 +64,7 @@ class ProcessedWebhookStore(private val jdbcTemplate: JdbcTemplate) {
             SET attempt_count = attempt_count + 1, last_attempt_at = ?
             WHERE provider = ? AND event_id = ?
             """.trimIndent(),
-            now,
+            Timestamp.from(now),
             provider,
             eventId,
         )
@@ -85,7 +78,7 @@ class ProcessedWebhookStore(private val jdbcTemplate: JdbcTemplate) {
             SET processing_status = 'PROCESSED', completed_at = ?
             WHERE provider = ? AND event_id = ? AND processing_status = 'PENDING'
             """.trimIndent(),
-            now,
+            Timestamp.from(now),
             provider,
             eventId,
         )

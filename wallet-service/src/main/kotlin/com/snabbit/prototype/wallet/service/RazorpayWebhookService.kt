@@ -1,5 +1,7 @@
 package com.snabbit.prototype.wallet.service
 
+import com.snabbit.prototype.wallet.dto.response.ProviderCapture
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.wallet.payment.RazorpayWebhookVerifier
 import com.snabbit.prototype.wallet.support.InvalidWebhook

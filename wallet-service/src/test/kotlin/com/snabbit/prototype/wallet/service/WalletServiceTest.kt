@@ -1,11 +1,22 @@
 package com.snabbit.prototype.wallet.service
 
-import com.snabbit.prototype.wallet.booking.BookingPaymentQuote
+import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.BookingPaymentQuote
+
+import com.snabbit.prototype.wallet.dto.response.RefundExecution
+
+import com.snabbit.prototype.wallet.dto.response.ProviderRefund
+
+import com.snabbit.prototype.wallet.dto.response.PlusPurchaseSnapshot
+
+import com.snabbit.prototype.wallet.dto.response.ProviderOrder
+
+import com.snabbit.prototype.wallet.dto.response.BookingPaymentSnapshot
+
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
 import com.snabbit.prototype.wallet.payment.PaymentProvider
 import com.snabbit.prototype.wallet.payment.PaymentProviderException
-import com.snabbit.prototype.wallet.payment.ProviderOrder
-import com.snabbit.prototype.wallet.payment.ProviderRefund
 import com.snabbit.prototype.wallet.support.PaymentConflict
 import io.mockk.every
 import io.mockk.mockk

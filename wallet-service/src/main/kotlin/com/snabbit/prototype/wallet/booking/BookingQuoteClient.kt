@@ -1,5 +1,7 @@
 package com.snabbit.prototype.wallet.booking
 
+import com.snabbit.prototype.wallet.dto.response.BookingPaymentQuote
+
 import com.snabbit.prototype.wallet.support.BookingQuoteUnavailable
 import com.snabbit.prototype.wallet.security.InternalServiceClientFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -7,18 +9,6 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClientException
 import java.time.Instant
 import java.util.UUID
-
-@ConfigurationProperties("integrations")
-data class BookingIntegrationProperties(val bookingServiceUrl: String)
-
-data class BookingPaymentQuote(
-    val bookingId: UUID,
-    val customerId: UUID,
-    val status: String,
-    val quotedTotalMinor: Long,
-    val currency: String,
-    val holdExpiresAt: Instant,
-)
 
 @Component
 class BookingQuoteClient(factory: InternalServiceClientFactory, properties: BookingIntegrationProperties) {
