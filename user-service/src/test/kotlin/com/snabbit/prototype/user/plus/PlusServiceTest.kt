@@ -1,9 +1,11 @@
 package com.snabbit.prototype.user.plus
 
+import com.snabbit.prototype.user.domain.enums.PlusPassStatus
+
+import com.snabbit.prototype.user.domain.enums.UserStatus
+
 import com.snabbit.prototype.user.domain.PlusPass
-import com.snabbit.prototype.user.domain.PlusPassStatus
 import com.snabbit.prototype.user.domain.UserProfile
-import com.snabbit.prototype.user.domain.UserStatus
 import com.snabbit.prototype.user.repository.PlusPassRepository
 import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository

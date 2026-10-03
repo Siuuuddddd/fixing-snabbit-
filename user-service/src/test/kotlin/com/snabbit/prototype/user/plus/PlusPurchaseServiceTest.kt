@@ -1,5 +1,9 @@
 package com.snabbit.prototype.user.plus
 
+import com.snabbit.prototype.user.dto.response.PlusPurchaseSnapshot
+
+import com.snabbit.prototype.user.dto.request.CreatePlusWalletPurchaseRequest
+
 import com.snabbit.prototype.user.support.CustomerAccessDenied
 import io.mockk.every
 import io.mockk.mockk

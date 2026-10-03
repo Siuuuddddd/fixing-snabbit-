@@ -1,10 +1,11 @@
 package com.snabbit.prototype.user.service
 
+import com.snabbit.prototype.user.domain.enums.UserStatus
+
 import com.snabbit.prototype.user.domain.FavouriteWorker
 import com.snabbit.prototype.user.domain.FavouriteWorkerId
 import com.snabbit.prototype.user.domain.HouseholdPreference
 import com.snabbit.prototype.user.domain.UserProfile
-import com.snabbit.prototype.user.domain.UserStatus
 import com.snabbit.prototype.user.repository.FavouriteWorkerRepository
 import com.snabbit.prototype.user.repository.HouseholdPreferenceRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository

@@ -16,8 +16,6 @@ import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
-class CustomerAccessDenied : RuntimeException("Authenticated customer does not own this resource")
-
 @RestControllerAdvice
 class UserExceptionHandler {
     @ExceptionHandler(UserNotFound::class)

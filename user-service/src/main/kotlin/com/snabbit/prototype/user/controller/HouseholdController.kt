@@ -1,8 +1,12 @@
 package com.snabbit.prototype.user.controller
 
-import com.snabbit.prototype.user.service.HouseholdCommand
+import com.snabbit.prototype.user.dto.response.HouseholdSnapshot
+
+import com.snabbit.prototype.user.dto.request.HouseholdCommand
+
+import com.snabbit.prototype.user.dto.request.HouseholdRequest
+
 import com.snabbit.prototype.user.service.HouseholdService
-import com.snabbit.prototype.user.service.HouseholdSnapshot
 import com.snabbit.prototype.user.support.CustomerAccessDenied
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Size
@@ -18,23 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
-
-data class HouseholdRequest(
-    val hasPets: Boolean = false,
-    @field:Size(max = 300)
-    val petDetails: String? = null,
-    @field:Size(max = 80)
-    val foodContext: String? = null,
-    val utensilPreferences: List<String> = emptyList(),
-    val preferredLanguages: List<String> = emptyList(),
-    val allergies: List<String> = emptyList(),
-    val religiousFoodRestrictions: List<String> = emptyList(),
-    val accessibilityNeeds: List<String> = emptyList(),
-    val workerConstraints: List<String> = emptyList(),
-    val heavyLiftingRequired: Boolean = false,
-    val disallowedChemicals: List<String> = emptyList(),
-    val requiredEquipment: List<String> = emptyList(),
-)
 
 @RestController
 @RequestMapping("/api/v1/users/{userId}/household")
@@ -82,15 +69,4 @@ class HouseholdController(private val service: HouseholdService) {
         @PathVariable workerId: UUID,
         @RequestHeader("X-Authenticated-User-Id") authenticatedUserId: UUID,
     ): HouseholdSnapshot = service.removeFavourite(userId.also { requireOwner(authenticatedUserId, it) }, workerId)
-}
-
-@RestController
-@RequestMapping("/internal/v1/users/{userId}/household")
-class InternalHouseholdController(private val service: HouseholdService) {
-    @GetMapping
-    fun snapshot(@PathVariable userId: UUID): HouseholdSnapshot = service.snapshot(userId)
-}
-
-private fun requireOwner(authenticatedUserId: UUID, requestedUserId: UUID) {
-    if (authenticatedUserId != requestedUserId) throw CustomerAccessDenied()
 }

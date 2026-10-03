@@ -1,5 +1,7 @@
 package com.snabbit.prototype.user.domain
 
+import com.snabbit.prototype.user.domain.enums.UserStatus
+
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -11,8 +13,6 @@ import java.time.Instant
 import java.util.UUID
 import java.math.BigDecimal
 import java.math.RoundingMode
-
-enum class UserStatus { ACTIVE, SUSPENDED, DELETED }
 
 @Entity
 @Table(name = "user_profile")

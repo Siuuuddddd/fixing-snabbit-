@@ -1,12 +1,14 @@
 package com.snabbit.prototype.user.staff
 
+import com.snabbit.prototype.user.domain.enums.StaffStatus
+
+import com.snabbit.prototype.user.domain.enums.StaffRole
+
 import com.snabbit.prototype.user.auth.AuthConfiguration
 import com.snabbit.prototype.user.auth.AuthProperties
 import com.snabbit.prototype.user.auth.OtpChallengeStore
 import com.snabbit.prototype.user.auth.OtpDelivery
 import com.snabbit.prototype.user.domain.StaffAccount
-import com.snabbit.prototype.user.domain.StaffRole
-import com.snabbit.prototype.user.domain.StaffStatus
 import com.snabbit.prototype.user.repository.StaffAccountRepository
 import io.mockk.every
 import io.mockk.mockk

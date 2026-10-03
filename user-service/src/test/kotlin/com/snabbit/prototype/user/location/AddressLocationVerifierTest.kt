@@ -1,5 +1,7 @@
 package com.snabbit.prototype.user.location
 
+import com.snabbit.prototype.user.dto.response.GeocodedAddress
+
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow

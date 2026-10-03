@@ -1,8 +1,13 @@
 package com.snabbit.prototype.user.rating
 
+import com.snabbit.prototype.user.dto.response.BookingRatingVisit
+
+import com.snabbit.prototype.user.dto.response.BookingRatingContext
+
+import com.snabbit.prototype.user.domain.enums.UserStatus
+
 import com.snabbit.prototype.user.domain.CustomerRating
 import com.snabbit.prototype.user.domain.UserProfile
-import com.snabbit.prototype.user.domain.UserStatus
 import com.snabbit.prototype.user.repository.CustomerRatingRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every

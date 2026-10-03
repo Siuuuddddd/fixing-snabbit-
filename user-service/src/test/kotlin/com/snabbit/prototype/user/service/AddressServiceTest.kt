@@ -1,5 +1,7 @@
 package com.snabbit.prototype.user.service
 
+import com.snabbit.prototype.user.dto.request.AddressCommand
+
 import com.snabbit.prototype.user.domain.UserAddress
 import com.snabbit.prototype.user.repository.UserAddressRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository

@@ -17,55 +17,6 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
-const val CURRENT_EVENT_SCHEMA_VERSION = 1
-
-data class BookingEventEnvelope(
-    val eventId: UUID,
-    val eventType: String,
-    val aggregateType: String,
-    val aggregateId: String,
-    val occurredAt: Instant,
-    val payload: JsonNode,
-    val schemaVersion: Int = CURRENT_EVENT_SCHEMA_VERSION,
-) {
-    init {
-        require(schemaVersion == CURRENT_EVENT_SCHEMA_VERSION) {
-            "Unsupported event schema version $schemaVersion"
-        }
-    }
-}
-
-@Repository
-class PlusProcessedMessageStore(private val jdbc: JdbcTemplate) {
-    fun claim(consumer: String, eventId: UUID, now: Instant): Boolean = jdbc.update(
-        """
-        INSERT INTO processed_message (consumer_name, message_id, processed_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT (consumer_name, message_id) DO NOTHING
-        """.trimIndent(),
-        consumer, eventId, Timestamp.from(now),
-    ) == 1
-}
-
-@Service
-class PlusBookingEventHandler(
-    private val processed: PlusProcessedMessageStore,
-    private val plus: PlusService,
-    @param:Value("\${plus-events.consumer-group:user-service-plus}") private val consumerGroup: String,
-) {
-    @Transactional
-    fun handle(event: BookingEventEnvelope) {
-        if (!processed.claim(consumerGroup, event.eventId, event.occurredAt)) return
-        val bookingId = UUID.fromString(event.aggregateId)
-        when (event.eventType) {
-            "BookingConfirmed" -> plus.consumePass(bookingId, event.occurredAt)
-            "BookingCustomerCancelled", "BookingPlatformCancelled" -> plus.restorePass(bookingId)
-            "BookingCancelled", "BookingExpired", "WorkerOfferRejected", "WorkerOfferExpired" ->
-                plus.releasePass(bookingId)
-        }
-    }
-}
-
 @Component
 class PlusBookingEventListener(
     private val mapper: ObjectMapper,

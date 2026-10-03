@@ -1,6 +1,7 @@
 package com.snabbit.prototype.user.integration
 
-import com.snabbit.prototype.user.service.AddressCommand
+import com.snabbit.prototype.user.dto.request.AddressCommand
+
 import com.snabbit.prototype.user.service.AddressService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach

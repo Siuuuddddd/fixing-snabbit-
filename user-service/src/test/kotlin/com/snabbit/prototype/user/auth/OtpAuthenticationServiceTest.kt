@@ -1,7 +1,8 @@
 package com.snabbit.prototype.user.auth
 
+import com.snabbit.prototype.user.domain.enums.UserStatus
+
 import com.snabbit.prototype.user.domain.UserProfile
-import com.snabbit.prototype.user.domain.UserStatus
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk

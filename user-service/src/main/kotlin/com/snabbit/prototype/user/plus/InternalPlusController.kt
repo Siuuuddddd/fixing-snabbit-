@@ -1,5 +1,17 @@
 package com.snabbit.prototype.user.plus
 
+import com.snabbit.prototype.user.dto.response.PassReservationSnapshot
+
+import com.snabbit.prototype.user.dto.response.PlusStatusSnapshot
+
+import com.snabbit.prototype.user.dto.request.ActivatePlusCommand
+
+import com.snabbit.prototype.user.dto.request.ConsumePassRequest
+
+import com.snabbit.prototype.user.dto.request.ReservePassRequest
+
+import com.snabbit.prototype.user.dto.request.ActivatePlusRequest
+
 import com.snabbit.prototype.user.support.CustomerAccessDenied
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
@@ -17,52 +29,6 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.http.HttpStatus
 import java.time.Instant
 import java.util.UUID
-
-data class ActivatePlusRequest(
-    @field:NotBlank @field:Size(max = 120) val sourceReference: String,
-    val startsAt: Instant,
-    val expiresAt: Instant,
-    @field:Min(0) @field:Max(20) val passCount: Int,
-    @field:Min(0) val passDiscountMinor: Long,
-    @field:Size(max = 60) val serviceCode: String? = null,
-)
-
-data class ReservePassRequest(
-    val bookingId: UUID,
-    @field:NotBlank @field:Size(max = 60) val serviceCode: String,
-    @field:Min(1) val grossTotalMinor: Long,
-    val holdUntil: Instant,
-)
-
-data class ConsumePassRequest(val confirmedAt: Instant)
-data class PurchasePlusRequest(val walletId: UUID, @field:NotBlank @field:Size(max = 60) val planCode: String)
-
-@RestController
-@RequestMapping("/api/v1/users/{userId}/plus")
-class CustomerPlusController(
-    private val service: PlusService,
-    private val purchases: PlusPurchaseService,
-) {
-    @GetMapping
-    fun status(
-        @PathVariable userId: UUID,
-        @RequestHeader("X-Authenticated-User-Id") authenticatedUserId: UUID,
-    ): PlusStatusSnapshot {
-        if (authenticatedUserId != userId) throw CustomerAccessDenied()
-        return service.status(userId)
-    }
-
-    @PostMapping("/purchases")
-    @ResponseStatus(HttpStatus.CREATED)
-    fun purchase(
-        @PathVariable userId: UUID,
-        @RequestHeader("X-Authenticated-User-Id") authenticatedUserId: UUID,
-        @RequestHeader("Idempotency-Key") idempotencyKey: String,
-        @Valid @RequestBody request: PurchasePlusRequest,
-    ): PlusPurchaseSnapshot = purchases.purchase(
-        userId, authenticatedUserId, request.walletId, request.planCode, idempotencyKey,
-    )
-}
 
 @RestController
 @RequestMapping("/internal/v1/users/{userId}/plus")

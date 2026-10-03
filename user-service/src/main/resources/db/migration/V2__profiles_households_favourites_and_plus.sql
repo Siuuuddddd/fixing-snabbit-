@@ -47,7 +47,7 @@ CREATE TABLE household_preference (
 CREATE TABLE favourite_worker (
     user_id UUID NOT NULL REFERENCES user_profile(id),
     worker_id UUID NOT NULL,
-    priority SMALLINT NOT NULL,
+    priority INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (user_id, worker_id),
     CONSTRAINT uq_favourite_priority UNIQUE (user_id, priority),

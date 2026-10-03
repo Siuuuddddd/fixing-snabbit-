@@ -9,7 +9,7 @@ CREATE TABLE customer_rating (
     visit_index INTEGER NOT NULL,
     customer_id UUID NOT NULL REFERENCES user_profile(id),
     worker_id UUID NOT NULL,
-    stars SMALLINT NOT NULL,
+    stars INTEGER NOT NULL,
     comment VARCHAR(500) NULL,
     created_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT uq_customer_rating_booking_visit UNIQUE (booking_id, visit_index),

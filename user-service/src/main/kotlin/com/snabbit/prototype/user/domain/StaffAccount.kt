@@ -1,5 +1,9 @@
 package com.snabbit.prototype.user.domain
 
+import com.snabbit.prototype.user.domain.enums.StaffStatus
+
+import com.snabbit.prototype.user.domain.enums.StaffRole
+
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -8,9 +12,6 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
-
-enum class StaffRole { SUPPORT_AGENT, OPERATIONS_MANAGER, ADMIN, FINANCE_OPERATOR }
-enum class StaffStatus { ACTIVE, DISABLED }
 
 @Entity
 @Table(name = "staff_account")

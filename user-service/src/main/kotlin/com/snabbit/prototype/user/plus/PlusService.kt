@@ -1,8 +1,15 @@
 package com.snabbit.prototype.user.plus
 
+import com.snabbit.prototype.user.dto.response.PassReservationSnapshot
+
+import com.snabbit.prototype.user.dto.response.PlusStatusSnapshot
+
+import com.snabbit.prototype.user.dto.request.ActivatePlusCommand
+
+import com.snabbit.prototype.user.domain.enums.PlusPassStatus
+
 import com.snabbit.prototype.user.service.UserNotFound
 import com.snabbit.prototype.user.domain.PlusPass
-import com.snabbit.prototype.user.domain.PlusPassStatus
 import com.snabbit.prototype.user.domain.PlusSubscription
 import com.snabbit.prototype.user.repository.PlusPassRepository
 import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
@@ -14,33 +21,6 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import kotlin.math.min
-
-data class PlusStatusSnapshot(
-    val userId: UUID,
-    val active: Boolean,
-    val expiresAt: Instant?,
-    val availablePasses: Long,
-)
-
-data class ActivatePlusCommand(
-    val sourceReference: String,
-    val startsAt: Instant,
-    val expiresAt: Instant,
-    val passCount: Int,
-    val passDiscountMinor: Long,
-    val serviceCode: String?,
-)
-
-data class PassReservationSnapshot(
-    val passId: UUID?,
-    val bookingId: UUID,
-    val grossTotalMinor: Long,
-    val discountMinor: Long,
-    val netTotalMinor: Long,
-    val expiresAt: Instant?,
-)
-
-class PlusRequestRejected(message: String) : RuntimeException(message)
 
 @Service
 class PlusService(

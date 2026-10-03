@@ -1,6 +1,11 @@
 package com.snabbit.prototype.user.auth
 
-import com.snabbit.prototype.user.domain.UserStatus
+import com.snabbit.prototype.user.dto.response.AccessTokenResult
+
+import com.snabbit.prototype.user.dto.response.OtpRequestResult
+
+import com.snabbit.prototype.user.domain.enums.UserStatus
+
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwsHeader
@@ -15,21 +20,6 @@ import java.time.Clock
 import java.util.HexFormat
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-
-data class OtpRequestResult(
-    val status: String = "OTP_SENT",
-    val expiresInSeconds: Long,
-    val debugOtp: String?,
-)
-
-data class AccessTokenResult(
-    val accessToken: String,
-    val tokenType: String = "Bearer",
-    val expiresInSeconds: Long,
-)
-
-class OtpRateLimited : RuntimeException("Please wait before requesting another OTP")
-class InvalidOtp : RuntimeException("The OTP is invalid or expired")
 
 @Service
 class OtpAuthenticationService(

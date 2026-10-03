@@ -1,13 +1,16 @@
 package com.snabbit.prototype.user.staff
 
-import com.snabbit.prototype.user.auth.AccessTokenResult
+import com.snabbit.prototype.user.dto.response.AccessTokenResult
+
+import com.snabbit.prototype.user.dto.response.OtpRequestResult
+
+import com.snabbit.prototype.user.domain.enums.StaffStatus
+
 import com.snabbit.prototype.user.auth.AuthProperties
 import com.snabbit.prototype.user.auth.InvalidOtp
 import com.snabbit.prototype.user.auth.OtpChallengeStore
 import com.snabbit.prototype.user.auth.OtpDelivery
 import com.snabbit.prototype.user.auth.OtpRateLimited
-import com.snabbit.prototype.user.auth.OtpRequestResult
-import com.snabbit.prototype.user.domain.StaffStatus
 import com.snabbit.prototype.user.repository.StaffAccountRepository
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwsHeader

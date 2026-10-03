@@ -21,13 +21,3 @@ data class EventEnvelope(
         }
     }
 }
-
-data class ClaimedOutboxEvent(
-    val id: UUID,
-    val aggregateType: String,
-    val aggregateId: String,
-    val eventType: String,
-    val payload: String,
-    val occurredAt: Instant,
-    val schemaVersion: Int,
-)
