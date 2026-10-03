@@ -4,7 +4,7 @@ x-postgres-common: &postgres-common
   image: postgres:17-alpine
   restart: unless-stopped
   healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U snabbit"]
+    test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
     interval: 5s
     timeout: 3s
     retries: 10
@@ -14,8 +14,8 @@ services:
     <<: *postgres-common
     environment:
       POSTGRES_DB: users
-      POSTGRES_USER: snabbit
-      POSTGRES_PASSWORD: snabbit-local
+      POSTGRES_USER: ${USER_DB_USERNAME:-snabbit}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:?Set USER_DB_PASSWORD in .env}
     ports: ["127.0.0.1:5433:5432"]
     volumes: ["user-db-data:/var/lib/postgresql/data"]
 
@@ -23,8 +23,8 @@ services:
     <<: *postgres-common
     environment:
       POSTGRES_DB: bookings
-      POSTGRES_USER: snabbit
-      POSTGRES_PASSWORD: snabbit-local
+      POSTGRES_USER: ${BOOKING_DB_USERNAME:-snabbit}
+      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:?Set BOOKING_DB_PASSWORD in .env}
     ports: ["127.0.0.1:5434:5432"]
     volumes: ["booking-db-data:/var/lib/postgresql/data"]
 
@@ -32,8 +32,8 @@ services:
     <<: *postgres-common
     environment:
       POSTGRES_DB: workers
-      POSTGRES_USER: snabbit
-      POSTGRES_PASSWORD: snabbit-local
+      POSTGRES_USER: ${WORKER_DB_USERNAME:-snabbit}
+      POSTGRES_PASSWORD: ${WORKER_DB_PASSWORD:?Set WORKER_DB_PASSWORD in .env}
     ports: ["127.0.0.1:5435:5432"]
     volumes: ["worker-db-data:/var/lib/postgresql/data"]
 
@@ -41,8 +41,8 @@ services:
     <<: *postgres-common
     environment:
       POSTGRES_DB: wallets
-      POSTGRES_USER: snabbit
-      POSTGRES_PASSWORD: snabbit-local
+      POSTGRES_USER: ${WALLET_DB_USERNAME:-snabbit}
+      POSTGRES_PASSWORD: ${WALLET_DB_PASSWORD:?Set WALLET_DB_PASSWORD in .env}
     ports: ["127.0.0.1:5436:5432"]
     volumes: ["wallet-db-data:/var/lib/postgresql/data"]
 
@@ -50,8 +50,8 @@ services:
     <<: *postgres-common
     environment:
       POSTGRES_DB: support
-      POSTGRES_USER: snabbit
-      POSTGRES_PASSWORD: snabbit-local
+      POSTGRES_USER: ${SUPPORT_DB_USERNAME:-snabbit}
+      POSTGRES_PASSWORD: ${SUPPORT_DB_PASSWORD:?Set SUPPORT_DB_PASSWORD in .env}
     ports: ["127.0.0.1:5437:5432"]
     volumes: ["support-db-data:/var/lib/postgresql/data"]
 
@@ -59,8 +59,8 @@ services:
     <<: *postgres-common
     environment:
       POSTGRES_DB: notifications
-      POSTGRES_USER: snabbit
-      POSTGRES_PASSWORD: snabbit-local
+      POSTGRES_USER: ${NOTIFICATION_DB_USERNAME:-snabbit}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD in .env}
     ports: ["127.0.0.1:5438:5432"]
     volumes: ["notification-db-data:/var/lib/postgresql/data"]
 

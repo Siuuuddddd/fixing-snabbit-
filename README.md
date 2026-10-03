@@ -23,18 +23,38 @@ No service may query another service's database. Immediate commands use HTTP API
 Requirements: Java 21 and Docker Desktop.
 
 ```powershell
+./scripts/init-local-env.ps1
 docker compose up -d
 ./gradlew.bat test
 ./gradlew.bat :booking-service:bootRun
 ```
 
+The environment initializer creates an ignored `.env` containing random local-only database passwords, JWT/OTP material, the internal service token and a fake-mode webhook secret. It refuses to overwrite an existing file. `.env.example` documents every required variable without containing credentials.
+
 The default Compose file starts infrastructure only, which is convenient when running a service from the IDE. To build and start the complete local backend, including the gateway and every application service, use:
 
 ```powershell
-docker compose -f compose.yaml -f compose.apps.yaml up --build
+docker compose -f compose.yaml -f compose.apps.yaml build
+docker compose -f compose.yaml -f compose.apps.yaml up -d
+docker compose -f compose.yaml -f compose.apps.yaml ps
 ```
 
-The application overlay keeps Kafka reachable both from host-run services at `localhost:9092` and containers at `kafka:29092`. All checked-in credentials are local-development defaults only, and every published development port is bound to `127.0.0.1` so databases, brokers and internal APIs are not exposed to the LAN.
+After the containers finish starting, check every application health endpoint:
+
+```powershell
+foreach ($port in 8080..8086) {
+    $health = Invoke-RestMethod "http://127.0.0.1:$port/actuator/health"
+    [pscustomobject]@{ Port = $port; Status = $health.status }
+}
+```
+
+Stop the full stack without deleting database volumes:
+
+```powershell
+docker compose -f compose.yaml -f compose.apps.yaml down
+```
+
+The application overlay keeps Kafka reachable both from host-run services at `localhost:9092` and containers at `kafka:29092`. No credential values are checked in; Compose reads them from the ignored `.env`. Every published development port is bound to `127.0.0.1` so databases, brokers and internal APIs are not exposed to the LAN.
 
 Service health is available at `/actuator/health`. Local credentials in `compose.yaml` are development-only.
 

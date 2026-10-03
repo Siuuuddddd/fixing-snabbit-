@@ -1,19 +1,19 @@
 x-service-environment: &service-environment
-  SPRING_PROFILES_ACTIVE: local
-  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-  REDIS_HOST: redis
-  REDIS_PORT: 6379
-  JWT_SECRET: local-only-change-me-32-byte-secret
-  GATEWAY_RATE_LIMIT_PER_SECOND: 20
-  GATEWAY_RATE_LIMIT_BURST: 40
-  OTP_PEPPER: local-only-otp-pepper
-  SERVICE_AUTH_TOKEN: local-only-service-token-change-me-1234567890
-  USER_SERVICE_URL: http://user-service:8081
-  BOOKING_SERVICE_URL: http://booking-service:8082
-  WORKER_SERVICE_URL: http://worker-service:8083
-  WALLET_SERVICE_URL: http://wallet-service:8084
-  SUPPORT_SERVICE_URL: http://support-service:8085
-  NOTIFICATION_SERVICE_URL: http://notification-service:8086
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  GATEWAY_RATE_LIMIT_PER_SECOND: ${GATEWAY_RATE_LIMIT_PER_SECOND:-20}
+  GATEWAY_RATE_LIMIT_BURST: ${GATEWAY_RATE_LIMIT_BURST:-40}
+  OTP_PEPPER: ${OTP_PEPPER:?Set OTP_PEPPER in .env}
+  SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:?Set SERVICE_AUTH_TOKEN in .env}
+  USER_SERVICE_URL: ${USER_SERVICE_URL:-http://user-service:8081}
+  BOOKING_SERVICE_URL: ${BOOKING_SERVICE_URL:-http://booking-service:8082}
+  WORKER_SERVICE_URL: ${WORKER_SERVICE_URL:-http://worker-service:8083}
+  WALLET_SERVICE_URL: ${WALLET_SERVICE_URL:-http://wallet-service:8084}
+  SUPPORT_SERVICE_URL: ${SUPPORT_SERVICE_URL:-http://support-service:8085}
+  NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:8086}
 
 x-service-common: &service-common
   restart: unless-stopped
@@ -37,8 +37,8 @@ services:
     environment:
       <<: *service-environment
       USER_DB_URL: jdbc:postgresql://user-db:5432/users
-      USER_DB_USERNAME: snabbit
-      USER_DB_PASSWORD: snabbit-local
+      USER_DB_USERNAME: ${USER_DB_USERNAME:-snabbit}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?Set USER_DB_PASSWORD in .env}
     depends_on:
       user-db: { condition: service_healthy }
       redis: { condition: service_started }
@@ -53,8 +53,8 @@ services:
     environment:
       <<: *service-environment
       BOOKING_DB_URL: jdbc:postgresql://booking-db:5432/bookings
-      BOOKING_DB_USERNAME: snabbit
-      BOOKING_DB_PASSWORD: snabbit-local
+      BOOKING_DB_USERNAME: ${BOOKING_DB_USERNAME:-snabbit}
+      BOOKING_DB_PASSWORD: ${BOOKING_DB_PASSWORD:?Set BOOKING_DB_PASSWORD in .env}
     depends_on:
       booking-db: { condition: service_healthy }
       redis: { condition: service_started }
@@ -69,8 +69,8 @@ services:
     environment:
       <<: *service-environment
       WORKER_DB_URL: jdbc:postgresql://worker-db:5432/workers
-      WORKER_DB_USERNAME: snabbit
-      WORKER_DB_PASSWORD: snabbit-local
+      WORKER_DB_USERNAME: ${WORKER_DB_USERNAME:-snabbit}
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:?Set WORKER_DB_PASSWORD in .env}
     depends_on:
       worker-db: { condition: service_healthy }
       redis: { condition: service_started }
@@ -85,10 +85,12 @@ services:
     environment:
       <<: *service-environment
       WALLET_DB_URL: jdbc:postgresql://wallet-db:5432/wallets
-      WALLET_DB_USERNAME: snabbit
-      WALLET_DB_PASSWORD: snabbit-local
-      RAZORPAY_MODE: fake
-      RAZORPAY_WEBHOOK_SECRET: local-webhook-secret
+      WALLET_DB_USERNAME: ${WALLET_DB_USERNAME:-snabbit}
+      WALLET_DB_PASSWORD: ${WALLET_DB_PASSWORD:?Set WALLET_DB_PASSWORD in .env}
+      RAZORPAY_MODE: ${RAZORPAY_MODE:-fake}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:?Set RAZORPAY_WEBHOOK_SECRET in .env}
     depends_on:
       wallet-db: { condition: service_healthy }
       kafka: { condition: service_started }
@@ -102,8 +104,8 @@ services:
     environment:
       <<: *service-environment
       SUPPORT_DB_URL: jdbc:postgresql://support-db:5432/support
-      SUPPORT_DB_USERNAME: snabbit
-      SUPPORT_DB_PASSWORD: snabbit-local
+      SUPPORT_DB_USERNAME: ${SUPPORT_DB_USERNAME:-snabbit}
+      SUPPORT_DB_PASSWORD: ${SUPPORT_DB_PASSWORD:?Set SUPPORT_DB_PASSWORD in .env}
     depends_on:
       support-db: { condition: service_healthy }
 
@@ -116,8 +118,8 @@ services:
     environment:
       <<: *service-environment
       NOTIFICATION_DB_URL: jdbc:postgresql://notification-db:5432/notifications
-      NOTIFICATION_DB_USERNAME: snabbit
-      NOTIFICATION_DB_PASSWORD: snabbit-local
+      NOTIFICATION_DB_USERNAME: ${NOTIFICATION_DB_USERNAME:-snabbit}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD in .env}
     depends_on:
       notification-db: { condition: service_healthy }
       kafka: { condition: service_started }
