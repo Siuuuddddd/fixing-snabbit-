@@ -1,5 +1,3 @@
-package com.snabbit.prototype.wallet.support
-
-import java.util.UUID
+package com.snabbit.prototype.wallet.exception
 
 class PaymentNotFound(message: String) : RuntimeException(message)

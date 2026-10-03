@@ -1,26 +1,19 @@
 package com.snabbit.prototype.wallet.service
 
-import com.snabbit.prototype.wallet.dto.response.WalletOwnershipSnapshot
-
-import com.snabbit.prototype.wallet.dto.response.WalletBalance
-
-import com.snabbit.prototype.wallet.dto.response.TopUpSnapshot
-
-import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
-
-import com.snabbit.prototype.wallet.dto.response.PlusPurchaseSnapshot
-
-import com.snabbit.prototype.wallet.dto.response.ProviderOrder
-
-import com.snabbit.prototype.wallet.dto.response.BookingPaymentSnapshot
-
 import com.snabbit.prototype.wallet.booking.BookingQuoteClient
+import com.snabbit.prototype.wallet.dto.response.BookingPaymentSnapshot
+import com.snabbit.prototype.wallet.dto.response.PlusPurchaseSnapshot
+import com.snabbit.prototype.wallet.dto.response.ProviderOrder
+import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
+import com.snabbit.prototype.wallet.dto.response.TopUpSnapshot
+import com.snabbit.prototype.wallet.dto.response.WalletBalance
+import com.snabbit.prototype.wallet.dto.response.WalletOwnershipSnapshot
+import com.snabbit.prototype.wallet.exception.PaymentConflict
+import com.snabbit.prototype.wallet.exception.PaymentProviderException
 import com.snabbit.prototype.wallet.payment.PaymentProvider
-import com.snabbit.prototype.wallet.payment.PaymentProviderException
-import com.snabbit.prototype.wallet.support.PaymentConflict
-import org.springframework.stereotype.Service
 import java.time.Clock
 import java.util.UUID
+import org.springframework.stereotype.Service
 
 @Service
 class WalletService(

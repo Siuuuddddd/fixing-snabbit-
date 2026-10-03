@@ -1,16 +1,15 @@
 package com.snabbit.prototype.wallet.repository
 
 import com.snabbit.prototype.wallet.domain.enums.RefundStatus
-
 import com.snabbit.prototype.wallet.domain.PaymentRefund
 import jakarta.persistence.LockModeType
+import java.time.Instant
+import java.util.UUID
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
-import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.query.Param
-import java.time.Instant
-import java.util.UUID
 
 interface PaymentRefundRepository : JpaRepository<PaymentRefund, UUID> {
     fun findByIdempotencyKey(idempotencyKey: String): PaymentRefund?

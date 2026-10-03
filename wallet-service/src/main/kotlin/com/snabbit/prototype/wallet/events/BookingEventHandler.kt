@@ -1,10 +1,10 @@
 package com.snabbit.prototype.wallet.events
 
 import com.snabbit.prototype.wallet.service.WalletTransactionService
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.util.UUID
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class BookingEventHandler(

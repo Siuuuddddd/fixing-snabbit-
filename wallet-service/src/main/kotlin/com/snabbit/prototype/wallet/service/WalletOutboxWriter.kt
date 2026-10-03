@@ -3,9 +3,9 @@ package com.snabbit.prototype.wallet.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.wallet.domain.WalletOutboxEvent
 import com.snabbit.prototype.wallet.repository.WalletOutboxRepository
-import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Component
 
 @Component
 class WalletOutboxWriter(

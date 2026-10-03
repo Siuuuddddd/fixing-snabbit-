@@ -1,6 +1,5 @@
-package com.snabbit.prototype.wallet.support
+package com.snabbit.prototype.wallet.exception
 
-import com.snabbit.prototype.wallet.payment.PaymentProviderException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler

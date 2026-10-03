@@ -1,6 +1,5 @@
 package com.snabbit.prototype.wallet.events
 
-import com.fasterxml.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.UUID
 

@@ -1,5 +1,3 @@
-package com.snabbit.prototype.wallet.support
-
-import java.util.UUID
+package com.snabbit.prototype.wallet.exception
 
 class WalletRuleViolation(message: String) : RuntimeException(message)

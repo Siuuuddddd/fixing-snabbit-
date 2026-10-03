@@ -1,4 +1,4 @@
-package com.snabbit.prototype.wallet.support
+package com.snabbit.prototype.wallet.exception
 
 import java.util.UUID
 

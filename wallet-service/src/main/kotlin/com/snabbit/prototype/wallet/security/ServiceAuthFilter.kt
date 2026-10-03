@@ -3,12 +3,10 @@ package com.snabbit.prototype.wallet.security
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
-import org.springframework.web.filter.OncePerRequestFilter
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class ServiceAuthFilter(private val properties: ServiceAuthProperties) : OncePerRequestFilter() {

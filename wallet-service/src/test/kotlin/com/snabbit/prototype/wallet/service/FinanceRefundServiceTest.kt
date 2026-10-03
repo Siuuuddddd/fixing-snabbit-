@@ -1,21 +1,18 @@
 package com.snabbit.prototype.wallet.service
 
-import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
-
-import com.snabbit.prototype.wallet.dto.response.FinanceRefundSnapshot
-
 import com.snabbit.prototype.wallet.domain.enums.RefundStatus
-
-import com.snabbit.prototype.wallet.payment.PaymentProviderException
+import com.snabbit.prototype.wallet.dto.response.FinanceRefundSnapshot
+import com.snabbit.prototype.wallet.dto.response.RefundSnapshot
+import com.snabbit.prototype.wallet.exception.PaymentProviderException
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
 class FinanceRefundServiceTest {
     private val transactions = mockk<WalletTransactionService>()

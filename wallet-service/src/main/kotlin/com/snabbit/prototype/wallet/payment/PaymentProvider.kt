@@ -1,8 +1,7 @@
 package com.snabbit.prototype.wallet.payment
 
-import com.snabbit.prototype.wallet.dto.response.ProviderRefund
-
 import com.snabbit.prototype.wallet.dto.response.ProviderOrder
+import com.snabbit.prototype.wallet.dto.response.ProviderRefund
 
 interface PaymentProvider {
     fun findOrderByReceipt(receipt: String): ProviderOrder?

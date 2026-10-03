@@ -1,10 +1,10 @@
 package com.snabbit.prototype.wallet.repository
 
 import com.snabbit.prototype.wallet.domain.WalletLedgerEntry
+import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
-import java.util.UUID
 
 interface WalletLedgerRepository : JpaRepository<WalletLedgerEntry, UUID> {
     fun existsByIdempotencyKey(idempotencyKey: String): Boolean

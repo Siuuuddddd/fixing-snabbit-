@@ -1,9 +1,9 @@
 package com.snabbit.prototype.wallet.repository
 
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Repository
 import java.sql.Timestamp
 import java.time.Instant
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Repository
 
 @Repository
 class ProcessedWebhookStore(private val jdbcTemplate: JdbcTemplate) {
