@@ -1,5 +1,6 @@
 package com.snabbit.prototype.support.security
 
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -9,7 +10,6 @@ import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.web.server.WebFilterChain
 import reactor.core.publisher.Mono
-import java.util.concurrent.atomic.AtomicBoolean
 
 class ServiceAuthWebFilterTest {
     private val token = "test-service-token-with-at-least-32-bytes"

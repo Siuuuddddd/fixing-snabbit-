@@ -1,20 +1,19 @@
 package com.snabbit.prototype.support.service
 
-import com.snabbit.prototype.support.dto.response.SupportMessageSnapshot
-
 import com.snabbit.prototype.support.dto.response.BookingOwnershipContext
-
+import com.snabbit.prototype.support.dto.response.SupportMessageSnapshot
+import com.snabbit.prototype.support.exception.SupportRequestRejected
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 
 class SupportServiceTest {
     private val bookings = mockk<SupportBookingClient>()

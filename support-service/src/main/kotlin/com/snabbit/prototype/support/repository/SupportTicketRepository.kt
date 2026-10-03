@@ -1,15 +1,13 @@
 package com.snabbit.prototype.support.repository
 
 import com.snabbit.prototype.support.domain.enums.SupportTicketStatus
-
-import com.snabbit.prototype.support.domain.SupportMessage
 import com.snabbit.prototype.support.domain.SupportTicket
 import jakarta.persistence.LockModeType
+import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
-import java.util.UUID
 
 interface SupportTicketRepository : JpaRepository<SupportTicket, UUID> {
     fun findByBookingId(bookingId: UUID): SupportTicket?

@@ -1,11 +1,10 @@
 package com.snabbit.prototype.support.domain
 
 import com.snabbit.prototype.support.domain.enums.SupportTicketStatus
-
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.EnumType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.Version

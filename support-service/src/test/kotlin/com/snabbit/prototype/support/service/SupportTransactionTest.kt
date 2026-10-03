@@ -1,23 +1,22 @@
 package com.snabbit.prototype.support.service
 
-import com.snabbit.prototype.support.domain.enums.SupportTicketStatus
-
 import com.snabbit.prototype.support.domain.enums.SupportSenderType
-
+import com.snabbit.prototype.support.domain.enums.SupportTicketStatus
 import com.snabbit.prototype.support.domain.SupportMessage
 import com.snabbit.prototype.support.domain.SupportTicket
+import com.snabbit.prototype.support.exception.SupportRequestRejected
 import com.snabbit.prototype.support.repository.SupportMessageRepository
 import com.snabbit.prototype.support.repository.SupportTicketRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class SupportTransactionTest {
     private val tickets = mockk<SupportTicketRepository>()
