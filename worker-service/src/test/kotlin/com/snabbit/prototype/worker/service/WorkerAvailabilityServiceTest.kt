@@ -1,26 +1,25 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
-
 import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
-
 import com.snabbit.prototype.worker.domain.WorkerAvailability
 import com.snabbit.prototype.worker.domain.WorkerProfile
+import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
+import com.snabbit.prototype.worker.exception.InvalidWorkerAvailability
 import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every
 import io.mockk.mockk
-import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class WorkerAvailabilityServiceTest {
     private val workers = mockk<WorkerProfileRepository>()

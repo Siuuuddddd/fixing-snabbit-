@@ -1,26 +1,24 @@
 package com.snabbit.prototype.worker.integration
 
-import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
-
 import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
-
+import com.snabbit.prototype.worker.dto.request.WorkerAvailabilityCommand
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.service.WorkerAvailabilityService
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.springframework.jdbc.core.JdbcTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.util.UUID
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 
 @SpringBootTest(
     properties = [

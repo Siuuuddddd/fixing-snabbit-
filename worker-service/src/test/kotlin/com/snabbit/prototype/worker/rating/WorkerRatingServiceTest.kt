@@ -1,30 +1,27 @@
 package com.snabbit.prototype.worker.rating
 
-import com.snabbit.prototype.worker.dto.response.BookingRatingVisit
-
-import com.snabbit.prototype.worker.dto.response.BookingRatingContext
-
-import com.snabbit.prototype.worker.domain.enums.WorkerTier
-
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
-
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.domain.WorkerRating
+import com.snabbit.prototype.worker.dto.response.BookingRatingContext
+import com.snabbit.prototype.worker.dto.response.BookingRatingVisit
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
+import com.snabbit.prototype.worker.exception.WorkerRatingRejected
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerRatingRepository
 import io.mockk.every
 import io.mockk.mockk
-import com.snabbit.prototype.worker.events.WorkerOutboxWriter
 import io.mockk.slot
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class WorkerRatingServiceTest {
     private val workers = mockk<WorkerProfileRepository>()

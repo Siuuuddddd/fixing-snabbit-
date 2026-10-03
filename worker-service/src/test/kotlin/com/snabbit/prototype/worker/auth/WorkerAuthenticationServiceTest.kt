@@ -1,21 +1,13 @@
 package com.snabbit.prototype.worker.auth
 
-import com.snabbit.prototype.worker.domain.enums.WorkerTier
-
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
-
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
 import com.snabbit.prototype.worker.domain.WorkerProfile
+import com.snabbit.prototype.worker.exception.InvalidWorkerOtp
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets
 import java.time.Clock
@@ -24,6 +16,13 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import javax.crypto.spec.SecretKeySpec
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 
 class WorkerAuthenticationServiceTest {
     private val workers = mockk<WorkerProfileRepository>()

@@ -1,7 +1,7 @@
 package com.snabbit.prototype.worker.events
 
-import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
+import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("worker-eventing")
 data class WorkerEventingProperties(

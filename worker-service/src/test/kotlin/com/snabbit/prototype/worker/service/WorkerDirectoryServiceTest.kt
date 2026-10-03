@@ -1,22 +1,19 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.dto.response.WorkerContactSnapshot
-
-import com.snabbit.prototype.worker.domain.enums.WorkerTier
-
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
-
+import com.snabbit.prototype.worker.domain.enums.WorkerTier
 import com.snabbit.prototype.worker.domain.WorkerProfile
+import com.snabbit.prototype.worker.dto.response.WorkerContactSnapshot
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Test
 
 class WorkerDirectoryServiceTest {
     private val workers = mockk<WorkerProfileRepository>()

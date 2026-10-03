@@ -3,9 +3,9 @@ package com.snabbit.prototype.worker.events
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.worker.domain.WorkerOutboxEvent
 import com.snabbit.prototype.worker.repository.WorkerOutboxRepository
-import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Component
 
 @Component
 class WorkerOutboxWriter(

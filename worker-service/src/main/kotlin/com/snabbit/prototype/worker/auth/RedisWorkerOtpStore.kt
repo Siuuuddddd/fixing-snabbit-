@@ -1,8 +1,8 @@
 package com.snabbit.prototype.worker.auth
 
+import java.time.Duration
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
-import java.time.Duration
 
 @Component
 class RedisWorkerOtpStore(private val redis: StringRedisTemplate) : WorkerOtpStore {

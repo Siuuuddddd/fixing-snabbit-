@@ -1,20 +1,17 @@
 package com.snabbit.prototype.worker.rating
 
-import com.snabbit.prototype.worker.dto.response.WorkerRatingSnapshot
-
 import com.snabbit.prototype.worker.domain.WorkerRating
+import com.snabbit.prototype.worker.dto.response.WorkerRatingSnapshot
+import com.snabbit.prototype.worker.events.WorkerOutboxWriter
+import com.snabbit.prototype.worker.exception.WorkerRatingRejected
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerRatingRepository
-import com.snabbit.prototype.worker.security.InternalServiceClientFactory
-import com.snabbit.prototype.worker.events.WorkerOutboxWriter
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.stereotype.Component
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class WorkerRatingTransaction(
