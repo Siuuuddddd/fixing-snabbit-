@@ -1,21 +1,19 @@
 package com.snabbit.prototype.booking.domain
 
-import com.snabbit.prototype.booking.domain.enums.BookingType
-
 import com.snabbit.prototype.booking.domain.enums.BookingStatus
-
+import com.snabbit.prototype.booking.domain.enums.BookingType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.EnumType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.Version
+import java.math.BigDecimal
+import java.time.Instant
+import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
-import java.time.Instant
-import java.math.BigDecimal
-import java.util.UUID
 
 @Entity
 @Table(name = "booking")

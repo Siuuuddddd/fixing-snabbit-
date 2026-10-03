@@ -1,15 +1,22 @@
 package com.snabbit.prototype.booking.integration
 
-import com.snabbit.prototype.booking.dto.request.VisitCommand
-
-import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
-
 import com.snabbit.prototype.booking.domain.enums.BookingType
-
-import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.events.OutboxDeliveryStore
-import com.snabbit.prototype.booking.support.BookingRuleViolation
-import com.snabbit.prototype.booking.support.SlotUnavailable
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
+import com.snabbit.prototype.booking.exception.SlotUnavailable
+import com.snabbit.prototype.booking.service.BookingLifecycleService
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.time.ZoneId
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -22,16 +29,6 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.sql.Timestamp
-import java.util.UUID
-import java.util.concurrent.Callable
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
 
 @SpringBootTest(
     properties = [

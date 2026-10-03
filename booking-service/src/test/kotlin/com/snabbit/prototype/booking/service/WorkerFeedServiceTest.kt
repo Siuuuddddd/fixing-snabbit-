@@ -1,37 +1,31 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.dto.response.WorkerOfferFeedItem
-
-import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
-
-import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
-
-import com.snabbit.prototype.booking.domain.enums.JobStatus
-
-import com.snabbit.prototype.booking.domain.enums.BookingType
-
-import com.snabbit.prototype.booking.domain.enums.BookingStatus
-
 import com.snabbit.prototype.booking.catalog.ServiceOfferingRepository
 import com.snabbit.prototype.booking.domain.Booking
 import com.snabbit.prototype.booking.domain.BookingRequirements
+import com.snabbit.prototype.booking.domain.enums.BookingStatus
+import com.snabbit.prototype.booking.domain.enums.BookingType
+import com.snabbit.prototype.booking.domain.enums.JobStatus
+import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
+import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
 import com.snabbit.prototype.booking.domain.ServiceOffering
 import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.WorkerOffer
+import com.snabbit.prototype.booking.dto.response.WorkerOfferFeedItem
 import com.snabbit.prototype.booking.repository.BookingRepository
 import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Test
-import org.springframework.data.domain.Pageable
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Test
+import org.springframework.data.domain.Pageable
 
 class WorkerFeedServiceTest {
     private val offers = mockk<WorkerOfferRepository>()

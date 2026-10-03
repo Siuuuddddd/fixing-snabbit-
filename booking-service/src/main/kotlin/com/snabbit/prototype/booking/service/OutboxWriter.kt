@@ -3,9 +3,9 @@ package com.snabbit.prototype.booking.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.booking.domain.OutboxEvent
 import com.snabbit.prototype.booking.repository.OutboxEventRepository
-import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Component
 
 @Component
 class OutboxWriter(

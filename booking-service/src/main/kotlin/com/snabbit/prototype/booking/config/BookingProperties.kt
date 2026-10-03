@@ -1,9 +1,9 @@
 package com.snabbit.prototype.booking.config
 
-import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZoneId
+import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("booking")
 data class BookingProperties(

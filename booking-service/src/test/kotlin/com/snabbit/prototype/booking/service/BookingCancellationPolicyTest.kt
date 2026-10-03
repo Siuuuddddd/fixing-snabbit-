@@ -1,10 +1,10 @@
 package com.snabbit.prototype.booking.service
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class BookingCancellationPolicyTest {
     private val policy = BookingCancellationPolicy(

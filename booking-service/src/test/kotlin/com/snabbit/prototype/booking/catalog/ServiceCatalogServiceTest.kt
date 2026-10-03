@@ -1,14 +1,14 @@
 package com.snabbit.prototype.booking.catalog
 
 import com.snabbit.prototype.booking.domain.ServiceOffering
-import com.snabbit.prototype.booking.support.BookingRuleViolation
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import io.mockk.every
 import io.mockk.mockk
+import java.util.Optional
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.util.Optional
-import java.util.UUID
 
 class ServiceCatalogServiceTest {
     private val repository = mockk<ServiceOfferingRepository>()

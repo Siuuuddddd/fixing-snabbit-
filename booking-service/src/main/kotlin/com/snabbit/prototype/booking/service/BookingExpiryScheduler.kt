@@ -3,9 +3,9 @@ package com.snabbit.prototype.booking.service
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository
+import java.time.Clock
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.time.Clock
 
 @Component
 class BookingExpiryScheduler(

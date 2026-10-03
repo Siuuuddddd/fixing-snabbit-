@@ -1,7 +1,7 @@
 package com.snabbit.prototype.booking.events
 
-import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
+import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("eventing")
 data class EventingProperties(

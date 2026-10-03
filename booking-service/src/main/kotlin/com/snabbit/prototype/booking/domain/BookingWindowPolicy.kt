@@ -1,14 +1,13 @@
 package com.snabbit.prototype.booking.domain
 
-import com.snabbit.prototype.booking.domain.enums.BookingType
-
 import com.snabbit.prototype.booking.config.BookingProperties
-import com.snabbit.prototype.booking.support.BookingRuleViolation
-import org.springframework.stereotype.Component
+import com.snabbit.prototype.booking.domain.enums.BookingType
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZonedDateTime
+import org.springframework.stereotype.Component
 
 @Component
 class BookingWindowPolicy(

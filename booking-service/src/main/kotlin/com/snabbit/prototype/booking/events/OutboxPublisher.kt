@@ -1,15 +1,15 @@
 package com.snabbit.prototype.booking.events
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.time.Clock
+import java.time.Duration
+import java.util.concurrent.TimeUnit
+import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 @Component
 @ConditionalOnProperty(prefix = "eventing", name = ["outbox-enabled"], havingValue = "true", matchIfMissing = true)

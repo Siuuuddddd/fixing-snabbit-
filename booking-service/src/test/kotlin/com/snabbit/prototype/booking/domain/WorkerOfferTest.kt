@@ -1,12 +1,11 @@
 package com.snabbit.prototype.booking.domain
 
 import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
-
+import java.time.Instant
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.time.Instant
-import java.util.UUID
 
 class WorkerOfferTest {
     private val now = Instant.parse("2026-10-02T04:00:00Z")

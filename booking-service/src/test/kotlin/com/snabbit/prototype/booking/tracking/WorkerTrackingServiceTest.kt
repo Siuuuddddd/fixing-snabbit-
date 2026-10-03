@@ -1,17 +1,21 @@
 package com.snabbit.prototype.booking.tracking
 
-import com.snabbit.prototype.booking.dto.response.VisitSnapshot
-
-import com.snabbit.prototype.booking.dto.response.BookingSnapshot
-
-import com.snabbit.prototype.booking.dto.response.WorkerLocationResponse
-
-import com.snabbit.prototype.booking.service.BookingLifecycleService
 import com.snabbit.prototype.booking.domain.BookingRequirements
-import com.snabbit.prototype.booking.support.CustomerAccessDenied
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+import com.snabbit.prototype.booking.dto.response.VisitSnapshot
+import com.snabbit.prototype.booking.dto.response.WorkerLocationResponse
+import com.snabbit.prototype.booking.exception.CustomerAccessDenied
+import com.snabbit.prototype.booking.exception.WorkerTrackingUnavailable
+import com.snabbit.prototype.booking.service.BookingLifecycleService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.math.BigDecimal
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import java.util.UUID
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -19,12 +23,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.math.BigDecimal
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneOffset
-import java.util.UUID
 
 class WorkerTrackingServiceTest {
     private val now = Instant.parse("2026-10-02T04:00:00Z")

@@ -1,24 +1,21 @@
 package com.snabbit.prototype.booking.payment
 
-import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
-
-import com.snabbit.prototype.booking.dto.response.BookingPaymentSnapshot
-
 import com.snabbit.prototype.booking.dto.request.StartBookingPaymentCommand
-
+import com.snabbit.prototype.booking.dto.response.BookingPaymentSnapshot
+import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
+import com.snabbit.prototype.booking.exception.CustomerAccessDenied
+import com.snabbit.prototype.booking.exception.InvalidBookingState
 import com.snabbit.prototype.booking.service.BookingLifecycleService
-import com.snabbit.prototype.booking.support.InvalidBookingState
-import com.snabbit.prototype.booking.support.CustomerAccessDenied
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class BookingPaymentServiceTest {
     private val bookings = mockk<BookingLifecycleService>()

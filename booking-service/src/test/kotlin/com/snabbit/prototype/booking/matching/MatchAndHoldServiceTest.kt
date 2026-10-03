@@ -1,50 +1,40 @@
 package com.snabbit.prototype.booking.matching
 
-import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
-
-import com.snabbit.prototype.booking.dto.response.BookingSnapshot
-
-import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
-
-import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
-
-import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
-
-import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
-
-import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
-
-import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
-
-import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
-
-import com.snabbit.prototype.booking.dto.request.MatchAndHoldCommand
-
-import com.snabbit.prototype.booking.domain.enums.BookingType
-
-import com.snabbit.prototype.booking.service.BookingLifecycleService
 import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
+import com.snabbit.prototype.booking.domain.enums.BookingType
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+import com.snabbit.prototype.booking.dto.request.MatchAndHoldCommand
+import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
+import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
+import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
+import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
+import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
+import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
+import com.snabbit.prototype.booking.exception.SlotUnavailable
+import com.snabbit.prototype.booking.service.BookingLifecycleService
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.time.Clock
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.Test
 
 class MatchAndHoldServiceTest {
     private val now = Instant.parse("2026-10-02T04:00:00Z")
@@ -188,10 +178,10 @@ class MatchAndHoldServiceTest {
             PlusPassReservationResponse(passId, request.bookingId, 18_000, 3_000, 15_000, request.holdUntil)
         }
         every { lifecycle.findIdempotent(customerId, any(), any()) } returns null
-        every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.support.SlotUnavailable("lost race")
+        every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.exception.SlotUnavailable("lost race")
         coEvery { clients.releasePass(customerId, any()) } returns Unit
 
-        assertThrows<com.snabbit.prototype.booking.support.SlotUnavailable> {
+        assertThrows<com.snabbit.prototype.booking.exception.SlotUnavailable> {
             service.matchAndHold(
                 MatchAndHoldCommand(
                     customerId, serviceId, BookingType.SCHEDULED, Duration.ofHours(1),
@@ -258,7 +248,7 @@ class MatchAndHoldServiceTest {
             val request = secondArg<ReservePlusPassRequest>()
             PlusPassReservationResponse(passId, request.bookingId, 18_000, 3_000, 15_000, request.holdUntil)
         }
-        every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.support.SlotUnavailable("lost race")
+        every { lifecycle.create(any()) } throws com.snabbit.prototype.booking.exception.SlotUnavailable("lost race")
 
         val result = service.matchAndHold(
             MatchAndHoldCommand(

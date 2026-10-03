@@ -1,10 +1,10 @@
 package com.snabbit.prototype.booking.events
 
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Repository
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Repository
 
 @Repository
 class ProcessedMessageStore(private val jdbcTemplate: JdbcTemplate) {

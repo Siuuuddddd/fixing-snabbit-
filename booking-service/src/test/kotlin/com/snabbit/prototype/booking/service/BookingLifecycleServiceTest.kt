@@ -1,44 +1,34 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
-
-import com.snabbit.prototype.booking.dto.request.VisitCommand
-
-import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
-
-import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
-
-import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
-
-import com.snabbit.prototype.booking.domain.enums.JobStatus
-
-import com.snabbit.prototype.booking.domain.enums.BookingType
-
-import com.snabbit.prototype.booking.domain.enums.BookingStatus
-
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.Booking
 import com.snabbit.prototype.booking.domain.BookingRequirements
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
+import com.snabbit.prototype.booking.domain.enums.BookingStatus
+import com.snabbit.prototype.booking.domain.enums.BookingType
+import com.snabbit.prototype.booking.domain.enums.JobStatus
+import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
+import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
 import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.WorkerDayCapacity
 import com.snabbit.prototype.booking.domain.WorkerOffer
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+import com.snabbit.prototype.booking.dto.request.VisitCommand
+import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
+import com.snabbit.prototype.booking.exception.CustomerAccessDenied
+import com.snabbit.prototype.booking.exception.InvalidBookingState
+import com.snabbit.prototype.booking.exception.SlotUnavailable
 import com.snabbit.prototype.booking.repository.BookingRepository
 import com.snabbit.prototype.booking.repository.OutboxEventRepository
 import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerDayCapacityRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository
-import com.snabbit.prototype.booking.support.SlotUnavailable
-import com.snabbit.prototype.booking.support.BookingRuleViolation
-import com.snabbit.prototype.booking.support.CustomerAccessDenied
-import com.snabbit.prototype.booking.support.InvalidBookingState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -46,9 +36,11 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.util.UUID
 import java.util.Optional
-import java.math.BigDecimal
+import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class BookingLifecycleServiceTest {
     private val bookingRepository = mockk<BookingRepository>()
@@ -361,7 +353,7 @@ class BookingLifecycleServiceTest {
         every { bookingRepository.findForUpdate(booking.id) } returns booking
         every { holdRepository.findVisitForUpdate(booking.id, 0) } returns hold
 
-        assertThrows(com.snabbit.prototype.booking.support.BookingRuleViolation::class.java) {
+        assertThrows(com.snabbit.prototype.booking.exception.BookingRuleViolation::class.java) {
             service.workerArrive(
                 booking.id,
                 0,
@@ -386,7 +378,7 @@ class BookingLifecycleServiceTest {
         every { holdRepository.findVisitForUpdate(booking.id, 0) } returns hold
 
         assertEquals(200.0, properties.arrivalRadiusMeters)
-        assertThrows(com.snabbit.prototype.booking.support.BookingRuleViolation::class.java) {
+        assertThrows(com.snabbit.prototype.booking.exception.BookingRuleViolation::class.java) {
             service.workerArrive(
                 booking.id,
                 0,

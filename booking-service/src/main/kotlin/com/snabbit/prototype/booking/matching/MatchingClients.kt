@@ -1,26 +1,18 @@
 package com.snabbit.prototype.booking.matching
 
-import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
-
-import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
-
-import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
-
-import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
-
-import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
-
-import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
-
 import com.snabbit.prototype.booking.config.IntegrationProperties
+import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
+import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
+import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
+import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
+import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
+import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
 import com.snabbit.prototype.booking.security.InternalServiceClientFactory
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
-import java.math.BigDecimal
-import java.time.Instant
-import java.util.UUID
 
 @Component
 class MatchingClients(factory: InternalServiceClientFactory, properties: IntegrationProperties) {

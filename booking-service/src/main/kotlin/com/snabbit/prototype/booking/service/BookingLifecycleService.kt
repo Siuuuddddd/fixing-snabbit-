@@ -1,54 +1,37 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.dto.response.VisitSnapshot
-
-import com.snabbit.prototype.booking.dto.response.RatingVisitSnapshot
-
-import com.snabbit.prototype.booking.dto.response.RatingContextSnapshot
-
-import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
-
-import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
-
-import com.snabbit.prototype.booking.dto.response.CancellationContext
-
-import com.snabbit.prototype.booking.dto.response.BookingSnapshot
-
-import com.snabbit.prototype.booking.dto.response.BookingOwnershipSnapshot
-
-import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
-
-import com.snabbit.prototype.booking.dto.request.VisitCommand
-
-import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
-
-import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
-
-import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
-
-import com.snabbit.prototype.booking.domain.enums.JobStatus
-
-import com.snabbit.prototype.booking.domain.enums.BookingType
-
-import com.snabbit.prototype.booking.domain.enums.BookingStatus
-
 import com.snabbit.prototype.booking.config.BookingProperties
 import com.snabbit.prototype.booking.domain.Booking
 import com.snabbit.prototype.booking.domain.BookingWindowPolicy
+import com.snabbit.prototype.booking.domain.enums.BookingStatus
+import com.snabbit.prototype.booking.domain.enums.BookingType
+import com.snabbit.prototype.booking.domain.enums.JobStatus
+import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
+import com.snabbit.prototype.booking.domain.enums.WorkerOfferStatus
 import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.WorkerDayCapacity
 import com.snabbit.prototype.booking.domain.WorkerOffer
+import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+import com.snabbit.prototype.booking.dto.request.VisitCommand
+import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
+import com.snabbit.prototype.booking.dto.response.BookingOwnershipSnapshot
+import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+import com.snabbit.prototype.booking.dto.response.CancellationContext
+import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
+import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
+import com.snabbit.prototype.booking.dto.response.RatingContextSnapshot
+import com.snabbit.prototype.booking.dto.response.RatingVisitSnapshot
+import com.snabbit.prototype.booking.dto.response.VisitSnapshot
+import com.snabbit.prototype.booking.exception.BookingNotFound
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
+import com.snabbit.prototype.booking.exception.CustomerAccessDenied
+import com.snabbit.prototype.booking.exception.InvalidBookingState
+import com.snabbit.prototype.booking.exception.OfferUnavailable
+import com.snabbit.prototype.booking.exception.SlotUnavailable
 import com.snabbit.prototype.booking.repository.BookingRepository
 import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerDayCapacityRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository
-import com.snabbit.prototype.booking.support.BookingNotFound
-import com.snabbit.prototype.booking.support.BookingRuleViolation
-import com.snabbit.prototype.booking.support.InvalidBookingState
-import com.snabbit.prototype.booking.support.OfferUnavailable
-import com.snabbit.prototype.booking.support.SlotUnavailable
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -57,6 +40,8 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class BookingLifecycleService(
@@ -289,7 +274,7 @@ class BookingLifecycleService(
     ): BookingSnapshot {
         val now = clock.instant()
         val booking = requireBookingForUpdate(bookingId)
-        if (booking.customerId != expectedCustomerId) throw com.snabbit.prototype.booking.support.CustomerAccessDenied()
+        if (booking.customerId != expectedCustomerId) throw com.snabbit.prototype.booking.exception.CustomerAccessDenied()
         if (booking.status == BookingStatus.CANCELLED && booking.cancellationType == "CUSTOMER") {
             return currentSnapshot(booking)
         }
@@ -465,7 +450,7 @@ class BookingLifecycleService(
         val now = clock.instant()
         val booking = requireBookingForUpdate(bookingId)
         if (expectedCustomerId != null && booking.customerId != expectedCustomerId) {
-            throw com.snabbit.prototype.booking.support.CustomerAccessDenied()
+            throw com.snabbit.prototype.booking.exception.CustomerAccessDenied()
         }
         if (booking.status == BookingStatus.CANCELLED) return currentSnapshot(booking)
         if (booking.status == BookingStatus.CONFIRMED || booking.status == BookingStatus.COMPLETED) {

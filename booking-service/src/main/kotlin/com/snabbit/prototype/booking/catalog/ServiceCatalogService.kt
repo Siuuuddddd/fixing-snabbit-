@@ -1,13 +1,11 @@
 package com.snabbit.prototype.booking.catalog
 
-import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
-
 import com.snabbit.prototype.booking.domain.ServiceOffering
-import com.snabbit.prototype.booking.support.BookingRuleViolation
-import org.springframework.data.jpa.repository.JpaRepository
+import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
+import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class ServiceCatalogService(private val offerings: ServiceOfferingRepository) {

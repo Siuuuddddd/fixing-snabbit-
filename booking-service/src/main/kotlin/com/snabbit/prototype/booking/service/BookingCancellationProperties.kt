@@ -1,16 +1,7 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.matching.MatchingClients
-import com.snabbit.prototype.booking.support.CustomerAccessDenied
-import com.snabbit.prototype.booking.support.InvalidBookingState
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.stereotype.Component
-import org.springframework.stereotype.Service
-import java.time.Clock
 import java.time.Duration
-import java.time.Instant
-import java.util.UUID
-import kotlin.math.min
+import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("cancellation")
 data class BookingCancellationProperties(
