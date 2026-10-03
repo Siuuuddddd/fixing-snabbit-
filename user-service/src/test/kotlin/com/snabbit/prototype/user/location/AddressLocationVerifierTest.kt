@@ -1,13 +1,13 @@
 package com.snabbit.prototype.user.location
 
 import com.snabbit.prototype.user.dto.response.GeocodedAddress
-
+import com.snabbit.prototype.user.exception.LocationVerificationRejected
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.Test
 
 class AddressLocationVerifierTest {
     private val provider = mockk<GeocodingProvider>()

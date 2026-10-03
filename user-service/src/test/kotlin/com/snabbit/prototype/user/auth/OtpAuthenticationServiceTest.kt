@@ -1,19 +1,13 @@
 package com.snabbit.prototype.user.auth
 
 import com.snabbit.prototype.user.domain.enums.UserStatus
-
 import com.snabbit.prototype.user.domain.UserProfile
+import com.snabbit.prototype.user.exception.InvalidOtp
+import com.snabbit.prototype.user.exception.OtpRateLimited
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import java.nio.charset.StandardCharsets
 import java.time.Clock
 import java.time.Duration
@@ -21,6 +15,13 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import javax.crypto.spec.SecretKeySpec
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 
 class OtpAuthenticationServiceTest {
     private val users = mockk<UserProfileRepository>()

@@ -1,27 +1,27 @@
 package com.snabbit.prototype.user.service
 
 import com.snabbit.prototype.user.domain.enums.UserStatus
-
 import com.snabbit.prototype.user.domain.FavouriteWorker
 import com.snabbit.prototype.user.domain.FavouriteWorkerId
 import com.snabbit.prototype.user.domain.HouseholdPreference
 import com.snabbit.prototype.user.domain.UserProfile
+import com.snabbit.prototype.user.events.UserOutboxWriter
+import com.snabbit.prototype.user.exception.FavouriteLimitReached
 import com.snabbit.prototype.user.repository.FavouriteWorkerRepository
 import com.snabbit.prototype.user.repository.HouseholdPreferenceRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
-import com.snabbit.prototype.user.events.UserOutboxWriter
 import io.mockk.slot
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
 
 class HouseholdServiceTest {
     private val users = mockk<UserProfileRepository>()

@@ -1,20 +1,18 @@
 package com.snabbit.prototype.user.plus
 
-import com.snabbit.prototype.user.dto.response.PlusPurchaseSnapshot
-
 import com.snabbit.prototype.user.dto.request.CreatePlusWalletPurchaseRequest
-
+import com.snabbit.prototype.user.dto.response.PlusPurchaseSnapshot
+import com.snabbit.prototype.user.exception.CustomerAccessDenied
+import com.snabbit.prototype.user.exception.PlusPurchaseUnavailable
+import com.snabbit.prototype.user.exception.PlusRequestRejected
 import com.snabbit.prototype.user.rating.UserIntegrationProperties
 import com.snabbit.prototype.user.security.InternalServiceClientFactory
-import com.snabbit.prototype.user.support.CustomerAccessDenied
-import org.springframework.boot.context.properties.ConfigurationProperties
+import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientResponseException
-import java.time.Duration
-import java.util.UUID
 
 @Component
 class HttpPlusWalletClient(

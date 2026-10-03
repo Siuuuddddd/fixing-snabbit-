@@ -1,7 +1,5 @@
 package com.snabbit.prototype.user.auth
 
-import org.springframework.data.redis.core.StringRedisTemplate
-import org.springframework.stereotype.Component
 import java.time.Duration
 
 interface OtpChallengeStore {

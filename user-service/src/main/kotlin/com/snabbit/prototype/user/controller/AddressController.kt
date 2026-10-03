@@ -1,19 +1,12 @@
 package com.snabbit.prototype.user.controller
 
-import com.snabbit.prototype.user.dto.response.AddressSnapshot
-
 import com.snabbit.prototype.user.dto.request.AddressCommand
-
 import com.snabbit.prototype.user.dto.request.SaveAddressRequest
-
+import com.snabbit.prototype.user.dto.response.AddressSnapshot
+import com.snabbit.prototype.user.exception.CustomerAccessDenied
 import com.snabbit.prototype.user.service.AddressService
-import com.snabbit.prototype.user.support.CustomerAccessDenied
 import jakarta.validation.Valid
-import jakarta.validation.constraints.DecimalMax
-import jakarta.validation.constraints.DecimalMin
-import jakarta.validation.constraints.Pattern
-import jakarta.validation.constraints.Positive
-import jakarta.validation.constraints.Size
+import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -24,9 +17,6 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import java.math.BigDecimal
-import java.time.Instant
-import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/users/{userId}/addresses")

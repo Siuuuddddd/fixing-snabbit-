@@ -1,7 +1,7 @@
 package com.snabbit.prototype.user.auth
 
-import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
+import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("auth")
 data class AuthProperties(

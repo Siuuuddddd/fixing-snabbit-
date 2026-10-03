@@ -1,23 +1,14 @@
 package com.snabbit.prototype.user.staff
 
-import com.snabbit.prototype.user.dto.response.AccessTokenResult
-
-import com.snabbit.prototype.user.dto.response.OtpRequestResult
-
-import com.snabbit.prototype.user.domain.enums.StaffStatus
-
 import com.snabbit.prototype.user.auth.AuthProperties
-import com.snabbit.prototype.user.auth.InvalidOtp
 import com.snabbit.prototype.user.auth.OtpChallengeStore
 import com.snabbit.prototype.user.auth.OtpDelivery
-import com.snabbit.prototype.user.auth.OtpRateLimited
+import com.snabbit.prototype.user.domain.enums.StaffStatus
+import com.snabbit.prototype.user.dto.response.AccessTokenResult
+import com.snabbit.prototype.user.dto.response.OtpRequestResult
+import com.snabbit.prototype.user.exception.InvalidOtp
+import com.snabbit.prototype.user.exception.OtpRateLimited
 import com.snabbit.prototype.user.repository.StaffAccountRepository
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm
-import org.springframework.security.oauth2.jwt.JwsHeader
-import org.springframework.security.oauth2.jwt.JwtClaimsSet
-import org.springframework.security.oauth2.jwt.JwtEncoder
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters
-import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -25,6 +16,12 @@ import java.time.Clock
 import java.util.HexFormat
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm
+import org.springframework.security.oauth2.jwt.JwsHeader
+import org.springframework.security.oauth2.jwt.JwtClaimsSet
+import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters
+import org.springframework.stereotype.Service
 
 @Service
 class StaffAuthenticationService(

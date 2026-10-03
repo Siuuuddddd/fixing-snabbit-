@@ -1,24 +1,22 @@
 package com.snabbit.prototype.user.plus
 
 import com.snabbit.prototype.user.domain.enums.PlusPassStatus
-
 import com.snabbit.prototype.user.domain.enums.UserStatus
-
 import com.snabbit.prototype.user.domain.PlusPass
 import com.snabbit.prototype.user.domain.UserProfile
+import com.snabbit.prototype.user.events.UserOutboxWriter
 import com.snabbit.prototype.user.repository.PlusPassRepository
 import com.snabbit.prototype.user.repository.PlusSubscriptionRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
 import io.mockk.every
 import io.mockk.mockk
-import com.snabbit.prototype.user.events.UserOutboxWriter
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class PlusServiceTest {
     private val users = mockk<UserProfileRepository>()

@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
+import org.junit.jupiter.api.Test
 
 class PlusWalletEventHandlerTest {
     private val processed = mockk<PlusProcessedMessageStore>()

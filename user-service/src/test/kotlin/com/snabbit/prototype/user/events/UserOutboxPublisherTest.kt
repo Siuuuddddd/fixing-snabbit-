@@ -4,16 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.junit.jupiter.api.Test
-import org.springframework.kafka.core.KafkaTemplate
-import org.springframework.kafka.support.SendResult
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
-import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.UUID
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.junit.jupiter.api.Test
+import org.springframework.kafka.core.KafkaTemplate
+import org.springframework.kafka.support.SendResult
 
 class UserOutboxPublisherTest {
     @Test

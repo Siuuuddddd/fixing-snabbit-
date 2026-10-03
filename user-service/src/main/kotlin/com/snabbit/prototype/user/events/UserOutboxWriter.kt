@@ -3,9 +3,9 @@ package com.snabbit.prototype.user.events
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.user.domain.UserOutboxEvent
 import com.snabbit.prototype.user.repository.UserOutboxRepository
-import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Component
 
 @Component
 class UserOutboxWriter(

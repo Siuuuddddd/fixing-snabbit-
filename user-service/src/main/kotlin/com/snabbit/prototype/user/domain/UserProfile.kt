@@ -1,18 +1,17 @@
 package com.snabbit.prototype.user.domain
 
 import com.snabbit.prototype.user.domain.enums.UserStatus
-
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.EnumType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.Version
-import java.time.Instant
-import java.util.UUID
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
+import java.util.UUID
 
 @Entity
 @Table(name = "user_profile")

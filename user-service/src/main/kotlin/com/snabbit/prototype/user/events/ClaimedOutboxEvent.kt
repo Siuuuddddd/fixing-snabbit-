@@ -1,6 +1,5 @@
 package com.snabbit.prototype.user.events
 
-import com.fasterxml.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.UUID
 

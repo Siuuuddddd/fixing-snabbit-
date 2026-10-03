@@ -1,7 +1,8 @@
 package com.snabbit.prototype.user.plus
 
 import com.snabbit.prototype.user.dto.request.ActivatePlusCommand
-
+import java.time.Instant
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -13,8 +14,6 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Instant
-import java.util.UUID
 
 @SpringBootTest(
     properties = [

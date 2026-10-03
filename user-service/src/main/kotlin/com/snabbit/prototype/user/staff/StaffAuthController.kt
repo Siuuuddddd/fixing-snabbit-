@@ -1,15 +1,10 @@
 package com.snabbit.prototype.user.staff
 
-import com.snabbit.prototype.user.dto.response.AccessTokenResult
-
-import com.snabbit.prototype.user.dto.response.OtpRequestResult
-
-import com.snabbit.prototype.user.dto.request.StaffOtpVerification
-
 import com.snabbit.prototype.user.dto.request.StaffOtpRequest
-
+import com.snabbit.prototype.user.dto.request.StaffOtpVerification
+import com.snabbit.prototype.user.dto.response.AccessTokenResult
+import com.snabbit.prototype.user.dto.response.OtpRequestResult
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Pattern
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping

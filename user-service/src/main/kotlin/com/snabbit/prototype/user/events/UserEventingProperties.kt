@@ -1,7 +1,7 @@
 package com.snabbit.prototype.user.events
 
-import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
+import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("user-eventing")
 data class UserEventingProperties(

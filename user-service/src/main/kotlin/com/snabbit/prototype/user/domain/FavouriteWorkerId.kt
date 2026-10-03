@@ -2,11 +2,7 @@ package com.snabbit.prototype.user.domain
 
 import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
-import jakarta.persistence.EmbeddedId
-import jakarta.persistence.Entity
-import jakarta.persistence.Table
 import java.io.Serializable
-import java.time.Instant
 import java.util.UUID
 
 @Embeddable

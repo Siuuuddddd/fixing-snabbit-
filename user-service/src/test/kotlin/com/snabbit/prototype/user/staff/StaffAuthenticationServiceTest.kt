@@ -1,23 +1,16 @@
 package com.snabbit.prototype.user.staff
 
-import com.snabbit.prototype.user.domain.enums.StaffStatus
-
-import com.snabbit.prototype.user.domain.enums.StaffRole
-
 import com.snabbit.prototype.user.auth.AuthConfiguration
 import com.snabbit.prototype.user.auth.AuthProperties
 import com.snabbit.prototype.user.auth.OtpChallengeStore
 import com.snabbit.prototype.user.auth.OtpDelivery
+import com.snabbit.prototype.user.domain.enums.StaffRole
+import com.snabbit.prototype.user.domain.enums.StaffStatus
 import com.snabbit.prototype.user.domain.StaffAccount
 import com.snabbit.prototype.user.repository.StaffAccountRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import java.nio.charset.StandardCharsets
 import java.time.Clock
 import java.time.Duration
@@ -25,6 +18,11 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import javax.crypto.spec.SecretKeySpec
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 
 class StaffAuthenticationServiceTest {
     private val staff = mockk<StaffAccountRepository>()

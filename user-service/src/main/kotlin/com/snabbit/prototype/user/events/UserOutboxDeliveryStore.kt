@@ -1,10 +1,10 @@
 package com.snabbit.prototype.user.events
 
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Repository
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Repository
 
 @Repository
 class UserOutboxDeliveryStore(private val jdbc: JdbcTemplate) {

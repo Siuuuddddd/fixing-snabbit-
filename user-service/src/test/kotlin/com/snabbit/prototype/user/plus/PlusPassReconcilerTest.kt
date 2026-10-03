@@ -1,17 +1,15 @@
 package com.snabbit.prototype.user.plus
 
 import com.snabbit.prototype.user.dto.response.ExpiredPassReservation
-
 import com.snabbit.prototype.user.dto.response.PlusPassBookingContext
-
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import org.junit.jupiter.api.Test
 
 class PlusPassReconcilerTest {
     private val query = mockk<PlusReconciliationQuery>()

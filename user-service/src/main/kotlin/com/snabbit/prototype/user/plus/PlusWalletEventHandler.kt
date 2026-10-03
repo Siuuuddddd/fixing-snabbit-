@@ -1,16 +1,9 @@
 package com.snabbit.prototype.user.plus
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import org.slf4j.LoggerFactory
+import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.kafka.annotation.DltHandler
-import org.springframework.kafka.annotation.KafkaListener
-import org.springframework.kafka.annotation.RetryableTopic
-import org.springframework.retry.annotation.Backoff
-import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class PlusWalletEventHandler(

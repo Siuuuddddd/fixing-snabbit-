@@ -1,19 +1,18 @@
 package com.snabbit.prototype.user.plus
 
-import com.snabbit.prototype.user.dto.response.PlusPurchaseSnapshot
-
 import com.snabbit.prototype.user.dto.request.CreatePlusWalletPurchaseRequest
-
-import com.snabbit.prototype.user.support.CustomerAccessDenied
+import com.snabbit.prototype.user.dto.response.PlusPurchaseSnapshot
+import com.snabbit.prototype.user.exception.CustomerAccessDenied
+import com.snabbit.prototype.user.exception.PlusRequestRejected
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.time.Duration
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import java.util.UUID
 
 class PlusPurchaseServiceTest {
     private val wallet = mockk<PlusWalletClient>()
