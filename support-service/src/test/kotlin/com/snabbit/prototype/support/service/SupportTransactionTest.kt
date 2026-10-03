@@ -1,9 +1,11 @@
 package com.snabbit.prototype.support.service
 
+import com.snabbit.prototype.support.domain.enums.SupportTicketStatus
+
+import com.snabbit.prototype.support.domain.enums.SupportSenderType
+
 import com.snabbit.prototype.support.domain.SupportMessage
-import com.snabbit.prototype.support.domain.SupportSenderType
 import com.snabbit.prototype.support.domain.SupportTicket
-import com.snabbit.prototype.support.domain.SupportTicketStatus
 import com.snabbit.prototype.support.repository.SupportMessageRepository
 import com.snabbit.prototype.support.repository.SupportTicketRepository
 import io.mockk.every

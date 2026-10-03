@@ -1,5 +1,9 @@
 package com.snabbit.prototype.support.service
 
+import com.snabbit.prototype.support.dto.response.SupportMessageSnapshot
+
+import com.snabbit.prototype.support.dto.response.BookingOwnershipContext
+
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
