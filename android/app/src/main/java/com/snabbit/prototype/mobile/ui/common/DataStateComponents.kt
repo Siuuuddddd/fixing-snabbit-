@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +34,7 @@ fun DataErrorPanel(
         verticalArrangement = Arrangement.spacedBy(SnabbitSpacing.medium),
     ) {
         Icon(
-            imageVector = Icons.Outlined.CloudOff,
+            imageVector = if (error.reason == UiDataErrorReason.OFFLINE) Icons.Outlined.CloudOff else Icons.Outlined.ErrorOutline,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.error,
         )
@@ -43,6 +45,21 @@ fun DataErrorPanel(
             textAlign = TextAlign.Center,
         )
         SnabbitButton(text = stringResource(R.string.action_retry), onClick = onRetry)
+    }
+}
+
+@Composable
+fun LoadingStatePanel(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth().padding(SnabbitSpacing.large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(SnabbitSpacing.medium),
+    ) {
+        CircularProgressIndicator()
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 

@@ -12,6 +12,7 @@ import com.snabbit.prototype.mobile.data.auth.remote.AuthApi
 import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.auth.remote.RetrofitAuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.auth.JwtSessionIdentityProvider
+import com.snabbit.prototype.mobile.data.auth.DefaultSessionManager
 import com.snabbit.prototype.mobile.data.address.AndroidDeviceLocationDataSource
 import com.snabbit.prototype.mobile.data.address.DefaultAddressRepository
 import com.snabbit.prototype.mobile.data.address.remote.AddressApi
@@ -23,6 +24,14 @@ import com.snabbit.prototype.mobile.data.catalog.remote.CatalogRemoteDataSource
 import com.snabbit.prototype.mobile.data.catalog.remote.RetrofitCatalogRemoteDataSource
 import com.snabbit.prototype.mobile.data.booking.DefaultBookingRepository
 import com.snabbit.prototype.mobile.data.booking.remote.BookingApi
+import com.snabbit.prototype.mobile.data.bookings.DataStoreKnownBookingDataSource
+import com.snabbit.prototype.mobile.data.bookings.DefaultBookingListRepository
+import com.snabbit.prototype.mobile.data.notification.DataStoreDeviceRegistrationStore
+import com.snabbit.prototype.mobile.data.notification.DefaultNotificationRepository
+import com.snabbit.prototype.mobile.data.notification.DefaultNotificationRefreshEvents
+import com.snabbit.prototype.mobile.data.notification.FirebasePushTokenDataSource
+import com.snabbit.prototype.mobile.data.notification.NotificationApi
+import com.snabbit.prototype.mobile.data.profile.DefaultProfileRepository
 import com.snabbit.prototype.mobile.data.household.DefaultHouseholdRepository
 import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.DefaultWalletRepository
@@ -55,6 +64,8 @@ import com.snabbit.prototype.mobile.domain.catalog.CatalogRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingDraft
 import com.snabbit.prototype.mobile.domain.booking.BookingRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingType
+import com.snabbit.prototype.mobile.domain.bookings.BookingListRepository
+import com.snabbit.prototype.mobile.domain.bookings.KnownBookingDataSource
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletIdDataSource
 import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
@@ -67,6 +78,12 @@ import com.snabbit.prototype.mobile.domain.cancellation.CancellationRepository
 import com.snabbit.prototype.mobile.domain.rating.RatingRepository
 import com.snabbit.prototype.mobile.domain.launch.LaunchRepository
 import com.snabbit.prototype.mobile.domain.session.SessionIdentityProvider
+import com.snabbit.prototype.mobile.domain.session.SessionManager
+import com.snabbit.prototype.mobile.domain.notification.DeviceRegistrationStore
+import com.snabbit.prototype.mobile.domain.notification.NotificationRepository
+import com.snabbit.prototype.mobile.domain.notification.NotificationRefreshEvents
+import com.snabbit.prototype.mobile.domain.notification.PushTokenDataSource
+import com.snabbit.prototype.mobile.domain.profile.ProfileRepository
 import com.snabbit.prototype.mobile.navigation.AddMoneyRoute
 import com.snabbit.prototype.mobile.navigation.AppRole
 import com.snabbit.prototype.mobile.navigation.AddressServiceabilityRoute
@@ -119,6 +136,13 @@ import com.snabbit.prototype.mobile.ui.wallet.WalletScreen
 import com.snabbit.prototype.mobile.ui.wallet.WalletViewModel
 import com.snabbit.prototype.mobile.ui.plus.PlusScreen
 import com.snabbit.prototype.mobile.ui.plus.PlusViewModel
+import com.snabbit.prototype.mobile.ui.bookings.MyBookingsScreen
+import com.snabbit.prototype.mobile.ui.bookings.MyBookingsViewModel
+import com.snabbit.prototype.mobile.ui.notification.NotificationsScreen
+import com.snabbit.prototype.mobile.ui.notification.NotificationsViewModel
+import com.snabbit.prototype.mobile.ui.profile.ProfileScreen
+import com.snabbit.prototype.mobile.ui.profile.ProfileViewModel
+import com.snabbit.prototype.mobile.ui.common.EmptyErrorOfflineScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -136,10 +160,12 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.core.parameter.parametersOf
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.dsl.navigation3.navigation
+import org.koin.core.qualifier.named
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 private val storageModule = module {
+    single(named("applicationScope")) { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
     single<TokenStore> { EncryptedTokenStore(androidContext()) }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.create(
@@ -188,6 +214,7 @@ private val networkModule = module {
     single { get<Retrofit>().create(TrackingApi::class.java) }
     single { get<Retrofit>().create(CancellationApi::class.java) }
     single { get<Retrofit>().create(RatingApi::class.java) }
+    single { get<Retrofit>().create(NotificationApi::class.java) }
     single<TrackingStreamDataSource> { OkHttpTrackingStreamDataSource(get(), get(), BuildConfig.API_BASE_URL) }
 }
 
@@ -196,10 +223,13 @@ private val repositoryModule = module {
     single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get()) }
     single<LaunchRepository> { DefaultLaunchRepository(get(), get()) }
     single<SessionIdentityProvider> { JwtSessionIdentityProvider(get(), get()) }
+    single<SessionManager> { DefaultSessionManager(get()) }
     single<CatalogRepository> { DefaultCatalogRepository(get(), get()) }
     single<AddressRepository> { DefaultAddressRepository(get(), get(), get()) }
     single<DeviceLocationDataSource> { AndroidDeviceLocationDataSource(androidContext()) }
-    single<BookingRepository> { DefaultBookingRepository(get(), get(), get()) }
+    single<KnownBookingDataSource> { DataStoreKnownBookingDataSource(get(), get()) }
+    single<BookingRepository> { DefaultBookingRepository(get(), get(), get(), get()) }
+    single<BookingListRepository> { DefaultBookingListRepository(get(), get()) }
     single<HouseholdRepository> { DefaultHouseholdRepository(get(), get(), get()) }
     single<WalletIdDataSource> { PrototypeConfiguredWalletIdDataSource(BuildConfig.PROTOTYPE_WALLET_ID) }
     single<WalletLedgerDataSource> { PrototypeWalletLedgerDataSource() }
@@ -210,6 +240,11 @@ private val repositoryModule = module {
     single<TrackingRepository> { DefaultTrackingRepository(get(), get(), get()) }
     single<CancellationRepository> { DefaultCancellationRepository(get(), get()) }
     single<RatingRepository> { DefaultRatingRepository(get(), get()) }
+    single<PushTokenDataSource> { FirebasePushTokenDataSource(androidContext()) }
+    single<DeviceRegistrationStore> { DataStoreDeviceRegistrationStore(get()) }
+    single<NotificationRepository> { DefaultNotificationRepository(get(), get(), get(), get(), get()) }
+    single<NotificationRefreshEvents> { DefaultNotificationRefreshEvents() }
+    single<ProfileRepository> { DefaultProfileRepository(get(), get(), get(), get(), get(), get(), get()) }
 }
 
 private val viewModelModule = module {
@@ -237,6 +272,9 @@ private val viewModelModule = module {
     viewModel { (bookingId: String) -> CancelBookingViewModel(bookingId, get()) }
     viewModel { WalletViewModel(get(), get()) }
     viewModel { PlusViewModel(get(), get()) }
+    viewModel { MyBookingsViewModel(get()) }
+    viewModel { NotificationsViewModel(get(), get()) }
+    viewModel { ProfileViewModel(get()) }
 }
 
 @OptIn(KoinExperimentalAPI::class)
@@ -383,10 +421,23 @@ private val navigationModule = module {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         PlusScreen(state, viewModel::refresh, viewModel::retry, viewModel::join, viewModel::checkAgain)
     }
-    navigation<MyBookingsRoute> { PlaceholderScreen(MyBookingsRoute.titleRes()) }
-    navigation<NotificationsRoute> { PlaceholderScreen(NotificationsRoute.titleRes()) }
-    navigation<ProfileRoute> { PlaceholderScreen(ProfileRoute.titleRes()) }
-    navigation<EmptyErrorOfflineRoute> { PlaceholderScreen(EmptyErrorOfflineRoute.titleRes()) }
+    navigation<MyBookingsRoute> {
+        val viewModel = koinViewModel<MyBookingsViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        MyBookingsScreen(state, viewModel::refresh, viewModel::retry, viewModel::selectFilter)
+    }
+    navigation<NotificationsRoute> {
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<NotificationsViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        NotificationsScreen(state, viewModel::refresh, viewModel::retry, viewModel::selectFilter, viewModel::markRead, viewModel::retryPushRegistration, navigation.back)
+    }
+    navigation<ProfileRoute> {
+        val viewModel = koinViewModel<ProfileViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        ProfileScreen(state, viewModel::refresh, viewModel::retry, viewModel::signOut)
+    }
+    navigation<EmptyErrorOfflineRoute> { EmptyErrorOfflineScreen(onRetry = {}) }
     navigation<WorkerLandingRoute> { PlaceholderScreen(WorkerLandingRoute.titleRes()) }
     navigation<WorkerJobFeedRoute> { PlaceholderScreen(WorkerJobFeedRoute.titleRes()) }
     navigation<WorkerJobDetailsRoute> { PlaceholderScreen(WorkerJobDetailsRoute.titleRes()) }

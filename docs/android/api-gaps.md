@@ -8,8 +8,8 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 |---|---|---|
 | No refresh-token endpoint or refresh-token contract | Login, every authenticated screen | Access tokens expire. The Android authenticator safely clears the session after a 401 instead of inventing refresh behavior. |
 | No role-discovery or combined login endpoint | Signup/login role choice | Customer and worker OTP endpoints are separate and only allow active pre-seeded accounts. Registration/onboarding is not implemented. |
-| No customer profile read/update endpoint | Profile | Addresses, household, Plus, favourites, and ratings exist, but a general profile contract does not. |
-| No customer booking-list endpoint | My bookings | Individual booking lookup exists; list/filter/pagination for a customer is absent. |
+| No customer profile read/update endpoint | Profile | Addresses, household, Plus, favourites, and ratings exist, but a general profile contract does not. Android shows the JWT subject and backend-backed settings counts/status while explicitly labelling name, phone, and avatar unavailable. |
+| No customer booking-list endpoint | My bookings | Individual booking lookup exists; list/filter/pagination for a customer is absent. Android persists booking IDs created for each signed-in subject on this install and refreshes those snapshots; it does not present that subset as complete account history. |
 | No wallet ledger/history endpoint | Wallet | Wallet summary and top-up creation exist, but the transaction list shown by the design cannot be fetched. |
 | No authenticated customer-to-wallet discovery endpoint | Booking payment, Wallet, Add money, Plus | All wallet/payment calls require `walletId`, but the login/user/household contracts never return it. Android isolates an optional `PROTOTYPE_WALLET_ID` local-build value behind `WalletIdDataSource`; release-quality discovery remains blocked. |
 | No top-up status/read endpoint | Add money | Creation returns the provider order, and the webhook credits later; the app cannot authoritatively poll a pending order. |
@@ -24,7 +24,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 |---|---|---|
 | Worker registration/profile/onboarding APIs | Worker login/profile | Worker OTP is login for active workers, not self-registration. |
 | Public worker detail/favourite presentation API | Home, assigned worker, favourites | Matching and favourite IDs exist, but the mobile display contract is incomplete. |
-| Notification real-time stream | Notifications | History/device/read APIs exist; there is no notification SSE endpoint. |
+| Notification WebSocket/mobile reconnect validation | Notifications | Durable customer and worker WebSocket routes exist. This chunk uses FCM as a refresh signal plus authoritative history reads; direct WebSocket lifecycle/reconnect behavior remains an optional follow-up. |
 | No durable worker-location SSE replay | Live tracking | The stream emits location IDs but does not consume `Last-Event-ID` or retain event history. Android sends the header, re-fetches the latest snapshot on reconnect, and deduplicates, but cannot replay missed historical points. |
 | Worker schedule aggregate | Worker schedule | Date availability exists, but not the calendar/job aggregate implied by the screen. |
 | Support ticket history and attachment contract | Help and support | Live message creation/streaming exists; richer inbox and media contracts need confirmation. |

@@ -13,6 +13,7 @@ import com.snabbit.prototype.mobile.domain.booking.BookingRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingStatus
 import com.snabbit.prototype.mobile.domain.booking.BookingVisit
 import com.snabbit.prototype.mobile.domain.booking.VisitAvailability
+import com.snabbit.prototype.mobile.domain.bookings.KnownBookingDataSource
 import com.snabbit.prototype.mobile.domain.common.DataFailure
 import com.snabbit.prototype.mobile.domain.common.DataFailureReason
 import com.snabbit.prototype.mobile.domain.session.SessionIdentityProvider
@@ -21,6 +22,7 @@ import kotlinx.serialization.json.Json
 class DefaultBookingRepository(
     private val api: BookingApi,
     private val identity: SessionIdentityProvider,
+    private val knownBookings: KnownBookingDataSource,
     private val json: Json,
 ) : BookingRepository {
     override suspend fun availability(draft: BookingDraft) = apiCall(json) {
@@ -35,7 +37,10 @@ class DefaultBookingRepository(
     }
 
     override suspend fun matchAndHold(draft: BookingDraft, idempotencyKey: String) = apiCall(json) {
-        api.matchAndHold(idempotencyKey, draft.toDto()).toDomain()
+        api.matchAndHold(idempotencyKey, draft.toDto()).toDomain().also { booking ->
+            // Local history must never turn an authoritative booking success into a client-visible failure.
+            runCatching { knownBookings.remember(booking.id) }
+        }
     }
 
     override suspend fun booking(bookingId: String) = apiCall(json) { api.booking(bookingId).toDomain() }

@@ -249,4 +249,54 @@
     <string name="cancel_success_title">Booking cancelled</string>
     <string name="cancel_success_refund">Refund requested: %1$s</string>
     <string name="cancel_success_pending">This amount is not marked received until backend payment state confirms it.</string>
+    <string name="bookings_title">My bookings</string>
+    <string name="bookings_loading">Loading your bookings…</string>
+    <string name="bookings_local_scope_note">Shows backend status for bookings this app has remembered. Complete account history needs a booking-list API.</string>
+    <string name="bookings_filter_upcoming">Upcoming</string>
+    <string name="bookings_filter_past">Past</string>
+    <string name="bookings_empty_title">No bookings here yet</string>
+    <string name="bookings_empty_body">Your bookings will appear here after you create them on this device.</string>
+    <string name="bookings_booking_number">Booking %1$s</string>
+    <plurals name="bookings_visit_count"><item quantity="one">%1$d visit</item><item quantity="other">%1$d visits</item></plurals>
+    <string name="booking_status_awaiting_worker">Finding worker</string>
+    <string name="booking_status_awaiting_payment">Payment pending</string>
+    <string name="booking_status_confirmed">Confirmed</string>
+    <string name="booking_status_worker_unavailable">Worker unavailable</string>
+    <string name="booking_status_expired">Expired</string>
+    <string name="booking_status_cancelled">Cancelled</string>
+    <string name="booking_status_completed">Completed</string>
+    <string name="booking_status_unknown">Status unavailable</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_loading">Loading notifications…</string>
+    <string name="notifications_push_checking">Setting up push notifications…</string>
+    <string name="notifications_push_not_configured">Push delivery is unavailable in this build because Firebase is not configured.</string>
+    <string name="notifications_push_failed">Push registration failed. Notification history is still available.</string>
+    <string name="notifications_enable_permission">Enable notifications</string>
+    <string name="notifications_permission_body">Allow notifications so Snabbit can show booking and payment updates.</string>
+    <string name="notifications_filter_all">All</string>
+    <string name="notifications_filter_bookings">Bookings</string>
+    <string name="notifications_filter_payments">Payments</string>
+    <string name="notifications_filter_offers">Offers</string>
+    <string name="notifications_empty_title">You’re all caught up</string>
+    <string name="notifications_empty_body">Booking, payment, and account updates will appear here.</string>
+    <string name="notifications_unread">Unread</string>
+    <string name="profile_title">Profile</string>
+    <string name="profile_loading">Loading your profile…</string>
+    <string name="profile_customer_account">Customer account</string>
+    <string name="profile_worker_account">Worker account</string>
+    <string name="profile_subject">Account ID %1$s</string>
+    <string name="profile_identity_gap">Name, phone, and avatar are unavailable because the backend has no profile read API.</string>
+    <string name="profile_addresses">My addresses</string>
+    <plurals name="profile_address_count"><item quantity="one">%1$d saved address</item><item quantity="other">%1$d saved addresses</item></plurals>
+    <string name="profile_preferences">Household preferences</string>
+    <string name="profile_configured">Configured</string>
+    <string name="profile_not_configured">Not configured</string>
+    <string name="profile_plus">Snabbit Plus</string>
+    <plurals name="profile_plus_active"><item quantity="one">Active · %1$d pass available</item><item quantity="other">Active · %1$d passes available</item></plurals>
+    <string name="profile_plus_inactive">Not active</string>
+    <string name="profile_sign_out">Log out</string>
+    <string name="profile_signing_out">Logging out…</string>
+    <string name="states_title">Shared screen states</string>
+    <string name="states_empty_title">No bookings yet</string>
+    <string name="states_empty_body">New content will appear here when it becomes available.</string>
 </resources>

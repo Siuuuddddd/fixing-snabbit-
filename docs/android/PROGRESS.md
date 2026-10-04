@@ -39,10 +39,10 @@
 - [x] Cancellation with authoritative early/late quote, Plus benefit, fee/refund breakdown, optional reason, and pending refund state
 - [x] Wallet summary and Add Money with Razorpay test checkout, process-local prototype history, and backend-confirmed balance updates
 - [x] Snabbit Plus status and purchase with prototype plan display and backend-confirmed membership activation
-- [ ] Booking list
-- [ ] Notifications
-- [ ] Customer profile
-- [ ] Empty/error/offline presentation
+- [x] My Bookings with persisted subject-scoped known booking IDs and authoritative per-booking backend refresh
+- [x] Notification history/read states, notification permission, and customer/worker FCM device registration
+- [x] Customer/worker profile summary, backend-backed customer settings status, device cleanup, and logout
+- [x] Shared loading, empty, recoverable error, and offline presentation used across real screens
 - [ ] Worker landing/schedule
 - [ ] Worker job feed
 - [ ] Worker job details/progress
@@ -57,4 +57,5 @@
 - Booking/matching milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 38 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - Tracking/completion/cancellation milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 43 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - Wallet/Plus milestone: Razorpay checkout is activity-owned; client callbacks only begin backend verification. `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 46 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
+- Bookings/notifications/profile/shared-states milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 52 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - A final repository-root backend regression build is run immediately before commit.

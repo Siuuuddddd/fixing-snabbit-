@@ -6,6 +6,7 @@ import com.snabbit.prototype.mobile.data.booking.remote.BookingApi
 import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.WalletApi
 import com.snabbit.prototype.mobile.data.plus.PlusApi
+import com.snabbit.prototype.mobile.data.notification.NotificationApi
 import com.snabbit.prototype.mobile.data.tracking.TrackingApi
 import com.snabbit.prototype.mobile.data.cancellation.CancellationApi
 import com.snabbit.prototype.mobile.data.rating.RatingApi
@@ -70,5 +71,14 @@ class ScreenApiContractTest {
             "api/v1/bookings/{bookingId}/cancellations",
             requireNotNull(CancellationApi::class.java.methods.single { it.name == "cancel" }.getAnnotation(POST::class.java)).value,
         )
+    }
+
+    @Test
+    fun `customer and worker notification paths match backend controllers`() {
+        assertEquals("api/v1/notifications", requireNotNull(NotificationApi::class.java.methods.single { it.name == "customerHistory" }.getAnnotation(GET::class.java)).value)
+        assertEquals("api/v1/notifications/{notificationId}/read", requireNotNull(NotificationApi::class.java.methods.single { it.name == "customerMarkRead" }.getAnnotation(POST::class.java)).value)
+        assertEquals("api/v1/notifications/devices", requireNotNull(NotificationApi::class.java.methods.single { it.name == "customerRegister" }.getAnnotation(POST::class.java)).value)
+        assertEquals("api/v1/worker/notifications", requireNotNull(NotificationApi::class.java.methods.single { it.name == "workerHistory" }.getAnnotation(GET::class.java)).value)
+        assertEquals("api/v1/worker/notifications/devices", requireNotNull(NotificationApi::class.java.methods.single { it.name == "workerRegister" }.getAnnotation(POST::class.java)).value)
     }
 }

@@ -2,7 +2,7 @@
 
 This map was derived from the current Spring controllers, DTOs, enums, gateway routes/security, OTP services, exception handlers, Razorpay webhook flow, tracking endpoints, and worker endpoints. `ProblemDetail` means the backend's RFC 7807-style response with at least HTTP `status` and `detail`. Money fields are integer minor units.
 
-Implementation status: screens 1–13 are implemented. Screens 11–13 use the worker-location snapshot/SSE stream, booking status, worker rating, cancellation quote, cancellation, and refund-breakdown fields. Live tracking replays the latest snapshot before reconnecting and sends `Last-Event-ID`; the current backend does not provide durable historical replay. Later board destinations still use foundation placeholders.
+Implementation status: customer screens and shared states 1–19 are implemented. Screens 16 and 18 are constrained by the missing booking-list and profile-read contracts documented in `api-gaps.md`: Android retains IDs for bookings created on the current install and composes customer settings status from existing owned endpoints. Worker screens 20–23 remain placeholders.
 
 ## Authentication and gateway rules
 
@@ -29,10 +29,10 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 13 | Cancel booking | `GET /api/v1/bookings/{bookingId}/cancellation-quote`; `POST /api/v1/bookings/{bookingId}/cancellations` with optional `reason` | Customer owner | 403/404; 409 invalid/unstarted state; 422 rule; authoritative fee/refund fields; refund remains pending without a customer status endpoint |
 | 14 | Add money | `GET /api/v1/wallets/{walletId}`; `POST /api/v1/wallets/{walletId}/top-ups` | Customer owner; `Idempotency-Key` for top-up | 404 wallet/payment; 409 duplicate/conflict; 422 amount/rule; 502 provider. Razorpay success only starts balance polling; the shown balance changes only after backend confirmation. |
 | 15 | Snabbit Plus | `GET /api/v1/users/{userId}/plus`; `POST /api/v1/users/{userId}/plus/purchases` | Customer and matching user; `Idempotency-Key` | 404; 409 subscription; wallet/payment failures. Razorpay success only starts membership polling; the UI activates only from the backend snapshot. |
-| 16 | My bookings | No booking-list endpoint | Customer | Recorded in `api-gaps.md`; individual `GET /bookings/{id}` is insufficient |
-| 17 | Notifications | `GET /api/v1/notifications`; `POST /api/v1/notifications/{notificationId}/read`; device registration/removal endpoints | Customer or worker, own notifications | 403/404; 422 invalid device. No notification SSE contract. |
-| 18 | Profile | Address, household, favourites, Plus endpoints only | Customer/worker | General profile read/update is missing |
-| 19 | Empty/error/offline | No endpoint | None | Shared presentation for transport, `ProblemDetail`, empty and offline states |
+| 16 | My bookings | No booking-list endpoint; install-local IDs are refreshed with `GET /api/v1/bookings/{bookingId}` | Customer owner | Missing list contract is labelled in UI; 403/404 ownership/stale ID; transport failures remain errors rather than false empty state |
+| 17 | Notifications | Customer `/api/v1/notifications`; worker `/api/v1/worker/notifications`; read, device registration/removal, and `/live` WebSockets | Authenticated owner | 403/404; 422 invalid device. FCM foreground receipt triggers authoritative history refresh. |
+| 18 | Profile | Address, household, and Plus reads for customer summary; JWT subject for both roles | Customer/worker | General name/phone/avatar read/update is missing and is labelled unavailable; logout unregisters the backend device and FCM instance before clearing local auth. |
+| 19 | Empty/error/offline | No endpoint | None | Shared localized presentation for transport/offline, `ProblemDetail`, loading, empty, and retry states |
 | 20 | Worker app landing | Worker OTP plus availability/jobs contracts | Worker | 401/403; no self-registration contract |
 | 21 | Worker job feed | `GET /api/v1/worker/bookings/offers`; `GET /api/v1/worker/bookings/jobs`; accept/reject endpoints | Worker | 404 offer/job; 409 offer expired/already resolved/state conflict |
 | 22 | Worker job details & flow | Accept/reject plus visit arrive/start/complete endpoints; availability and location endpoints | Worker assigned to job | 403/404; 409 invalid transition; 422 availability/location |
@@ -113,11 +113,14 @@ Plus purchase creation returns `purchaseId`, `walletId`, `customerId`, `planCode
 |---|---|---|
 | `GET /api/v1/notifications` | Identity from JWT | Notification history |
 | `POST /api/v1/notifications/{notificationId}/read` | Notification ID | Updated/read acknowledgement |
-| `POST /api/v1/notifications/devices` | Device token and platform fields | Registers a push destination |
+| `POST /api/v1/notifications/devices` | `pushToken` (the current FCM SDK supplies a Firebase Installation ID through `onRegistered`) | Registers an Android push destination; platform is assigned by the backend |
 | `DELETE /api/v1/notifications/devices/{deviceId}` | Device ID | Removes a push destination |
+| WebSocket `/api/v1/notifications/live?afterNotificationId={id}` | Durable notification cursor | Customer notification snapshots after the cursor; worker path is `/api/v1/worker/notifications/live` |
 | `POST /api/v1/support/tickets` | Ticket subject/category/details fields | New support ticket snapshot |
 | `POST /api/v1/support/tickets/{ticketId}/messages` | Message body fields | Created support message |
 | `GET /api/v1/support/tickets/{ticketId}/stream` | SSE request | Live support message stream |
+
+Notification history returns at most 100 records after `afterNotificationId`, ordered ascending. Android follows the cursor to build the current history, displays it newest first, and refreshes from the backend after foreground FCM delivery. Customer and worker device registration use their role-specific paths with the same exact `pushToken` body.
 
 ### Worker jobs, availability, and location
 

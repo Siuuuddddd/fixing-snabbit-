@@ -20,6 +20,8 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.snabbit.prototype.mobile.domain.launch.LaunchDestination
+import com.snabbit.prototype.mobile.domain.notification.NotificationRepository
+import com.snabbit.prototype.mobile.domain.session.SessionManager
 import com.snabbit.prototype.mobile.ui.components.SnabbitBottomBar
 import com.snabbit.prototype.mobile.ui.login.LoginScreen
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
@@ -28,6 +30,7 @@ import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
 import com.snabbit.prototype.mobile.ui.splash.SplashScreen
 import com.snabbit.prototype.mobile.ui.splash.SplashViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.navigation3.koinEntryProvider
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -35,6 +38,14 @@ import org.koin.core.annotation.KoinExperimentalAPI
 @Composable
 fun SnabbitApp(role: AppRole = AppRole.fromBuild()) {
     var authenticated by rememberSaveable { mutableStateOf(false) }
+    val sessionManager = koinInject<SessionManager>()
+    val notifications = koinInject<NotificationRepository>()
+    LaunchedEffect(sessionManager) {
+        sessionManager.signedOut.collect { authenticated = false }
+    }
+    LaunchedEffect(authenticated) {
+        if (authenticated) runCatching { notifications.registerCurrentDevice() }
+    }
     if (authenticated) {
         when (role) {
             AppRole.CUSTOMER -> CustomerShell()
