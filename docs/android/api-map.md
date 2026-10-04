@@ -2,7 +2,7 @@
 
 This map was derived from the current Spring controllers, DTOs, enums, gateway routes/security, OTP services, exception handlers, Razorpay webhook flow, tracking endpoints, and worker endpoints. `ProblemDetail` means the backend's RFC 7807-style response with at least HTTP `status` and `detail`. Money fields are integer minor units.
 
-Implementation status: screens 1–3 are implemented. Splash checks encrypted session state before routing, onboarding completion is stored locally, and login selects the customer or worker OTP contract from the build flavor. The remaining board destinations still use foundation placeholders.
+Implementation status: screens 1–6 are implemented. Splash checks encrypted session state before routing, onboarding completion is stored locally, and login selects the customer or worker OTP contract from the build flavor. Home and service details consume the real service catalogue. Address management derives the customer identity from the verified JWT subject and uses the saved-address create/list/delete contracts; the backend remains authoritative for Mumbai serviceability. Later board destinations still use foundation placeholders.
 
 ## Authentication and gateway rules
 
@@ -64,6 +64,8 @@ There is no signup request, account-type discovery, or refresh response.
 | `DELETE /api/v1/users/{userId}/favourites/{workerId}` | Path IDs | Updated favourite state |
 | `GET /api/v1/users/{userId}/plus` | Path `userId` | Membership/subscription snapshot |
 | `POST /api/v1/users/{userId}/plus/purchases` | `walletId`, `planCode`; `Idempotency-Key` header | Purchase/membership result |
+
+The Android client obtains `userId` from the access-token `sub` claim returned by OTP verification. Address creation sends `city = Mumbai`, a `400xxx` pincode, and a consented device-location sample with latitude, longitude, accuracy, and ISO-8601 capture time. The backend validates freshness, accuracy, Mumbai bounds, and configured forward/reverse geocoding; client-side checks are guidance only.
 
 ### Services and booking
 

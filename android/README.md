@@ -1,6 +1,6 @@
 # Snabbit Android app
 
-This standalone project contains the customer and worker apps. It includes the shared design system, secure networking/DI foundation, Navigation 3 shell, and real splash, onboarding, and flavor-aware OTP login screens. Later destinations remain labelled placeholders.
+This standalone project contains the customer and worker apps. It includes the shared design system, secure networking/DI foundation, Navigation 3 shell, and real splash, onboarding, OTP login, customer catalogue, service details, and saved-address/serviceability screens. Later destinations remain labelled placeholders.
 
 ## Prerequisites
 
@@ -46,6 +46,8 @@ Use the `customerDebug` or `workerDebug` Android Studio run configuration. Custo
 - `navigation`: typed Navigation 3 keys and role-specific shells.
 - `data/network`: Retrofit/OkHttp and authentication boundaries.
 - `data/auth`: OTP remote/repository layers and secure access-token storage.
+- `data/catalog`: service catalogue remote and repository layers.
+- `data/address`: saved-address remote, repository, and consented device-location layers.
 - `data/launch`: persisted onboarding and launch routing.
 - `domain`: feature-facing repository contracts and models.
 - `di`: Koin modules. Feature modules are added here as real screens are built.

@@ -11,7 +11,7 @@ sealed interface SnabbitRoute : NavKey
 @Serializable data object OnboardingRoute : SnabbitRoute
 @Serializable data object LoginOtpRoute : SnabbitRoute
 @Serializable data object HomeRoute : SnabbitRoute
-@Serializable data object ServiceDetailsRoute : SnabbitRoute
+@Serializable data class ServiceDetailsRoute(val serviceId: String) : SnabbitRoute
 @Serializable data object AddressServiceabilityRoute : SnabbitRoute
 @Serializable data object SlotSelectionRoute : SnabbitRoute
 @Serializable data object HouseholdPreferencesRoute : SnabbitRoute
@@ -37,7 +37,7 @@ fun SnabbitRoute.titleRes(): Int = when (this) {
     OnboardingRoute -> R.string.screen_onboarding
     LoginOtpRoute -> R.string.screen_login_otp
     HomeRoute -> R.string.screen_home
-    ServiceDetailsRoute -> R.string.screen_service_details
+    is ServiceDetailsRoute -> R.string.screen_service_details
     AddressServiceabilityRoute -> R.string.screen_address_serviceability
     SlotSelectionRoute -> R.string.screen_slot_selection
     HouseholdPreferencesRoute -> R.string.screen_household_preferences

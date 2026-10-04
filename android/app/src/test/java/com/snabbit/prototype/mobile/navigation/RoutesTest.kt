@@ -11,7 +11,7 @@ class RoutesTest {
             OnboardingRoute,
             LoginOtpRoute,
             HomeRoute,
-            ServiceDetailsRoute,
+            ServiceDetailsRoute("service-id"),
             AddressServiceabilityRoute,
             SlotSelectionRoute,
             HouseholdPreferencesRoute,

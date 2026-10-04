@@ -74,4 +74,63 @@
     <string name="error_offline">You appear to be offline. Check your connection and retry.</string>
     <string name="error_server">Snabbit is temporarily unavailable. Please try again.</string>
     <string name="error_unknown">Something went wrong. Please try again.</string>
+    <string name="action_back">Back</string>
+    <string name="data_error_unauthorized">Your session has expired. Sign in again to continue.</string>
+    <string name="data_error_forbidden">You do not have access to this information.</string>
+    <string name="data_error_not_found">The requested information could not be found.</string>
+    <string name="data_error_conflict">This changed elsewhere. Refresh and try again.</string>
+    <string name="data_error_validation">Check the entered details and try again.</string>
+    <string name="home_greeting">Home help, right when you need it</string>
+    <string name="home_location_prompt">Choose a service address</string>
+    <string name="notifications_description">Notifications</string>
+    <string name="home_hero_title">One expert who can do it all</string>
+    <string name="home_hero_description">Trusted, verified help for cleaning and everyday household work.</string>
+    <string name="home_hours">Available from 8 AM to 7 PM</string>
+    <string name="home_services_title">What can we help with?</string>
+    <string name="home_empty_title">No services available</string>
+    <string name="home_empty_description">Pull down to refresh the service catalogue.</string>
+    <string name="service_artwork_description">Illustration placeholder for %1$s</string>
+    <string name="service_from_price">From %1$s per hour</string>
+    <string name="service_details_description">Thorough household help from a trained and verified Snabbit expert.</string>
+    <string name="service_included_title">What’s included</string>
+    <string-array name="service_included_items">
+        <item>Sweeping and mopping</item>
+        <item>Dusting common surfaces</item>
+        <item>Kitchen cleaning outside surfaces</item>
+        <item>Basic bathroom cleaning</item>
+    </string-array>
+    <string name="service_duration_title">Choose duration</string>
+    <string name="duration_hours">%1$d hr</string>
+    <string name="duration_selected">%1$d hr selected</string>
+    <string name="service_pricing_note">Final availability and pricing are confirmed during slot selection.</string>
+    <string name="service_total_price">%1$s for %2$d hr</string>
+    <string name="address_title">Address and serviceability</string>
+    <string name="address_service_area_title">We serve Mumbai</string>
+    <string name="address_service_area_description">A fresh device-location sample verifies that your address is inside the current service area.</string>
+    <string name="address_add_action">Add a new address</string>
+    <string name="address_saved_title">Saved addresses</string>
+    <string name="address_empty_title">No saved addresses</string>
+    <string name="address_empty_description">Add a Mumbai address to continue your booking.</string>
+    <string name="address_form_title">Add service address</string>
+    <string name="address_label_label">Label, such as Home</string>
+    <string name="address_line_label">Flat, building and street</string>
+    <string name="address_pincode_label">Mumbai pincode</string>
+    <string name="address_capture_location">Capture current location</string>
+    <string name="address_recapture_location">Capture location again</string>
+    <string name="address_location_accuracy">Location accuracy: %1$d metres</string>
+    <string name="address_save_action">Verify and save address</string>
+    <string name="address_verified">Verified</string>
+    <string name="address_full_format">%1$s, %2$s %3$s</string>
+    <string name="address_delete_description">Delete %1$s address</string>
+    <string name="address_delete_title">Delete address?</string>
+    <string name="address_delete_message">Remove %1$s from your saved addresses?</string>
+    <string name="address_delete_confirm">Delete</string>
+    <string name="address_error_label">Enter an address label.</string>
+    <string name="address_error_line">Enter at least 5 characters for the street address.</string>
+    <string name="address_error_pincode">Enter a valid Mumbai pincode beginning with 400.</string>
+    <string name="address_error_location_required">Capture your current location before saving.</string>
+    <string name="address_error_location_accuracy">Location accuracy must be within 100 metres. Move to an open area and try again.</string>
+    <string name="address_error_location_permission">Location permission is required to verify serviceability.</string>
+    <string name="address_error_location_unavailable">Current location is unavailable. Enable location and try again.</string>
+    <string name="address_error_location_timeout">Location took too long. Try again in an open area.</string>
 </resources>

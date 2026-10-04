@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,10 +130,18 @@ private fun CustomerShell() {
         CustomerTab.PLUS to plus,
         CustomerTab.PROFILE to profile,
     )
-    AppShell(
-        backStack = stacks.getValue(selected),
-        bottomBar = { SnabbitBottomBar(CustomerTab.entries, selected, { selected = it }) },
+    val navigation = CustomerNavigation(
+        openService = { serviceId -> home.add(ServiceDetailsRoute(serviceId)) },
+        openAddresses = { home.add(AddressServiceabilityRoute) },
+        openNotifications = { home.add(NotificationsRoute) },
+        back = { if (home.size > 1) home.removeLastOrNull() },
     )
+    CompositionLocalProvider(LocalCustomerNavigation provides navigation) {
+        AppShell(
+            backStack = stacks.getValue(selected),
+            bottomBar = { SnabbitBottomBar(CustomerTab.entries, selected, { selected = it }) },
+        )
+    }
 }
 
 @OptIn(KoinExperimentalAPI::class)

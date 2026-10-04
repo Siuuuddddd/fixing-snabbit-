@@ -24,7 +24,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | Worker schedule aggregate | Worker schedule | Date availability exists, but not the calendar/job aggregate implied by the screen. |
 | Support ticket history and attachment contract | Help and support | Live message creation/streaming exists; richer inbox and media contracts need confirmation. |
 | Payment hand-off contract validation | Booking payment, Add money | Razorpay order IDs are returned in existing flows, but the exact mobile SDK hand-off/error/status contract needs an end-to-end test. |
-| Maps/serviceability UI contract | Address, live tracking | Backend location checks exist; provider geocoding/autocomplete and route-display contracts are not defined. |
+| Maps/serviceability UI contract | Address, live tracking | Address create/list/delete is implemented with consented device coordinates and backend serviceability verification. Provider autocomplete, map rendering, and route-display contracts remain undefined. |
 | Pagination standards | Bookings, notifications, ledger, offers | Existing collections are not consistently cursor/page based. |
 
 ## Confirmed backend behavior the app must respect
@@ -33,6 +33,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 - Customer and worker JWTs carry different roles and are enforced at the gateway.
 - The implemented Android login uses the product flavor to select the separate customer or worker OTP endpoints; it does not attempt role discovery or registration.
 - Successful OTP verification stores only the returned access token in encrypted storage. Relaunch auto-login uses that session, while an unrecoverable 401 clears it because no refresh contract exists.
+- The JWT subject is the customer UUID used by Android for owned address paths. Address creation is the available serviceability check; there is no separate client-facing serviceability endpoint.
 - Wallet top-ups are credited only after a verified Razorpay webhook. The Android SDK result is never treated as payment truth.
 - The backend uses RFC 7807-style `ProblemDetail` responses. Screen error mapping should use HTTP status plus `detail`, not exception class names.
 - Money amounts use integer minor units.
