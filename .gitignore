@@ -8,3 +8,9 @@ build/
 .env
 *.log
 out/
+reference/
+android/local.properties
+android/**/build/
+android/**/google-services.json
+android/**/*.jks
+android/**/*.keystore
