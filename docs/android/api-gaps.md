@@ -13,6 +13,8 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | No wallet ledger/history endpoint | Wallet | Wallet summary and top-up creation exist, but the transaction list shown by the design cannot be fetched. |
 | No authenticated customer-to-wallet discovery endpoint | Booking payment, Wallet, Add money, Plus | All wallet/payment calls require `walletId`, but the login/user/household contracts never return it. Android isolates an optional `PROTOTYPE_WALLET_ID` local-build value behind `WalletIdDataSource`; release-quality discovery remains blocked. |
 | No top-up status/read endpoint | Add money | Creation returns the provider order, and the webhook credits later; the app cannot authoritatively poll a pending order. |
+| No Plus plan catalogue endpoint | Snabbit Plus | Android isolates the currently configured `MONTHLY` display terms behind `PrototypePlusPlanDataSource`; the purchase request sends only `planCode`, and backend configuration remains authoritative. |
+| No Plus purchase status/read endpoint | Snabbit Plus | Purchase creation returns a provider order, but no customer endpoint exposes that purchase afterward. Android polls the authoritative Plus membership snapshot and stays pending until it becomes active. |
 | No customer refund status/read endpoint | Cancel booking | Cancellation returns the expected refund amount, but the customer cannot query wallet/provider refund processing or settlement. Android therefore shows the refund as requested/pending. |
 | No worker earnings endpoint | Worker earnings | The board requires totals and payout history that are not exposed. |
 
@@ -38,6 +40,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 - Successful OTP verification stores only the returned access token in encrypted storage. Relaunch auto-login uses that session, while an unrecoverable 401 clears it because no refresh contract exists.
 - The JWT subject is the customer UUID used by Android for owned address paths. Address creation is the available serviceability check; there is no separate client-facing serviceability endpoint.
 - Wallet top-ups are credited only after a verified Razorpay webhook. The Android SDK result is never treated as payment truth.
+- Snabbit Plus is activated only by backend payment processing. Android keeps membership pending after the SDK callback until `GET /api/v1/users/{userId}/plus` reports an active, updated membership.
 - The backend uses RFC 7807-style `ProblemDetail` responses. Screen error mapping should use HTTP status plus `detail`, not exception class names.
 - Money amounts use integer minor units.
 - Match-and-hold creates an `AWAITING_WORKER` booking. Payment creation is valid only after a worker accepts and the booking reaches `AWAITING_PAYMENT`; its returned split is authoritative.

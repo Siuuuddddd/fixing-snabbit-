@@ -11,7 +11,9 @@ import com.snabbit.prototype.mobile.domain.booking.VisitAvailability
 import com.snabbit.prototype.mobile.domain.household.HouseholdPreferences
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletBalance
+import com.snabbit.prototype.mobile.domain.wallet.WalletLedgerEntry
 import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
+import com.snabbit.prototype.mobile.domain.wallet.WalletTopUp
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -146,7 +148,11 @@ private class FakeHouseholdRepository : HouseholdRepository {
 }
 
 private class FakeWalletRepository : WalletRepository {
-    override suspend fun balance() = WalletBalance("wallet", "INR", 5_000)
+    override suspend fun balance() = WalletBalance("wallet", "INR", 5_000, 0, 5_000, 0)
+    override suspend fun createTopUp(amountMinor: Long, idempotencyKey: String) =
+        WalletTopUp("top-up", "wallet", amountMinor, "PENDING", "order")
+    override suspend fun history(): List<WalletLedgerEntry> = emptyList()
+    override suspend fun recordPrototypeEntry(entry: WalletLedgerEntry) = Unit
 }
 
 private fun sampleDraft() = BookingDraft(

@@ -114,6 +114,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.razorpay.checkout)
 
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)

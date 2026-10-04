@@ -1,6 +1,6 @@
 # Android foundation guide
 
-The native Android app lives in the standalone `android/` Gradle build. It provides customer and worker product flavors, shared Compose design tokens/components, Koin dependency injection, secure Retrofit/OkHttp setup, and a typed Navigation 3 shell. Customer screens through live tracking, completion/rating, and cancellation/refund (screens 1–13) are implemented; later destinations remain clearly labelled placeholders.
+The native Android app lives in the standalone `android/` Gradle build. It provides customer and worker product flavors, shared Compose design tokens/components, Koin dependency injection, secure Retrofit/OkHttp setup, and a typed Navigation 3 shell. Customer screens through Wallet/Add Money and Snabbit Plus (screens 1–15) are implemented; later destinations remain clearly labelled placeholders.
 
 ## Toolchain
 
@@ -9,6 +9,7 @@ The native Android app lives in the standalone `android/` Gradle build. It provi
 - Compose Material 3 via BOM 2026.08.00
 - AndroidX Navigation 3 1.2.0
 - Koin 4.2.2 (`koin-android`, Compose, Compose ViewModel, and Navigation 3 artifacts)
+- Razorpay Android Standard Checkout 1.6.41; provider callbacks are signals only, and backend reads remain payment/membership authority
 
 Navigation 3 and Koin are stable. The required `lifecycle-viewmodel-navigation3` back-stack ViewModel decorator is currently `2.12.0-alpha04`; it is isolated to the navigation shell and was selected explicitly because the stable lifecycle line does not yet supply this Navigation 3 integration artifact.
 

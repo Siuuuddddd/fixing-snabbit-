@@ -5,6 +5,7 @@ import com.snabbit.prototype.mobile.data.catalog.remote.CatalogApi
 import com.snabbit.prototype.mobile.data.booking.remote.BookingApi
 import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.WalletApi
+import com.snabbit.prototype.mobile.data.plus.PlusApi
 import com.snabbit.prototype.mobile.data.tracking.TrackingApi
 import com.snabbit.prototype.mobile.data.cancellation.CancellationApi
 import com.snabbit.prototype.mobile.data.rating.RatingApi
@@ -46,6 +47,9 @@ class ScreenApiContractTest {
         assertEquals("api/v1/users/{userId}/household", requireNotNull(HouseholdApi::class.java.methods.single { it.name == "get" }.getAnnotation(GET::class.java)).value)
         assertEquals("api/v1/users/{userId}/household", requireNotNull(HouseholdApi::class.java.methods.single { it.name == "update" }.getAnnotation(PUT::class.java)).value)
         assertEquals("api/v1/wallets/{walletId}", requireNotNull(WalletApi::class.java.methods.single { it.name == "balance" }.getAnnotation(GET::class.java)).value)
+        assertEquals("api/v1/wallets/{walletId}/top-ups", requireNotNull(WalletApi::class.java.methods.single { it.name == "createTopUp" }.getAnnotation(POST::class.java)).value)
+        assertEquals("api/v1/users/{userId}/plus", requireNotNull(PlusApi::class.java.methods.single { it.name == "status" }.getAnnotation(GET::class.java)).value)
+        assertEquals("api/v1/users/{userId}/plus/purchases", requireNotNull(PlusApi::class.java.methods.single { it.name == "purchase" }.getAnnotation(POST::class.java)).value)
     }
 
     @Test

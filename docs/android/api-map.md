@@ -27,8 +27,8 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 11 | Live tracking | `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location`; SSE `GET .../worker-location/stream`; booking polling for completion | Customer owner | 403/404; 409 outside tracking window/no fresh location; 502/offline reconnect with latest-snapshot replay; stale after two minutes |
 | 12 | Booking completed | `GET /api/v1/bookings/{bookingId}`; `POST /api/v1/ratings/workers/{workerId}` with `bookingId`, `visitIndex`, `stars`, optional `comment` | Customer owner | 1–5 stars; 404; 409 duplicate/invalid rating; only the completed assigned visit can be rated |
 | 13 | Cancel booking | `GET /api/v1/bookings/{bookingId}/cancellation-quote`; `POST /api/v1/bookings/{bookingId}/cancellations` with optional `reason` | Customer owner | 403/404; 409 invalid/unstarted state; 422 rule; authoritative fee/refund fields; refund remains pending without a customer status endpoint |
-| 14 | Add money | `GET /api/v1/wallets/{walletId}`; `POST /api/v1/wallets/{walletId}/top-ups` | Customer owner; `Idempotency-Key` for top-up | 404 wallet/payment; 409 duplicate/conflict; 422 amount/rule; 502 provider. Client success never credits money. |
-| 15 | Snabbit Plus | `GET /api/v1/users/{userId}/plus`; `POST /api/v1/users/{userId}/plus/purchases` | Customer and matching user; `Idempotency-Key` | 404; 409 subscription; wallet/payment failures |
+| 14 | Add money | `GET /api/v1/wallets/{walletId}`; `POST /api/v1/wallets/{walletId}/top-ups` | Customer owner; `Idempotency-Key` for top-up | 404 wallet/payment; 409 duplicate/conflict; 422 amount/rule; 502 provider. Razorpay success only starts balance polling; the shown balance changes only after backend confirmation. |
+| 15 | Snabbit Plus | `GET /api/v1/users/{userId}/plus`; `POST /api/v1/users/{userId}/plus/purchases` | Customer and matching user; `Idempotency-Key` | 404; 409 subscription; wallet/payment failures. Razorpay success only starts membership polling; the UI activates only from the backend snapshot. |
 | 16 | My bookings | No booking-list endpoint | Customer | Recorded in `api-gaps.md`; individual `GET /bookings/{id}` is insufficient |
 | 17 | Notifications | `GET /api/v1/notifications`; `POST /api/v1/notifications/{notificationId}/read`; device registration/removal endpoints | Customer or worker, own notifications | 403/404; 422 invalid device. No notification SSE contract. |
 | 18 | Profile | Address, household, favourites, Plus endpoints only | Customer/worker | General profile read/update is missing |
@@ -99,11 +99,13 @@ Cancellation quotes return `plusActive`, `cancellationFeeMinor`, `refundAmountMi
 
 | Method and path | Request | Response/use |
 |---|---|---|
-| `GET /api/v1/wallets/{walletId}` | Wallet ID | Wallet snapshot including available/reserved/spent totals exposed by backend |
-| `POST /api/v1/wallets/{walletId}/top-ups` | `amountMinor`; `Idempotency-Key` | Pending top-up snapshot including provider order reference |
+| `GET /api/v1/wallets/{walletId}` | Wallet ID | `walletId`, `currency`, `ledgerBalanceMinor`, `reservedMinor`, `availableMinor`, `totalSpentMinor` |
+| `POST /api/v1/wallets/{walletId}/top-ups` | `amountMinor`; `Idempotency-Key` | `topUpId`, `walletId`, `amountMinor`, `status`, `providerOrderId` |
 | Razorpay webhook route | Provider-signed event | Backend verifies signature and publishes/processes success once |
 
-The app opens the provider flow using the server-created order. Only the signed webhook causes an append-only wallet credit. The app must show pending/unknown until server state proves success; a top-up read/status endpoint is currently missing.
+The app opens Razorpay Standard Checkout using the server-created order. Only the signed webhook causes an append-only wallet credit. A client success callback moves Android to `VERIFYING`, never updates the displayed balance, and polls the wallet snapshot until the ledger increase is visible. Timeout remains pending with manual retry. A top-up read/status endpoint is currently missing, and transaction history is explicitly labelled as process-local prototype data.
+
+Plus purchase creation returns `purchaseId`, `walletId`, `customerId`, `planCode`, `amountMinor`, `status`, and `providerOrderId`. Android opens that provider order, then polls the Plus snapshot; only `active=true` with a changed/new expiry is shown as confirmed. The displayed monthly plan is isolated behind a prototype datasource because no plan catalogue exists.
 
 ### Notifications and support
 

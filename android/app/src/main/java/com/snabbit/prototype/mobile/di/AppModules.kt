@@ -28,6 +28,11 @@ import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.DefaultWalletRepository
 import com.snabbit.prototype.mobile.data.wallet.PrototypeConfiguredWalletIdDataSource
 import com.snabbit.prototype.mobile.data.wallet.WalletApi
+import com.snabbit.prototype.mobile.data.wallet.PrototypeWalletLedgerDataSource
+import com.snabbit.prototype.mobile.data.payment.DefaultPaymentCheckoutCoordinator
+import com.snabbit.prototype.mobile.data.plus.DefaultPlusRepository
+import com.snabbit.prototype.mobile.data.plus.PlusApi
+import com.snabbit.prototype.mobile.data.plus.PrototypePlusPlanDataSource
 import com.snabbit.prototype.mobile.data.tracking.DefaultTrackingRepository
 import com.snabbit.prototype.mobile.data.tracking.OkHttpTrackingStreamDataSource
 import com.snabbit.prototype.mobile.data.tracking.TrackingApi
@@ -53,6 +58,10 @@ import com.snabbit.prototype.mobile.domain.booking.BookingType
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletIdDataSource
 import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
+import com.snabbit.prototype.mobile.domain.wallet.WalletLedgerDataSource
+import com.snabbit.prototype.mobile.domain.payment.PaymentCheckoutCoordinator
+import com.snabbit.prototype.mobile.domain.plus.PlusPlanDataSource
+import com.snabbit.prototype.mobile.domain.plus.PlusRepository
 import com.snabbit.prototype.mobile.domain.tracking.TrackingRepository
 import com.snabbit.prototype.mobile.domain.cancellation.CancellationRepository
 import com.snabbit.prototype.mobile.domain.rating.RatingRepository
@@ -106,6 +115,10 @@ import com.snabbit.prototype.mobile.ui.completed.BookingCompletedScreen
 import com.snabbit.prototype.mobile.ui.completed.BookingCompletedViewModel
 import com.snabbit.prototype.mobile.ui.cancellation.CancelBookingScreen
 import com.snabbit.prototype.mobile.ui.cancellation.CancelBookingViewModel
+import com.snabbit.prototype.mobile.ui.wallet.WalletScreen
+import com.snabbit.prototype.mobile.ui.wallet.WalletViewModel
+import com.snabbit.prototype.mobile.ui.plus.PlusScreen
+import com.snabbit.prototype.mobile.ui.plus.PlusViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -171,6 +184,7 @@ private val networkModule = module {
     single { get<Retrofit>().create(BookingApi::class.java) }
     single { get<Retrofit>().create(HouseholdApi::class.java) }
     single { get<Retrofit>().create(WalletApi::class.java) }
+    single { get<Retrofit>().create(PlusApi::class.java) }
     single { get<Retrofit>().create(TrackingApi::class.java) }
     single { get<Retrofit>().create(CancellationApi::class.java) }
     single { get<Retrofit>().create(RatingApi::class.java) }
@@ -188,7 +202,11 @@ private val repositoryModule = module {
     single<BookingRepository> { DefaultBookingRepository(get(), get(), get()) }
     single<HouseholdRepository> { DefaultHouseholdRepository(get(), get(), get()) }
     single<WalletIdDataSource> { PrototypeConfiguredWalletIdDataSource(BuildConfig.PROTOTYPE_WALLET_ID) }
-    single<WalletRepository> { DefaultWalletRepository(get(), get(), get()) }
+    single<WalletLedgerDataSource> { PrototypeWalletLedgerDataSource() }
+    single<WalletRepository> { DefaultWalletRepository(get(), get(), get(), get()) }
+    single<PaymentCheckoutCoordinator> { DefaultPaymentCheckoutCoordinator() }
+    single<PlusPlanDataSource> { PrototypePlusPlanDataSource() }
+    single<PlusRepository> { DefaultPlusRepository(get(), get(), get(), get(), get()) }
     single<TrackingRepository> { DefaultTrackingRepository(get(), get(), get()) }
     single<CancellationRepository> { DefaultCancellationRepository(get(), get()) }
     single<RatingRepository> { DefaultRatingRepository(get(), get()) }
@@ -217,6 +235,8 @@ private val viewModelModule = module {
         BookingCompletedViewModel(bookingId, visitIndex, workerId, get(), get())
     }
     viewModel { (bookingId: String) -> CancelBookingViewModel(bookingId, get()) }
+    viewModel { WalletViewModel(get(), get()) }
+    viewModel { PlusViewModel(get(), get()) }
 }
 
 @OptIn(KoinExperimentalAPI::class)
@@ -353,8 +373,16 @@ private val navigationModule = module {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         CancelBookingScreen(state, navigation.back, viewModel::retry, viewModel::updateReason, viewModel::confirmCancellation)
     }
-    navigation<AddMoneyRoute> { PlaceholderScreen(AddMoneyRoute.titleRes()) }
-    navigation<SnabbitPlusRoute> { PlaceholderScreen(SnabbitPlusRoute.titleRes()) }
+    navigation<AddMoneyRoute> {
+        val viewModel = koinViewModel<WalletViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        WalletScreen(state, viewModel::refresh, viewModel::retry, viewModel::updateAmount, viewModel::addMoney, viewModel::checkAgain)
+    }
+    navigation<SnabbitPlusRoute> {
+        val viewModel = koinViewModel<PlusViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        PlusScreen(state, viewModel::refresh, viewModel::retry, viewModel::join, viewModel::checkAgain)
+    }
     navigation<MyBookingsRoute> { PlaceholderScreen(MyBookingsRoute.titleRes()) }
     navigation<NotificationsRoute> { PlaceholderScreen(NotificationsRoute.titleRes()) }
     navigation<ProfileRoute> { PlaceholderScreen(ProfileRoute.titleRes()) }
