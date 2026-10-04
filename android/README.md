@@ -1,10 +1,10 @@
-# Snabbit Android foundation
+# Snabbit Android app
 
-This is a standalone Android project for the customer and worker apps. It intentionally contains a shared design system, secure networking/DI foundation, Navigation 3 shell, and labelled placeholders—not production screens.
+This standalone project contains the customer and worker apps. It includes the shared design system, secure networking/DI foundation, Navigation 3 shell, and real splash, onboarding, and flavor-aware OTP login screens. Later destinations remain labelled placeholders.
 
 ## Prerequisites
 
-- Android Studio with Android SDK 36
+- Android Studio with Android SDK 37
 - JDK 17 or newer
 - A running backend gateway on the host at port 8080 for emulator networking
 
@@ -45,7 +45,9 @@ Use the `customerDebug` or `workerDebug` Android Studio run configuration. Custo
 - `ui/theme` and `ui/components`: shared design system.
 - `navigation`: typed Navigation 3 keys and role-specific shells.
 - `data/network`: Retrofit/OkHttp and authentication boundaries.
-- `data/auth`: secure access-token storage.
+- `data/auth`: OTP remote/repository layers and secure access-token storage.
+- `data/launch`: persisted onboarding and launch routing.
+- `domain`: feature-facing repository contracts and models.
 - `di`: Koin modules. Feature modules are added here as real screens are built.
 - `docs/android`: API contracts, gaps, visual specification, assets, and progress.
 

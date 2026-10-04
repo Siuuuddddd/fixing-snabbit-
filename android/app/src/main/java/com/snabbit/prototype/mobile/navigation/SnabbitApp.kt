@@ -4,28 +4,113 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.snabbit.prototype.mobile.domain.launch.LaunchDestination
 import com.snabbit.prototype.mobile.ui.components.SnabbitBottomBar
+import com.snabbit.prototype.mobile.ui.login.LoginScreen
+import com.snabbit.prototype.mobile.ui.login.LoginViewModel
+import com.snabbit.prototype.mobile.ui.onboarding.OnboardingScreen
+import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
+import com.snabbit.prototype.mobile.ui.splash.SplashScreen
+import com.snabbit.prototype.mobile.ui.splash.SplashViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import org.koin.compose.navigation3.koinEntryProvider
 import org.koin.core.annotation.KoinExperimentalAPI
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
 fun SnabbitApp(role: AppRole = AppRole.fromBuild()) {
-    when (role) {
-        AppRole.CUSTOMER -> CustomerShell()
-        AppRole.WORKER -> WorkerShell()
+    var authenticated by rememberSaveable { mutableStateOf(false) }
+    if (authenticated) {
+        when (role) {
+            AppRole.CUSTOMER -> CustomerShell()
+            AppRole.WORKER -> WorkerShell()
+        }
+    } else {
+        AuthenticationFlow(role = role, onAuthenticated = { authenticated = true })
     }
+}
+
+@Composable
+private fun AuthenticationFlow(
+    role: AppRole,
+    onAuthenticated: () -> Unit,
+) {
+    val backStack = rememberNavBackStack(SplashRoute)
+    NavDisplay(
+        backStack = backStack,
+        modifier = Modifier.fillMaxSize(),
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
+        entryProvider = entryProvider {
+            entry<SplashRoute> {
+                val viewModel = koinViewModel<SplashViewModel>()
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(state.destination) {
+                    when (state.destination) {
+                        LaunchDestination.AUTHENTICATED -> onAuthenticated()
+                        LaunchDestination.LOGIN -> backStack.replaceWith(LoginOtpRoute)
+                        LaunchDestination.ONBOARDING -> backStack.replaceWith(OnboardingRoute)
+                        null -> Unit
+                    }
+                }
+                SplashScreen()
+            }
+            entry<OnboardingRoute> {
+                val viewModel = koinViewModel<OnboardingViewModel>()
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(state.completed) {
+                    if (state.completed) backStack.replaceWith(LoginOtpRoute)
+                }
+                OnboardingScreen(
+                    state = state,
+                    onPageChanged = viewModel::selectPage,
+                    onContinue = viewModel::continueOnboarding,
+                    onSkip = viewModel::skip,
+                )
+            }
+            entry<LoginOtpRoute> {
+                val viewModel = koinViewModel<LoginViewModel>()
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(state.authenticated) {
+                    if (state.authenticated) onAuthenticated()
+                }
+                LoginScreen(
+                    state = state,
+                    role = role,
+                    onPhoneChanged = viewModel::updatePhone,
+                    onOtpChanged = viewModel::updateOtp,
+                    onRequestOtp = viewModel::requestOtp,
+                    onVerifyOtp = viewModel::verifyOtp,
+                    onResendOtp = viewModel::resendOtp,
+                    onEditPhone = viewModel::editPhone,
+                )
+            }
+        },
+        onBack = {
+            if (backStack.size > 1) backStack.removeLastOrNull()
+        },
+    )
+}
+
+private fun NavBackStack<NavKey>.replaceWith(route: NavKey) {
+    clear()
+    add(route)
 }
 
 @OptIn(KoinExperimentalAPI::class)

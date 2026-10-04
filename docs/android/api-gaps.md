@@ -31,6 +31,8 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 
 - Customer and worker OTP request endpoints return a generic response for unknown or inactive numbers; the UI must not reveal account existence.
 - Customer and worker JWTs carry different roles and are enforced at the gateway.
+- The implemented Android login uses the product flavor to select the separate customer or worker OTP endpoints; it does not attempt role discovery or registration.
+- Successful OTP verification stores only the returned access token in encrypted storage. Relaunch auto-login uses that session, while an unrecoverable 401 clears it because no refresh contract exists.
 - Wallet top-ups are credited only after a verified Razorpay webhook. The Android SDK result is never treated as payment truth.
 - The backend uses RFC 7807-style `ProblemDetail` responses. Screen error mapping should use HTTP status plus `detail`, not exception class names.
 - Money amounts use integer minor units.

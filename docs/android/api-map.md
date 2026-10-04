@@ -2,6 +2,8 @@
 
 This map was derived from the current Spring controllers, DTOs, enums, gateway routes/security, OTP services, exception handlers, Razorpay webhook flow, tracking endpoints, and worker endpoints. `ProblemDetail` means the backend's RFC 7807-style response with at least HTTP `status` and `detail`. Money fields are integer minor units.
 
+Implementation status: screens 1–3 are implemented. Splash checks encrypted session state before routing, onboarding completion is stored locally, and login selects the customer or worker OTP contract from the build flavor. The remaining board destinations still use foundation placeholders.
+
 ## Authentication and gateway rules
 
 The gateway exposes customer auth at `/api/v1/auth/**` and worker auth at `/api/v1/worker-auth/**`. Those routes, health, staff auth, and the Razorpay webhook are public. Worker routes require a JWT with `WORKER`; normal customer `/api/v1/**` routes require `CUSTOMER`; staff routes use staff roles. The gateway removes inbound identity headers and injects trusted identity values from the verified JWT.

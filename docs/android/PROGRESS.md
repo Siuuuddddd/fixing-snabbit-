@@ -14,11 +14,18 @@
 - [x] API map, UI specification, API gaps, asset backlog, and working rules
 - [x] Local secret placeholders are ignored; Android/reference artifacts are excluded from Docker context
 
-## Real screens — deliberately not implemented in this milestone
+## Authentication milestone
 
-- [ ] Splash animation
-- [ ] Onboarding
-- [ ] Customer/worker role choice and OTP login
+- [x] Splash animation with persisted-session routing and auto-login
+- [x] Three-page onboarding with persisted completion state
+- [x] Flavor-aware customer/worker phone login and OTP verification
+- [x] Real customer and worker OTP endpoints with exact backend DTO field names
+- [x] Encrypted access-token persistence after successful verification
+- [x] Resend cooldown, loading, validation, offline, throttling, server, and invalid/expired-code states
+- [x] ViewModel, launch-routing, repository, and endpoint-contract unit tests for both flavors
+
+## Remaining real screens
+
 - [ ] Customer home
 - [ ] Service details
 - [ ] Address and serviceability
@@ -44,4 +51,5 @@
 
 - Backend baseline: repository-root `.\gradlew.bat build --no-daemon --stacktrace` — passed (55 actionable tasks).
 - Android foundation: `android\.\gradlew.bat clean build --no-daemon` — passed for customer and worker debug/release variants, unit tests, and lint (194 actionable tasks).
+- Authentication milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, unit tests, and lint (195 actionable tasks).
 - A final repository-root backend regression build is run immediately before commit.
