@@ -12,11 +12,17 @@ sealed interface SnabbitRoute : NavKey
 @Serializable data object LoginOtpRoute : SnabbitRoute
 @Serializable data object HomeRoute : SnabbitRoute
 @Serializable data class ServiceDetailsRoute(val serviceId: String) : SnabbitRoute
-@Serializable data object AddressServiceabilityRoute : SnabbitRoute
-@Serializable data object SlotSelectionRoute : SnabbitRoute
-@Serializable data object HouseholdPreferencesRoute : SnabbitRoute
-@Serializable data object BookingSummaryRoute : SnabbitRoute
-@Serializable data object FindingWorkerRoute : SnabbitRoute
+@Serializable data class AddressServiceabilityRoute(val serviceId: String? = null, val durationHours: Int? = null) : SnabbitRoute
+@Serializable data class SlotSelectionRoute(val serviceId: String, val addressId: String, val durationHours: Int) : SnabbitRoute
+@Serializable data class HouseholdPreferencesRoute(
+    val serviceId: String, val addressId: String, val durationHours: Int,
+    val bookingType: String, val startsAt: List<String>,
+) : SnabbitRoute
+@Serializable data class BookingSummaryRoute(
+    val serviceId: String, val addressId: String, val durationHours: Int,
+    val bookingType: String, val startsAt: List<String>,
+) : SnabbitRoute
+@Serializable data class FindingWorkerRoute(val bookingId: String, val walletId: String?, val useWallet: Boolean) : SnabbitRoute
 @Serializable data object LiveTrackingRoute : SnabbitRoute
 @Serializable data object BookingCompletedRoute : SnabbitRoute
 @Serializable data object CancelBookingRoute : SnabbitRoute
@@ -38,11 +44,11 @@ fun SnabbitRoute.titleRes(): Int = when (this) {
     LoginOtpRoute -> R.string.screen_login_otp
     HomeRoute -> R.string.screen_home
     is ServiceDetailsRoute -> R.string.screen_service_details
-    AddressServiceabilityRoute -> R.string.screen_address_serviceability
-    SlotSelectionRoute -> R.string.screen_slot_selection
-    HouseholdPreferencesRoute -> R.string.screen_household_preferences
-    BookingSummaryRoute -> R.string.screen_booking_summary
-    FindingWorkerRoute -> R.string.screen_finding_worker
+    is AddressServiceabilityRoute -> R.string.screen_address_serviceability
+    is SlotSelectionRoute -> R.string.screen_slot_selection
+    is HouseholdPreferencesRoute -> R.string.screen_household_preferences
+    is BookingSummaryRoute -> R.string.screen_booking_summary
+    is FindingWorkerRoute -> R.string.screen_finding_worker
     LiveTrackingRoute -> R.string.screen_live_tracking
     BookingCompletedRoute -> R.string.screen_booking_completed
     CancelBookingRoute -> R.string.screen_cancel_booking

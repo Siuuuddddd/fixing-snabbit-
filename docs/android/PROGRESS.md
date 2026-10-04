@@ -30,10 +30,10 @@
 - [x] Service details with typed service navigation, backend catalogue pricing, duration selection, and pull-to-refresh
 - [x] Address and serviceability with JWT-subject ownership, saved-address list/create/delete, runtime location consent, and backend verification
 - [x] Screens 4–6 ViewModel, repository, identity, route, and endpoint-contract unit tests
-- [ ] Slot selection
-- [ ] Household preferences
-- [ ] Booking summary and payment
-- [ ] Worker matching/assigned
+- [x] Slot selection for instant, scheduled, and 2–7 day bookings with authoritative availability
+- [x] Household preferences read/update with exact matching constraint values
+- [x] Booking summary with advisory wallet/UPI estimate and idempotent match-and-hold
+- [x] Worker matching polling, hold cancellation, post-acceptance payment creation, and authoritative split
 - [ ] Live tracking
 - [ ] Booking completion/rating
 - [ ] Cancellation/refund quote
@@ -54,4 +54,5 @@
 - Android foundation: `android\.\gradlew.bat clean build --no-daemon` — passed for customer and worker debug/release variants, unit tests, and lint (194 actionable tasks).
 - Authentication milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, unit tests, and lint (195 actionable tasks).
 - Catalogue/address milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 32 unit tests, and lint (195 actionable tasks).
+- Booking/matching milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 38 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - A final repository-root backend regression build is run immediately before commit.

@@ -78,6 +78,8 @@ fun AddressScreen(
     onLocationPermissionDenied: () -> Unit,
     onSave: () -> Unit,
     onDelete: (String) -> Unit,
+    bookingMode: Boolean = false,
+    onAddressSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -131,6 +133,8 @@ fun AddressScreen(
                     onCaptureLocation = requestLocation,
                     onSave = onSave,
                     onDelete = onDelete,
+                    bookingMode = bookingMode,
+                    onAddressSelected = onAddressSelected,
                     onRetry = onRetry,
                 )
             }
@@ -150,6 +154,8 @@ private fun AddressContent(
     onSave: () -> Unit,
     onDelete: (String) -> Unit,
     onRetry: () -> Unit,
+    bookingMode: Boolean,
+    onAddressSelected: (String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -196,6 +202,8 @@ private fun AddressContent(
                     address = address,
                     deleting = state.deletingAddressId == address.id,
                     onDelete = { onDelete(address.id) },
+                    bookingMode = bookingMode,
+                    onSelect = { onAddressSelected(address.id) },
                 )
             }
         }
@@ -310,7 +318,13 @@ private fun AddAddressForm(
 }
 
 @Composable
-private fun AddressCard(address: SavedAddress, deleting: Boolean, onDelete: () -> Unit) {
+private fun AddressCard(
+    address: SavedAddress,
+    deleting: Boolean,
+    bookingMode: Boolean,
+    onSelect: () -> Unit,
+    onDelete: () -> Unit,
+) {
     var confirmDelete by remember { mutableStateOf(false) }
     SnabbitCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -346,6 +360,10 @@ private fun AddressCard(address: SavedAddress, deleting: Boolean, onDelete: () -
                     )
                 }
             }
+        }
+        if (bookingMode && address.verified) {
+            Spacer(Modifier.height(SnabbitSpacing.small))
+            SnabbitButton(text = stringResource(R.string.address_use_action), onClick = onSelect)
         }
     }
     if (confirmDelete) {

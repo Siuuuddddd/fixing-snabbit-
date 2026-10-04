@@ -2,7 +2,7 @@
 
 This map was derived from the current Spring controllers, DTOs, enums, gateway routes/security, OTP services, exception handlers, Razorpay webhook flow, tracking endpoints, and worker endpoints. `ProblemDetail` means the backend's RFC 7807-style response with at least HTTP `status` and `detail`. Money fields are integer minor units.
 
-Implementation status: screens 1–6 are implemented. Splash checks encrypted session state before routing, onboarding completion is stored locally, and login selects the customer or worker OTP contract from the build flavor. Home and service details consume the real service catalogue. Address management derives the customer identity from the verified JWT subject and uses the saved-address create/list/delete contracts; the backend remains authoritative for Mumbai serviceability. Later board destinations still use foundation placeholders.
+Implementation status: screens 1–10 are implemented. Screens 7–10 use the authoritative availability, household, match-and-hold, booking polling, wallet balance, and payment contracts. Because a worker must accept before payment can start, the summary shows only an availability-based estimate; the finding screen creates payment at `AWAITING_PAYMENT` and displays the server-calculated split. Later board destinations still use foundation placeholders.
 
 ## Authentication and gateway rules
 
@@ -22,8 +22,8 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 6 | Address & serviceability | `GET/POST /api/v1/users/{userId}/addresses`, `DELETE .../{addressId}` | Customer and matching user identity | 403 identity mismatch; 404; 422 address/location validation |
 | 7 | Slot selection | `POST /api/v1/bookings/availability` | Customer | 422 invalid date/duration/rules; service errors surfaced as `ProblemDetail` |
 | 8 | Household preferences | `GET/PUT /api/v1/users/{userId}/household`; favourite add/remove endpoints | Customer and matching user | 403; 404; 409 favourite limit/duplicate; 422 invalid preferences |
-| 9 | Booking summary | `POST /api/v1/bookings/match-and-hold`, then `POST /api/v1/bookings/{bookingId}/payment` | Customer; `Idempotency-Key` on hold | 409 slot/offer/state conflict; 422 rules; payment failures; 502 downstream payment |
-| 10 | Finding worker | `GET /api/v1/bookings/{bookingId}` after match-and-hold/payment | Customer owner | 403; 404 booking; booking status is authoritative |
+| 9 | Booking summary | Re-check `POST /api/v1/bookings/availability`; then `POST /api/v1/bookings/match-and-hold` | Customer; `Idempotency-Key` on hold | 409 slot/offer/state conflict; 422 rules. Price and wallet/UPI values are labelled estimates until payment creation. |
+| 10 | Finding worker | Poll `GET /api/v1/bookings/{bookingId}`; on `AWAITING_PAYMENT`, `POST /api/v1/bookings/{bookingId}/payments`; optional `DELETE .../hold` while waiting | Customer owner; `Idempotency-Key` on payment | Booking status and returned payment split are authoritative; 403/404/409/422/502 surfaced explicitly. |
 | 11 | Live tracking | `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location`; SSE `GET .../worker-location/stream` | Customer owner | 403; 404; 409 tracking unavailable; 502 tracking service |
 | 12 | Booking completed | `GET /api/v1/bookings/{bookingId}`; `POST /api/v1/ratings/workers/{workerId}` | Customer owner | 404; 409 duplicate/invalid rating; booking state controls availability |
 | 13 | Cancel booking | `GET /api/v1/bookings/{bookingId}/cancellation-quote`; `POST /api/v1/bookings/{bookingId}/cancellations` | Customer owner | 403/404; 409 invalid state; 422 rule; downstream refund failure |
@@ -72,15 +72,15 @@ The Android client obtains `userId` from the access-token `sub` claim returned b
 | Method and path | Request | Response/use |
 |---|---|---|
 | `GET /api/v1/services` | None | Available service catalog and booking/pricing inputs |
-| `POST /api/v1/bookings/availability` | Customer/address/service, booking type, visit date/time/duration and multi-day visit data from the DTO | Availability options calculated under 8 AM–7 PM and 1–4 hour rules |
-| `POST /api/v1/bookings/match-and-hold` | Selected service/visits, address, household requirements, tier and payment context; `Idempotency-Key` | Booking/visit snapshots with held slot, worker assignment and price snapshot |
+| `POST /api/v1/bookings/availability` | `customerId`, `serviceId`, `bookingType`, `durationHours`, `addressId`, `startsAt` | Per-visit availability, compatible worker count and lowest price under 8 AM–7 PM and 1–4 hour rules |
+| `POST /api/v1/bookings/match-and-hold` | The same exact request; `Idempotency-Key` | Booking/visit snapshots in `AWAITING_WORKER`, with offers and price snapshot |
 | `GET /api/v1/bookings/{bookingId}` | Booking ID | Current booking snapshot/status |
 | `DELETE /api/v1/bookings/{bookingId}/hold` | Booking ID | Releases a held booking when allowed |
-| `POST /api/v1/bookings/{bookingId}/payment` | Wallet/online split and provider payment reference fields defined by the DTO | Updated paid/confirmed booking snapshot |
+| `POST /api/v1/bookings/{bookingId}/payments` | `walletId`, `useWallet`; `Idempotency-Key`. The client never supplies amounts. | Payment snapshot containing authoritative total, wallet amount, online amount, status and provider order ID |
 | `GET /api/v1/bookings/{bookingId}/cancellation-quote` | Booking ID | Refund/fee quote before cancellation |
 | `POST /api/v1/bookings/{bookingId}/cancellations` | Cancellation reason/request fields | Cancelled booking/refund result |
 
-Booking enums and validation remain backend-owned: instant/scheduled/multi-day, visit dates, duration, tier, and state must be serialized exactly as declared in backend DTOs/enums when the real feature is implemented.
+Booking types serialize exactly as `INSTANT`, `SCHEDULED`, and `MULTI_DAY`. Instant/scheduled requests contain one start; multi-day contains 2–7 distinct local dates. Availability is advisory, so match-and-hold repeats validation authoritatively. Payment can start only after worker acceptance changes the booking to `AWAITING_PAYMENT`; device/provider callbacks never prove confirmation.
 
 ### Tracking and ratings
 

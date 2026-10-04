@@ -21,6 +21,13 @@ import com.snabbit.prototype.mobile.data.catalog.DefaultCatalogRepository
 import com.snabbit.prototype.mobile.data.catalog.remote.CatalogApi
 import com.snabbit.prototype.mobile.data.catalog.remote.CatalogRemoteDataSource
 import com.snabbit.prototype.mobile.data.catalog.remote.RetrofitCatalogRemoteDataSource
+import com.snabbit.prototype.mobile.data.booking.DefaultBookingRepository
+import com.snabbit.prototype.mobile.data.booking.remote.BookingApi
+import com.snabbit.prototype.mobile.data.household.DefaultHouseholdRepository
+import com.snabbit.prototype.mobile.data.household.HouseholdApi
+import com.snabbit.prototype.mobile.data.wallet.DefaultWalletRepository
+import com.snabbit.prototype.mobile.data.wallet.PrototypeConfiguredWalletIdDataSource
+import com.snabbit.prototype.mobile.data.wallet.WalletApi
 import com.snabbit.prototype.mobile.data.launch.DataStoreOnboardingLocalDataSource
 import com.snabbit.prototype.mobile.data.launch.DefaultLaunchRepository
 import com.snabbit.prototype.mobile.data.launch.OnboardingLocalDataSource
@@ -32,6 +39,12 @@ import com.snabbit.prototype.mobile.domain.auth.AuthRepository
 import com.snabbit.prototype.mobile.domain.address.AddressRepository
 import com.snabbit.prototype.mobile.domain.address.DeviceLocationDataSource
 import com.snabbit.prototype.mobile.domain.catalog.CatalogRepository
+import com.snabbit.prototype.mobile.domain.booking.BookingDraft
+import com.snabbit.prototype.mobile.domain.booking.BookingRepository
+import com.snabbit.prototype.mobile.domain.booking.BookingType
+import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
+import com.snabbit.prototype.mobile.domain.wallet.WalletIdDataSource
+import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
 import com.snabbit.prototype.mobile.domain.launch.LaunchRepository
 import com.snabbit.prototype.mobile.domain.session.SessionIdentityProvider
 import com.snabbit.prototype.mobile.navigation.AddMoneyRoute
@@ -68,7 +81,16 @@ import com.snabbit.prototype.mobile.ui.placeholder.PlaceholderViewModel
 import com.snabbit.prototype.mobile.ui.splash.SplashViewModel
 import com.snabbit.prototype.mobile.ui.service.ServiceDetailsScreen
 import com.snabbit.prototype.mobile.ui.service.ServiceDetailsViewModel
+import com.snabbit.prototype.mobile.ui.booking.BookingSummaryScreen
+import com.snabbit.prototype.mobile.ui.booking.BookingSummaryViewModel
+import com.snabbit.prototype.mobile.ui.booking.FindingWorkerScreen
+import com.snabbit.prototype.mobile.ui.booking.FindingWorkerViewModel
+import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesScreen
+import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesViewModel
+import com.snabbit.prototype.mobile.ui.booking.SlotSelectionScreen
+import com.snabbit.prototype.mobile.ui.booking.SlotSelectionViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -129,6 +151,9 @@ private val networkModule = module {
     single<CatalogRemoteDataSource> { RetrofitCatalogRemoteDataSource(get()) }
     single { get<Retrofit>().create(AddressApi::class.java) }
     single<AddressRemoteDataSource> { RetrofitAddressRemoteDataSource(get()) }
+    single { get<Retrofit>().create(BookingApi::class.java) }
+    single { get<Retrofit>().create(HouseholdApi::class.java) }
+    single { get<Retrofit>().create(WalletApi::class.java) }
 }
 
 private val repositoryModule = module {
@@ -139,6 +164,10 @@ private val repositoryModule = module {
     single<CatalogRepository> { DefaultCatalogRepository(get(), get()) }
     single<AddressRepository> { DefaultAddressRepository(get(), get(), get()) }
     single<DeviceLocationDataSource> { AndroidDeviceLocationDataSource(androidContext()) }
+    single<BookingRepository> { DefaultBookingRepository(get(), get(), get()) }
+    single<HouseholdRepository> { DefaultHouseholdRepository(get(), get(), get()) }
+    single<WalletIdDataSource> { PrototypeConfiguredWalletIdDataSource(BuildConfig.PROTOTYPE_WALLET_ID) }
+    single<WalletRepository> { DefaultWalletRepository(get(), get(), get()) }
 }
 
 private val viewModelModule = module {
@@ -149,6 +178,14 @@ private val viewModelModule = module {
     viewModel { HomeViewModel(get()) }
     viewModel { (serviceId: String) -> ServiceDetailsViewModel(serviceId, get()) }
     viewModel { AddressViewModel(get(), get()) }
+    viewModel { (serviceId: String, addressId: String, durationHours: Int) ->
+        SlotSelectionViewModel(serviceId, addressId, durationHours, get())
+    }
+    viewModel { HouseholdPreferencesViewModel(get()) }
+    viewModel { (draft: BookingDraft) -> BookingSummaryViewModel(draft, get(), get(), get()) }
+    viewModel { (bookingId: String, walletId: String?, useWallet: Boolean) ->
+        FindingWorkerViewModel(bookingId, walletId, useWallet, get())
+    }
 }
 
 @OptIn(KoinExperimentalAPI::class)
@@ -162,7 +199,7 @@ private val navigationModule = module {
             onRefresh = viewModel::refresh,
             onRetry = viewModel::retry,
             onServiceSelected = navigation.openService,
-            onAddressesSelected = navigation.openAddresses,
+            onAddressesSelected = { navigation.openAddresses(null, null) },
             onNotificationsSelected = navigation.openNotifications,
         )
     }
@@ -176,10 +213,10 @@ private val navigationModule = module {
             onRefresh = viewModel::refresh,
             onRetry = viewModel::retry,
             onDurationSelected = viewModel::selectDuration,
-            onContinue = navigation.openAddresses,
+            onContinue = { navigation.openAddresses(route.serviceId, state.selectedDurationHours) },
         )
     }
-    navigation<AddressServiceabilityRoute> {
+    navigation<AddressServiceabilityRoute> { route ->
         val navigation = LocalCustomerNavigation.current
         val viewModel = koinViewModel<AddressViewModel>()
         val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -197,12 +234,62 @@ private val navigationModule = module {
             onLocationPermissionDenied = viewModel::locationPermissionDenied,
             onSave = viewModel::saveAddress,
             onDelete = viewModel::deleteAddress,
+            bookingMode = route.serviceId != null && route.durationHours != null,
+            onAddressSelected = { addressId ->
+                val serviceId = route.serviceId
+                val duration = route.durationHours
+                if (serviceId != null && duration != null) navigation.openSlots(serviceId, addressId, duration)
+            },
         )
     }
-    navigation<SlotSelectionRoute> { PlaceholderScreen(SlotSelectionRoute.titleRes()) }
-    navigation<HouseholdPreferencesRoute> { PlaceholderScreen(HouseholdPreferencesRoute.titleRes()) }
-    navigation<BookingSummaryRoute> { PlaceholderScreen(BookingSummaryRoute.titleRes()) }
-    navigation<FindingWorkerRoute> { PlaceholderScreen(FindingWorkerRoute.titleRes()) }
+    navigation<SlotSelectionRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<SlotSelectionViewModel> { parametersOf(route.serviceId, route.addressId, route.durationHours) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        SlotSelectionScreen(
+            state, navigation.back, viewModel::selectType, viewModel::toggleDate, viewModel::selectTime,
+            viewModel::checkAvailability, viewModel::retry,
+            onContinue = {
+                val draft = viewModel.draft()
+                navigation.openHousehold(route.serviceId, route.addressId, route.durationHours, draft.bookingType.name, draft.startsAt)
+            },
+        )
+    }
+    navigation<HouseholdPreferencesRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<HouseholdPreferencesViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(state.saved) {
+            if (state.saved) {
+                viewModel.consumeSaved()
+                navigation.openSummary(route.serviceId, route.addressId, route.durationHours, route.bookingType, route.startsAt)
+            }
+        }
+        HouseholdPreferencesScreen(
+            state, navigation.back, viewModel::retry, viewModel::setPets, viewModel::setPetDetails,
+            viewModel::setFoodContext, viewModel::toggleLanguage, viewModel::toggleUtensil,
+            viewModel::toggleAllergy, viewModel::toggleAccessibility, viewModel::toggleEquipment,
+            viewModel::toggleConstraint, viewModel::setHeavyLifting, viewModel::save,
+        )
+    }
+    navigation<BookingSummaryRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val draft = BookingDraft(route.serviceId, route.addressId, BookingType.valueOf(route.bookingType), route.durationHours, route.startsAt)
+        val viewModel = koinViewModel<BookingSummaryViewModel> { parametersOf(draft) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(state.createdBookingId) {
+            state.createdBookingId?.let {
+                viewModel.consumeCreatedBooking()
+                navigation.openFindingWorker(it, state.wallet?.walletId, state.useWallet)
+            }
+        }
+        BookingSummaryScreen(state, navigation.back, viewModel::retry, viewModel::setUseWallet, viewModel::confirm)
+    }
+    navigation<FindingWorkerRoute> { route ->
+        val viewModel = koinViewModel<FindingWorkerViewModel> { parametersOf(route.bookingId, route.walletId, route.useWallet) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        FindingWorkerScreen(state, viewModel::retry, viewModel::cancel)
+    }
     navigation<LiveTrackingRoute> { PlaceholderScreen(LiveTrackingRoute.titleRes()) }
     navigation<BookingCompletedRoute> { PlaceholderScreen(BookingCompletedRoute.titleRes()) }
     navigation<CancelBookingRoute> { PlaceholderScreen(CancelBookingRoute.titleRes()) }

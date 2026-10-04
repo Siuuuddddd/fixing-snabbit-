@@ -1,6 +1,6 @@
 # Android foundation guide
 
-The native Android app lives in the standalone `android/` Gradle build. It provides customer and worker product flavors, shared Compose design tokens/components, Koin dependency injection, secure Retrofit/OkHttp setup, and a typed Navigation 3 shell. Splash, onboarding, OTP login, customer home, service details, and verified saved addresses are implemented; later destinations remain clearly labelled placeholders.
+The native Android app lives in the standalone `android/` Gradle build. It provides customer and worker product flavors, shared Compose design tokens/components, Koin dependency injection, secure Retrofit/OkHttp setup, and a typed Navigation 3 shell. Customer screens through worker matching/payment (screens 1–10) are implemented; later destinations remain clearly labelled placeholders.
 
 ## Toolchain
 
@@ -20,9 +20,10 @@ Create ignored `android/local.properties`:
 sdk.dir=C\:\\path\\to\\Android\\Sdk
 RAZORPAY_KEY_ID=
 MAPS_API_KEY=
+PROTOTYPE_WALLET_ID=
 ```
 
-Real secrets never belong in Git. Firebase is not integrated in this foundation; when it is added, place environment-specific `google-services.json` in an ignored Android source-set location. Missing payment/map credentials do not block this scaffold.
+Real secrets never belong in Git. `PROTOTYPE_WALLET_ID` is not a secret; it is an explicit local-only bridge for the documented missing wallet-discovery API and should be blank outside a seeded prototype environment. Firebase is not integrated in this foundation; when it is added, place environment-specific `google-services.json` in an ignored Android source-set location.
 
 Debug uses `http://10.0.2.2:8080/` and permits cleartext only through the debug manifest. Release uses an invalid placeholder until the deployment build supplies its TLS endpoint.
 

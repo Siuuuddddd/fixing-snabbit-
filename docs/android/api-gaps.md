@@ -11,6 +11,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | No customer profile read/update endpoint | Profile | Addresses, household, Plus, favourites, and ratings exist, but a general profile contract does not. |
 | No customer booking-list endpoint | My bookings | Individual booking lookup exists; list/filter/pagination for a customer is absent. |
 | No wallet ledger/history endpoint | Wallet | Wallet summary and top-up creation exist, but the transaction list shown by the design cannot be fetched. |
+| No authenticated customer-to-wallet discovery endpoint | Booking payment, Wallet, Add money, Plus | All wallet/payment calls require `walletId`, but the login/user/household contracts never return it. Android isolates an optional `PROTOTYPE_WALLET_ID` local-build value behind `WalletIdDataSource`; release-quality discovery remains blocked. |
 | No top-up status/read endpoint | Add money | Creation returns the provider order, and the webhook credits later; the app cannot authoritatively poll a pending order. |
 | No worker earnings endpoint | Worker earnings | The board requires totals and payout history that are not exposed. |
 
@@ -37,3 +38,4 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 - Wallet top-ups are credited only after a verified Razorpay webhook. The Android SDK result is never treated as payment truth.
 - The backend uses RFC 7807-style `ProblemDetail` responses. Screen error mapping should use HTTP status plus `detail`, not exception class names.
 - Money amounts use integer minor units.
+- Match-and-hold creates an `AWAITING_WORKER` booking. Payment creation is valid only after a worker accepts and the booking reaches `AWAITING_PAYMENT`; its returned split is authoritative.

@@ -132,7 +132,15 @@ private fun CustomerShell() {
     )
     val navigation = CustomerNavigation(
         openService = { serviceId -> home.add(ServiceDetailsRoute(serviceId)) },
-        openAddresses = { home.add(AddressServiceabilityRoute) },
+        openAddresses = { serviceId, durationHours -> home.add(AddressServiceabilityRoute(serviceId, durationHours)) },
+        openSlots = { serviceId, addressId, durationHours -> home.add(SlotSelectionRoute(serviceId, addressId, durationHours)) },
+        openHousehold = { serviceId, addressId, durationHours, bookingType, startsAt ->
+            home.add(HouseholdPreferencesRoute(serviceId, addressId, durationHours, bookingType, startsAt))
+        },
+        openSummary = { serviceId, addressId, durationHours, bookingType, startsAt ->
+            home.add(BookingSummaryRoute(serviceId, addressId, durationHours, bookingType, startsAt))
+        },
+        openFindingWorker = { bookingId, walletId, useWallet -> home.add(FindingWorkerRoute(bookingId, walletId, useWallet)) },
         openNotifications = { home.add(NotificationsRoute) },
         back = { if (home.size > 1) home.removeLastOrNull() },
     )

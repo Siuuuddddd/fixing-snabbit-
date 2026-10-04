@@ -30,6 +30,7 @@ android {
         buildConfigField("String", "API_BASE_URL", "\"https://api.invalid/\"")
         buildConfigField("String", "RAZORPAY_KEY_ID", "\"${localValue("RAZORPAY_KEY_ID")}\"")
         buildConfigField("String", "MAPS_API_KEY", "\"${localValue("MAPS_API_KEY")}\"")
+        buildConfigField("String", "PROTOTYPE_WALLET_ID", "\"${localValue("PROTOTYPE_WALLET_ID")}\"")
         manifestPlaceholders["mapsApiKey"] = localValue("MAPS_API_KEY")
     }
 
