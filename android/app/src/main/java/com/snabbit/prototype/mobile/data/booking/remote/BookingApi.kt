@@ -73,6 +73,11 @@ data class MatchAndHoldDto(
     val plusPassId: String? = null,
     val requirements: BookingRequirementsDto,
     val visits: List<BookingVisitDto>,
+    val cancellationType: String? = null,
+    val cancellationReason: String? = null,
+    val cancellationFeeMinor: Long? = null,
+    val refundAmountMinor: Long? = null,
+    val cancelledAt: String? = null,
 )
 
 @Serializable data class StartPaymentDto(val walletId: String, val useWallet: Boolean)

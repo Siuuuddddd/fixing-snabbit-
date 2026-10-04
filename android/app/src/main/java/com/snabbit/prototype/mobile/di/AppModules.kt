@@ -28,6 +28,14 @@ import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.DefaultWalletRepository
 import com.snabbit.prototype.mobile.data.wallet.PrototypeConfiguredWalletIdDataSource
 import com.snabbit.prototype.mobile.data.wallet.WalletApi
+import com.snabbit.prototype.mobile.data.tracking.DefaultTrackingRepository
+import com.snabbit.prototype.mobile.data.tracking.OkHttpTrackingStreamDataSource
+import com.snabbit.prototype.mobile.data.tracking.TrackingApi
+import com.snabbit.prototype.mobile.data.tracking.TrackingStreamDataSource
+import com.snabbit.prototype.mobile.data.cancellation.CancellationApi
+import com.snabbit.prototype.mobile.data.cancellation.DefaultCancellationRepository
+import com.snabbit.prototype.mobile.data.rating.DefaultRatingRepository
+import com.snabbit.prototype.mobile.data.rating.RatingApi
 import com.snabbit.prototype.mobile.data.launch.DataStoreOnboardingLocalDataSource
 import com.snabbit.prototype.mobile.data.launch.DefaultLaunchRepository
 import com.snabbit.prototype.mobile.data.launch.OnboardingLocalDataSource
@@ -45,6 +53,9 @@ import com.snabbit.prototype.mobile.domain.booking.BookingType
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletIdDataSource
 import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
+import com.snabbit.prototype.mobile.domain.tracking.TrackingRepository
+import com.snabbit.prototype.mobile.domain.cancellation.CancellationRepository
+import com.snabbit.prototype.mobile.domain.rating.RatingRepository
 import com.snabbit.prototype.mobile.domain.launch.LaunchRepository
 import com.snabbit.prototype.mobile.domain.session.SessionIdentityProvider
 import com.snabbit.prototype.mobile.navigation.AddMoneyRoute
@@ -89,6 +100,12 @@ import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesScreen
 import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesViewModel
 import com.snabbit.prototype.mobile.ui.booking.SlotSelectionScreen
 import com.snabbit.prototype.mobile.ui.booking.SlotSelectionViewModel
+import com.snabbit.prototype.mobile.ui.tracking.LiveTrackingScreen
+import com.snabbit.prototype.mobile.ui.tracking.LiveTrackingViewModel
+import com.snabbit.prototype.mobile.ui.completed.BookingCompletedScreen
+import com.snabbit.prototype.mobile.ui.completed.BookingCompletedViewModel
+import com.snabbit.prototype.mobile.ui.cancellation.CancelBookingScreen
+import com.snabbit.prototype.mobile.ui.cancellation.CancelBookingViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -154,6 +171,10 @@ private val networkModule = module {
     single { get<Retrofit>().create(BookingApi::class.java) }
     single { get<Retrofit>().create(HouseholdApi::class.java) }
     single { get<Retrofit>().create(WalletApi::class.java) }
+    single { get<Retrofit>().create(TrackingApi::class.java) }
+    single { get<Retrofit>().create(CancellationApi::class.java) }
+    single { get<Retrofit>().create(RatingApi::class.java) }
+    single<TrackingStreamDataSource> { OkHttpTrackingStreamDataSource(get(), get(), BuildConfig.API_BASE_URL) }
 }
 
 private val repositoryModule = module {
@@ -168,6 +189,9 @@ private val repositoryModule = module {
     single<HouseholdRepository> { DefaultHouseholdRepository(get(), get(), get()) }
     single<WalletIdDataSource> { PrototypeConfiguredWalletIdDataSource(BuildConfig.PROTOTYPE_WALLET_ID) }
     single<WalletRepository> { DefaultWalletRepository(get(), get(), get()) }
+    single<TrackingRepository> { DefaultTrackingRepository(get(), get(), get()) }
+    single<CancellationRepository> { DefaultCancellationRepository(get(), get()) }
+    single<RatingRepository> { DefaultRatingRepository(get(), get()) }
 }
 
 private val viewModelModule = module {
@@ -186,6 +210,13 @@ private val viewModelModule = module {
     viewModel { (bookingId: String, walletId: String?, useWallet: Boolean) ->
         FindingWorkerViewModel(bookingId, walletId, useWallet, get())
     }
+    viewModel { (bookingId: String, visitIndex: Int) ->
+        LiveTrackingViewModel(bookingId, visitIndex, get(), get())
+    }
+    viewModel { (bookingId: String, visitIndex: Int, workerId: String) ->
+        BookingCompletedViewModel(bookingId, visitIndex, workerId, get(), get())
+    }
+    viewModel { (bookingId: String) -> CancelBookingViewModel(bookingId, get()) }
 }
 
 @OptIn(KoinExperimentalAPI::class)
@@ -286,13 +317,42 @@ private val navigationModule = module {
         BookingSummaryScreen(state, navigation.back, viewModel::retry, viewModel::setUseWallet, viewModel::confirm)
     }
     navigation<FindingWorkerRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
         val viewModel = koinViewModel<FindingWorkerViewModel> { parametersOf(route.bookingId, route.walletId, route.useWallet) }
         val state by viewModel.uiState.collectAsStateWithLifecycle()
-        FindingWorkerScreen(state, viewModel::retry, viewModel::cancel)
+        FindingWorkerScreen(
+            state,
+            viewModel::retry,
+            viewModel::cancel,
+            onTrack = { visitIndex -> navigation.openTracking(route.bookingId, visitIndex) },
+            onCancelBooking = { navigation.openCancellation(route.bookingId) },
+            onCompleted = { visitIndex, workerId -> navigation.openCompleted(route.bookingId, visitIndex, workerId) },
+        )
     }
-    navigation<LiveTrackingRoute> { PlaceholderScreen(LiveTrackingRoute.titleRes()) }
-    navigation<BookingCompletedRoute> { PlaceholderScreen(BookingCompletedRoute.titleRes()) }
-    navigation<CancelBookingRoute> { PlaceholderScreen(CancelBookingRoute.titleRes()) }
+    navigation<LiveTrackingRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<LiveTrackingViewModel> { parametersOf(route.bookingId, route.visitIndex) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(state.completedWorkerId) {
+            state.completedWorkerId?.let { navigation.openCompleted(route.bookingId, route.visitIndex, it) }
+        }
+        LiveTrackingScreen(state, navigation.back, viewModel::retry, { navigation.openCancellation(route.bookingId) })
+    }
+    navigation<BookingCompletedRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<BookingCompletedViewModel> { parametersOf(route.bookingId, route.visitIndex, route.workerId) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        BookingCompletedScreen(
+            state, viewModel::retry, viewModel::selectStars, viewModel::updateComment,
+            viewModel::submitRating, navigation.returnHome,
+        )
+    }
+    navigation<CancelBookingRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<CancelBookingViewModel> { parametersOf(route.bookingId) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        CancelBookingScreen(state, navigation.back, viewModel::retry, viewModel::updateReason, viewModel::confirmCancellation)
+    }
     navigation<AddMoneyRoute> { PlaceholderScreen(AddMoneyRoute.titleRes()) }
     navigation<SnabbitPlusRoute> { PlaceholderScreen(SnabbitPlusRoute.titleRes()) }
     navigation<MyBookingsRoute> { PlaceholderScreen(MyBookingsRoute.titleRes()) }

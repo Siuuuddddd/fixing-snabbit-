@@ -13,6 +13,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | No wallet ledger/history endpoint | Wallet | Wallet summary and top-up creation exist, but the transaction list shown by the design cannot be fetched. |
 | No authenticated customer-to-wallet discovery endpoint | Booking payment, Wallet, Add money, Plus | All wallet/payment calls require `walletId`, but the login/user/household contracts never return it. Android isolates an optional `PROTOTYPE_WALLET_ID` local-build value behind `WalletIdDataSource`; release-quality discovery remains blocked. |
 | No top-up status/read endpoint | Add money | Creation returns the provider order, and the webhook credits later; the app cannot authoritatively poll a pending order. |
+| No customer refund status/read endpoint | Cancel booking | Cancellation returns the expected refund amount, but the customer cannot query wallet/provider refund processing or settlement. Android therefore shows the refund as requested/pending. |
 | No worker earnings endpoint | Worker earnings | The board requires totals and payout history that are not exposed. |
 
 ## Important follow-ups
@@ -22,6 +23,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | Worker registration/profile/onboarding APIs | Worker login/profile | Worker OTP is login for active workers, not self-registration. |
 | Public worker detail/favourite presentation API | Home, assigned worker, favourites | Matching and favourite IDs exist, but the mobile display contract is incomplete. |
 | Notification real-time stream | Notifications | History/device/read APIs exist; there is no notification SSE endpoint. |
+| No durable worker-location SSE replay | Live tracking | The stream emits location IDs but does not consume `Last-Event-ID` or retain event history. Android sends the header, re-fetches the latest snapshot on reconnect, and deduplicates, but cannot replay missed historical points. |
 | Worker schedule aggregate | Worker schedule | Date availability exists, but not the calendar/job aggregate implied by the screen. |
 | Support ticket history and attachment contract | Help and support | Live message creation/streaming exists; richer inbox and media contracts need confirmation. |
 | Payment hand-off contract validation | Booking payment, Add money | Razorpay order IDs are returned in existing flows, but the exact mobile SDK hand-off/error/status contract needs an end-to-end test. |

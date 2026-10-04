@@ -62,6 +62,10 @@ class DefaultBookingRepository(
         quotedTotalMinor,
         grossTotalMinor,
         plusDiscountMinor,
-        visits.map { BookingVisit(it.startsAt, it.endsAt, it.offerStatus) },
+        visits.map { BookingVisit(it.visitIndex, it.workerId, it.startsAt, it.endsAt, it.offerStatus, it.jobStatus) },
+        cancellationType,
+        cancellationReason,
+        cancellationFeeMinor,
+        refundAmountMinor,
     )
 }

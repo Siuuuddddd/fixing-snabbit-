@@ -31,12 +31,19 @@ data class Booking(
     val grossTotalMinor: Long,
     val plusDiscountMinor: Long,
     val visits: List<BookingVisit>,
+    val cancellationType: String? = null,
+    val cancellationReason: String? = null,
+    val cancellationFeeMinor: Long? = null,
+    val refundAmountMinor: Long? = null,
 )
 
 data class BookingVisit(
+    val visitIndex: Int,
+    val workerId: String,
     val startsAt: String,
     val endsAt: String,
     val offerStatus: String,
+    val jobStatus: String?,
 )
 
 enum class BookingStatus {

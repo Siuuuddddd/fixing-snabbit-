@@ -46,7 +46,7 @@ Each bottom tab owns a separate `NavBackStack`, so changing tabs preserves that 
 
 Customer tabs: Home, Bookings, Wallet, Plus, Profile. Worker tabs: Jobs, Schedule, Earnings, Support, Profile.
 
-All 23 board destinations are registered as typed routes. They currently render a clearly labelled foundation placeholder; no real screen behavior has been claimed.
+All 23 board destinations are registered as typed routes. Implementation status is tracked in `PROGRESS.md`; routes not yet completed still render a clearly labelled foundation placeholder.
 
 ## Required screen states
 

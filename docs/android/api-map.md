@@ -2,7 +2,7 @@
 
 This map was derived from the current Spring controllers, DTOs, enums, gateway routes/security, OTP services, exception handlers, Razorpay webhook flow, tracking endpoints, and worker endpoints. `ProblemDetail` means the backend's RFC 7807-style response with at least HTTP `status` and `detail`. Money fields are integer minor units.
 
-Implementation status: screens 1–10 are implemented. Screens 7–10 use the authoritative availability, household, match-and-hold, booking polling, wallet balance, and payment contracts. Because a worker must accept before payment can start, the summary shows only an availability-based estimate; the finding screen creates payment at `AWAITING_PAYMENT` and displays the server-calculated split. Later board destinations still use foundation placeholders.
+Implementation status: screens 1–13 are implemented. Screens 11–13 use the worker-location snapshot/SSE stream, booking status, worker rating, cancellation quote, cancellation, and refund-breakdown fields. Live tracking replays the latest snapshot before reconnecting and sends `Last-Event-ID`; the current backend does not provide durable historical replay. Later board destinations still use foundation placeholders.
 
 ## Authentication and gateway rules
 
@@ -24,9 +24,9 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 8 | Household preferences | `GET/PUT /api/v1/users/{userId}/household`; favourite add/remove endpoints | Customer and matching user | 403; 404; 409 favourite limit/duplicate; 422 invalid preferences |
 | 9 | Booking summary | Re-check `POST /api/v1/bookings/availability`; then `POST /api/v1/bookings/match-and-hold` | Customer; `Idempotency-Key` on hold | 409 slot/offer/state conflict; 422 rules. Price and wallet/UPI values are labelled estimates until payment creation. |
 | 10 | Finding worker | Poll `GET /api/v1/bookings/{bookingId}`; on `AWAITING_PAYMENT`, `POST /api/v1/bookings/{bookingId}/payments`; optional `DELETE .../hold` while waiting | Customer owner; `Idempotency-Key` on payment | Booking status and returned payment split are authoritative; 403/404/409/422/502 surfaced explicitly. |
-| 11 | Live tracking | `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location`; SSE `GET .../worker-location/stream` | Customer owner | 403; 404; 409 tracking unavailable; 502 tracking service |
-| 12 | Booking completed | `GET /api/v1/bookings/{bookingId}`; `POST /api/v1/ratings/workers/{workerId}` | Customer owner | 404; 409 duplicate/invalid rating; booking state controls availability |
-| 13 | Cancel booking | `GET /api/v1/bookings/{bookingId}/cancellation-quote`; `POST /api/v1/bookings/{bookingId}/cancellations` | Customer owner | 403/404; 409 invalid state; 422 rule; downstream refund failure |
+| 11 | Live tracking | `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location`; SSE `GET .../worker-location/stream`; booking polling for completion | Customer owner | 403/404; 409 outside tracking window/no fresh location; 502/offline reconnect with latest-snapshot replay; stale after two minutes |
+| 12 | Booking completed | `GET /api/v1/bookings/{bookingId}`; `POST /api/v1/ratings/workers/{workerId}` with `bookingId`, `visitIndex`, `stars`, optional `comment` | Customer owner | 1–5 stars; 404; 409 duplicate/invalid rating; only the completed assigned visit can be rated |
+| 13 | Cancel booking | `GET /api/v1/bookings/{bookingId}/cancellation-quote`; `POST /api/v1/bookings/{bookingId}/cancellations` with optional `reason` | Customer owner | 403/404; 409 invalid/unstarted state; 422 rule; authoritative fee/refund fields; refund remains pending without a customer status endpoint |
 | 14 | Add money | `GET /api/v1/wallets/{walletId}`; `POST /api/v1/wallets/{walletId}/top-ups` | Customer owner; `Idempotency-Key` for top-up | 404 wallet/payment; 409 duplicate/conflict; 422 amount/rule; 502 provider. Client success never credits money. |
 | 15 | Snabbit Plus | `GET /api/v1/users/{userId}/plus`; `POST /api/v1/users/{userId}/plus/purchases` | Customer and matching user; `Idempotency-Key` | 404; 409 subscription; wallet/payment failures |
 | 16 | My bookings | No booking-list endpoint | Customer | Recorded in `api-gaps.md`; individual `GET /bookings/{id}` is insufficient |
@@ -90,6 +90,10 @@ Booking types serialize exactly as `INSTANT`, `SCHEDULED`, and `MULTI_DAY`. Inst
 | `GET /api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location/stream` | SSE request | Live location events; client reconnects and treats timestamps as freshness evidence |
 | `POST /api/v1/ratings/workers/{workerId}` | Rating value and optional comment fields from DTO | Customer-to-worker rating snapshot |
 | `POST /api/v1/worker/ratings/customers/{customerId}` | Rating request DTO | Worker-to-customer rating snapshot |
+
+The location stream emits `worker-location` events whose event ID is `locationId` and otherwise emits keep-alive comments. Android sends the last received ID when reconnecting, fetches the latest REST snapshot as replay, deduplicates by location ID, and uses the backend two-minute freshness limit. The server currently starts each connection from its latest polled value and does not replay a retained event history.
+
+Cancellation quotes return `plusActive`, `cancellationFeeMinor`, `refundAmountMinor`, `policyBand` (`EARLY` or `LATE`), and `calculatedAt`. Cancellation returns the booking snapshot with cancellation/refund amounts; it does not prove that the external refund has settled.
 
 ### Wallet and Razorpay top-up
 

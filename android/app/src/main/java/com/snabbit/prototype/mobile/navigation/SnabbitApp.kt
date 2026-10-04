@@ -141,6 +141,10 @@ private fun CustomerShell() {
             home.add(BookingSummaryRoute(serviceId, addressId, durationHours, bookingType, startsAt))
         },
         openFindingWorker = { bookingId, walletId, useWallet -> home.add(FindingWorkerRoute(bookingId, walletId, useWallet)) },
+        openTracking = { bookingId, visitIndex -> home.add(LiveTrackingRoute(bookingId, visitIndex)) },
+        openCompleted = { bookingId, visitIndex, workerId -> home.add(BookingCompletedRoute(bookingId, visitIndex, workerId)) },
+        openCancellation = { bookingId -> home.add(CancelBookingRoute(bookingId)) },
+        returnHome = { home.clear(); home.add(HomeRoute) },
         openNotifications = { home.add(NotificationsRoute) },
         back = { if (home.size > 1) home.removeLastOrNull() },
     )

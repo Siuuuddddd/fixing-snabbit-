@@ -23,9 +23,9 @@ sealed interface SnabbitRoute : NavKey
     val bookingType: String, val startsAt: List<String>,
 ) : SnabbitRoute
 @Serializable data class FindingWorkerRoute(val bookingId: String, val walletId: String?, val useWallet: Boolean) : SnabbitRoute
-@Serializable data object LiveTrackingRoute : SnabbitRoute
-@Serializable data object BookingCompletedRoute : SnabbitRoute
-@Serializable data object CancelBookingRoute : SnabbitRoute
+@Serializable data class LiveTrackingRoute(val bookingId: String, val visitIndex: Int) : SnabbitRoute
+@Serializable data class BookingCompletedRoute(val bookingId: String, val visitIndex: Int, val workerId: String) : SnabbitRoute
+@Serializable data class CancelBookingRoute(val bookingId: String) : SnabbitRoute
 @Serializable data object AddMoneyRoute : SnabbitRoute
 @Serializable data object SnabbitPlusRoute : SnabbitRoute
 @Serializable data object MyBookingsRoute : SnabbitRoute
@@ -49,9 +49,9 @@ fun SnabbitRoute.titleRes(): Int = when (this) {
     is HouseholdPreferencesRoute -> R.string.screen_household_preferences
     is BookingSummaryRoute -> R.string.screen_booking_summary
     is FindingWorkerRoute -> R.string.screen_finding_worker
-    LiveTrackingRoute -> R.string.screen_live_tracking
-    BookingCompletedRoute -> R.string.screen_booking_completed
-    CancelBookingRoute -> R.string.screen_cancel_booking
+    is LiveTrackingRoute -> R.string.screen_live_tracking
+    is BookingCompletedRoute -> R.string.screen_booking_completed
+    is CancelBookingRoute -> R.string.screen_cancel_booking
     AddMoneyRoute -> R.string.screen_add_money
     SnabbitPlusRoute -> R.string.screen_snabbit_plus
     MyBookingsRoute -> R.string.screen_my_bookings

@@ -19,10 +19,18 @@ import com.snabbit.prototype.mobile.domain.booking.BookingStatus
 import com.snabbit.prototype.mobile.ui.common.DataErrorPanel
 import com.snabbit.prototype.mobile.ui.common.formatInrMinor
 import com.snabbit.prototype.mobile.ui.components.SnabbitCard
+import com.snabbit.prototype.mobile.ui.components.SnabbitButton
 import com.snabbit.prototype.mobile.ui.theme.SnabbitSpacing
 
 @Composable
-fun FindingWorkerScreen(state: FindingWorkerUiState, onRetry: () -> Unit, onCancel: () -> Unit) {
+fun FindingWorkerScreen(
+    state: FindingWorkerUiState,
+    onRetry: () -> Unit,
+    onCancelHold: () -> Unit,
+    onTrack: (Int) -> Unit,
+    onCancelBooking: () -> Unit,
+    onCompleted: (Int, String) -> Unit,
+) {
     Scaffold { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(SnabbitSpacing.large),
@@ -48,9 +56,18 @@ fun FindingWorkerScreen(state: FindingWorkerUiState, onRetry: () -> Unit, onCanc
             if (state.paymentUnavailable) Text(stringResource(R.string.finding_wallet_id_missing), color = MaterialTheme.colorScheme.error)
             state.error?.let { DataErrorPanel(it, onRetry) }
             if (state.booking?.status == BookingStatus.AWAITING_WORKER) {
-                OutlinedButton(onClick = onCancel, enabled = !state.isCancelling, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onCancelHold, enabled = !state.isCancelling, modifier = Modifier.fillMaxWidth()) {
                     if (state.isCancelling) CircularProgressIndicator() else Text(stringResource(R.string.finding_cancel_hold))
                 }
+            }
+            state.booking?.takeIf { it.status == BookingStatus.CONFIRMED }?.visits?.firstOrNull()?.let { visit ->
+                SnabbitButton(stringResource(R.string.finding_track_worker), { onTrack(visit.visitIndex) })
+                OutlinedButton(onClick = onCancelBooking, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.finding_cancel_booking))
+                }
+            }
+            state.booking?.takeIf { it.status == BookingStatus.COMPLETED }?.visits?.lastOrNull()?.let { visit ->
+                SnabbitButton(stringResource(R.string.completed_rate_prompt), { onCompleted(visit.visitIndex, visit.workerId) })
             }
         }
     }

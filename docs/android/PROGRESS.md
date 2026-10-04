@@ -34,9 +34,9 @@
 - [x] Household preferences read/update with exact matching constraint values
 - [x] Booking summary with advisory wallet/UPI estimate and idempotent match-and-hold
 - [x] Worker matching polling, hold cancellation, post-acceptance payment creation, and authoritative split
-- [ ] Live tracking
-- [ ] Booking completion/rating
-- [ ] Cancellation/refund quote
+- [x] Live tracking with latest-snapshot replay, SSE `Last-Event-ID`, reconnect backoff, stale-location state, and completion transition
+- [x] Booking completion with authoritative booking details and 1–5 star worker rating
+- [x] Cancellation with authoritative early/late quote, Plus benefit, fee/refund breakdown, optional reason, and pending refund state
 - [ ] Wallet and Add Money states
 - [ ] Snabbit Plus
 - [ ] Booking list
@@ -55,4 +55,5 @@
 - Authentication milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, unit tests, and lint (195 actionable tasks).
 - Catalogue/address milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 32 unit tests, and lint (195 actionable tasks).
 - Booking/matching milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 38 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
+- Tracking/completion/cancellation milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 43 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - A final repository-root backend regression build is run immediately before commit.

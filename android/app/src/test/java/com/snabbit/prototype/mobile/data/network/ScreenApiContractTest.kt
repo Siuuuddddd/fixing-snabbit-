@@ -5,6 +5,9 @@ import com.snabbit.prototype.mobile.data.catalog.remote.CatalogApi
 import com.snabbit.prototype.mobile.data.booking.remote.BookingApi
 import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.WalletApi
+import com.snabbit.prototype.mobile.data.tracking.TrackingApi
+import com.snabbit.prototype.mobile.data.cancellation.CancellationApi
+import com.snabbit.prototype.mobile.data.rating.RatingApi
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import retrofit2.http.DELETE
@@ -43,5 +46,25 @@ class ScreenApiContractTest {
         assertEquals("api/v1/users/{userId}/household", requireNotNull(HouseholdApi::class.java.methods.single { it.name == "get" }.getAnnotation(GET::class.java)).value)
         assertEquals("api/v1/users/{userId}/household", requireNotNull(HouseholdApi::class.java.methods.single { it.name == "update" }.getAnnotation(PUT::class.java)).value)
         assertEquals("api/v1/wallets/{walletId}", requireNotNull(WalletApi::class.java.methods.single { it.name == "balance" }.getAnnotation(GET::class.java)).value)
+    }
+
+    @Test
+    fun `tracking rating and cancellation paths match backend controllers`() {
+        assertEquals(
+            "api/v1/bookings/{bookingId}/visits/{visitIndex}/worker-location",
+            requireNotNull(TrackingApi::class.java.methods.single { it.name == "latest" }.getAnnotation(GET::class.java)).value,
+        )
+        assertEquals(
+            "api/v1/ratings/workers/{workerId}",
+            requireNotNull(RatingApi::class.java.methods.single { it.name == "rate" }.getAnnotation(POST::class.java)).value,
+        )
+        assertEquals(
+            "api/v1/bookings/{bookingId}/cancellation-quote",
+            requireNotNull(CancellationApi::class.java.methods.single { it.name == "quote" }.getAnnotation(GET::class.java)).value,
+        )
+        assertEquals(
+            "api/v1/bookings/{bookingId}/cancellations",
+            requireNotNull(CancellationApi::class.java.methods.single { it.name == "cancel" }.getAnnotation(POST::class.java)).value,
+        )
     }
 }
