@@ -1,6 +1,6 @@
 # Android foundation guide
 
-The native Android app lives in the standalone `android/` Gradle build. It provides customer and worker product flavors, shared Compose design tokens/components, Koin dependency injection, secure Retrofit/OkHttp setup, and a typed Navigation 3 shell. Customer screens and shared states through screen 19 are implemented; worker screens 20–23 remain clearly labelled placeholders.
+The native Android app lives in the standalone `android/` Gradle build. It provides customer and worker product flavors, shared Compose design tokens/components, Koin dependency injection, secure Retrofit/OkHttp setup, and a typed Navigation 3 shell. All 23 design-board destinations are implemented; screens whose backend read contracts are missing show explicit gap states rather than invented data.
 
 ## Toolchain
 

@@ -50,6 +50,10 @@ import com.snabbit.prototype.mobile.data.cancellation.CancellationApi
 import com.snabbit.prototype.mobile.data.cancellation.DefaultCancellationRepository
 import com.snabbit.prototype.mobile.data.rating.DefaultRatingRepository
 import com.snabbit.prototype.mobile.data.rating.RatingApi
+import com.snabbit.prototype.mobile.data.worker.DefaultWorkerAvailabilityRepository
+import com.snabbit.prototype.mobile.data.worker.DefaultWorkerJobsRepository
+import com.snabbit.prototype.mobile.data.worker.DefaultWorkerLocationRepository
+import com.snabbit.prototype.mobile.data.worker.WorkerApi
 import com.snabbit.prototype.mobile.data.launch.DataStoreOnboardingLocalDataSource
 import com.snabbit.prototype.mobile.data.launch.DefaultLaunchRepository
 import com.snabbit.prototype.mobile.data.launch.OnboardingLocalDataSource
@@ -76,6 +80,9 @@ import com.snabbit.prototype.mobile.domain.plus.PlusRepository
 import com.snabbit.prototype.mobile.domain.tracking.TrackingRepository
 import com.snabbit.prototype.mobile.domain.cancellation.CancellationRepository
 import com.snabbit.prototype.mobile.domain.rating.RatingRepository
+import com.snabbit.prototype.mobile.domain.worker.WorkerAvailabilityRepository
+import com.snabbit.prototype.mobile.domain.worker.WorkerJobsRepository
+import com.snabbit.prototype.mobile.domain.worker.WorkerLocationRepository
 import com.snabbit.prototype.mobile.domain.launch.LaunchRepository
 import com.snabbit.prototype.mobile.domain.session.SessionIdentityProvider
 import com.snabbit.prototype.mobile.domain.session.SessionManager
@@ -107,6 +114,7 @@ import com.snabbit.prototype.mobile.navigation.WorkerJobFeedRoute
 import com.snabbit.prototype.mobile.navigation.WorkerLandingRoute
 import com.snabbit.prototype.mobile.navigation.titleRes
 import com.snabbit.prototype.mobile.navigation.LocalCustomerNavigation
+import com.snabbit.prototype.mobile.navigation.LocalWorkerNavigation
 import com.snabbit.prototype.mobile.ui.address.AddressScreen
 import com.snabbit.prototype.mobile.ui.address.AddressViewModel
 import com.snabbit.prototype.mobile.ui.home.HomeScreen
@@ -143,6 +151,14 @@ import com.snabbit.prototype.mobile.ui.notification.NotificationsViewModel
 import com.snabbit.prototype.mobile.ui.profile.ProfileScreen
 import com.snabbit.prototype.mobile.ui.profile.ProfileViewModel
 import com.snabbit.prototype.mobile.ui.common.EmptyErrorOfflineScreen
+import com.snabbit.prototype.mobile.ui.worker.WorkerEarningsScreen
+import com.snabbit.prototype.mobile.ui.worker.WorkerEarningsViewModel
+import com.snabbit.prototype.mobile.ui.worker.WorkerJobDetailsScreen
+import com.snabbit.prototype.mobile.ui.worker.WorkerJobDetailsViewModel
+import com.snabbit.prototype.mobile.ui.worker.WorkerJobFeedScreen
+import com.snabbit.prototype.mobile.ui.worker.WorkerJobFeedViewModel
+import com.snabbit.prototype.mobile.ui.worker.WorkerScheduleScreen
+import com.snabbit.prototype.mobile.ui.worker.WorkerScheduleViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -215,6 +231,7 @@ private val networkModule = module {
     single { get<Retrofit>().create(CancellationApi::class.java) }
     single { get<Retrofit>().create(RatingApi::class.java) }
     single { get<Retrofit>().create(NotificationApi::class.java) }
+    single { get<Retrofit>().create(WorkerApi::class.java) }
     single<TrackingStreamDataSource> { OkHttpTrackingStreamDataSource(get(), get(), BuildConfig.API_BASE_URL) }
 }
 
@@ -245,6 +262,9 @@ private val repositoryModule = module {
     single<NotificationRepository> { DefaultNotificationRepository(get(), get(), get(), get(), get()) }
     single<NotificationRefreshEvents> { DefaultNotificationRefreshEvents() }
     single<ProfileRepository> { DefaultProfileRepository(get(), get(), get(), get(), get(), get(), get()) }
+    single<WorkerJobsRepository> { DefaultWorkerJobsRepository(get(), get()) }
+    single<WorkerAvailabilityRepository> { DefaultWorkerAvailabilityRepository(get(), get()) }
+    single<WorkerLocationRepository> { DefaultWorkerLocationRepository(get(), get()) }
 }
 
 private val viewModelModule = module {
@@ -275,6 +295,10 @@ private val viewModelModule = module {
     viewModel { MyBookingsViewModel(get()) }
     viewModel { NotificationsViewModel(get(), get()) }
     viewModel { ProfileViewModel(get()) }
+    viewModel { WorkerJobFeedViewModel(get()) }
+    viewModel { WorkerScheduleViewModel(get()) }
+    viewModel { (bookingId: String, visitIndex: Int) -> WorkerJobDetailsViewModel(bookingId, visitIndex, get(), get(), get()) }
+    viewModel { WorkerEarningsViewModel() }
 }
 
 @OptIn(KoinExperimentalAPI::class)
@@ -438,10 +462,30 @@ private val navigationModule = module {
         ProfileScreen(state, viewModel::refresh, viewModel::retry, viewModel::signOut)
     }
     navigation<EmptyErrorOfflineRoute> { EmptyErrorOfflineScreen(onRetry = {}) }
-    navigation<WorkerLandingRoute> { PlaceholderScreen(WorkerLandingRoute.titleRes()) }
-    navigation<WorkerJobFeedRoute> { PlaceholderScreen(WorkerJobFeedRoute.titleRes()) }
-    navigation<WorkerJobDetailsRoute> { PlaceholderScreen(WorkerJobDetailsRoute.titleRes()) }
-    navigation<WorkerEarningsRoute> { PlaceholderScreen(WorkerEarningsRoute.titleRes()) }
+    navigation<WorkerLandingRoute> {
+        val viewModel = koinViewModel<WorkerScheduleViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        WorkerScheduleScreen(state, viewModel::retry, viewModel::toggle)
+    }
+    navigation<WorkerJobFeedRoute> {
+        val navigation = LocalWorkerNavigation.current
+        val viewModel = koinViewModel<WorkerJobFeedViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        WorkerJobFeedScreen(state, viewModel::refresh, viewModel::retry, viewModel::accept, viewModel::reject,
+            { job -> navigation.openJob(job.bookingId, job.visitIndex) })
+    }
+    navigation<WorkerJobDetailsRoute> { route ->
+        val navigation = LocalWorkerNavigation.current
+        val viewModel = koinViewModel<WorkerJobDetailsViewModel> { parametersOf(route.bookingId, route.visitIndex) }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        WorkerJobDetailsScreen(state, navigation.back, viewModel::retry, viewModel::requestArrival,
+            viewModel::start, viewModel::complete, viewModel::publishLocation, viewModel::locationPermissionDenied)
+    }
+    navigation<WorkerEarningsRoute> {
+        val viewModel = koinViewModel<WorkerEarningsViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        WorkerEarningsScreen(state, viewModel::retry)
+    }
 }
 
 val appModules = listOf(storageModule, networkModule, repositoryModule, viewModelModule, navigationModule)

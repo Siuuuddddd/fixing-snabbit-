@@ -43,10 +43,10 @@
 - [x] Notification history/read states, notification permission, and customer/worker FCM device registration
 - [x] Customer/worker profile summary, backend-backed customer settings status, device cleanup, and logout
 - [x] Shared loading, empty, recoverable error, and offline presentation used across real screens
-- [ ] Worker landing/schedule
-- [ ] Worker job feed
-- [ ] Worker job details/progress
-- [ ] Worker earnings
+- [x] Worker landing/schedule with seven-day backend availability and explicit day updates
+- [x] Worker job feed with authoritative offers/jobs, expiry countdown, accept, decline, refresh, empty, offline, and error states
+- [x] Worker job details with assigned/arrived/in-progress/completed transitions and consented foreground location publishing
+- [x] Worker earnings gap state that does not invent totals or payout history while the backend contract is missing
 
 ## Verification record
 
@@ -58,4 +58,5 @@
 - Tracking/completion/cancellation milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 43 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - Wallet/Plus milestone: Razorpay checkout is activity-owned; client callbacks only begin backend verification. `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 46 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - Bookings/notifications/profile/shared-states milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 52 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
+- Worker screens milestone: worker OTP remains flavor-aware; availability, offer/job feeds, lifecycle transitions, and foreground location publishing use exact backend contracts, while earnings stays an explicit API-gap state. `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 57 unit tests per flavor, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon --stacktrace` passed (55 actionable tasks).
 - A final repository-root backend regression build is run immediately before commit.

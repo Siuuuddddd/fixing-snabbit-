@@ -28,7 +28,7 @@ class RoutesTest {
             EmptyErrorOfflineRoute,
             WorkerLandingRoute,
             WorkerJobFeedRoute,
-            WorkerJobDetailsRoute,
+            WorkerJobDetailsRoute("booking-id", 0),
             WorkerEarningsRoute,
         )
 

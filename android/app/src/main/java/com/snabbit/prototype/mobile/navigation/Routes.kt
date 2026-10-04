@@ -34,7 +34,7 @@ sealed interface SnabbitRoute : NavKey
 @Serializable data object EmptyErrorOfflineRoute : SnabbitRoute
 @Serializable data object WorkerLandingRoute : SnabbitRoute
 @Serializable data object WorkerJobFeedRoute : SnabbitRoute
-@Serializable data object WorkerJobDetailsRoute : SnabbitRoute
+@Serializable data class WorkerJobDetailsRoute(val bookingId: String, val visitIndex: Int) : SnabbitRoute
 @Serializable data object WorkerEarningsRoute : SnabbitRoute
 
 @StringRes
@@ -60,6 +60,6 @@ fun SnabbitRoute.titleRes(): Int = when (this) {
     EmptyErrorOfflineRoute -> R.string.screen_empty_error_offline
     WorkerLandingRoute -> R.string.screen_worker_landing
     WorkerJobFeedRoute -> R.string.screen_worker_job_feed
-    WorkerJobDetailsRoute -> R.string.screen_worker_job_details
+    is WorkerJobDetailsRoute -> R.string.screen_worker_job_details
     WorkerEarningsRoute -> R.string.screen_worker_earnings
 }

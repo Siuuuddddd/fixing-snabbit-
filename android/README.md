@@ -1,6 +1,6 @@
 # Snabbit Android app
 
-This standalone project contains the customer and worker apps. It includes the shared design system, secure networking/DI foundation, Navigation 3 shell, and real splash, onboarding, OTP login, customer catalogue, service details, and saved-address/serviceability screens. Later destinations remain labelled placeholders.
+This standalone project contains the customer and worker apps. It includes the shared design system, secure networking/DI foundation, Navigation 3 shell, and all 23 design-board destinations. Missing backend read contracts are surfaced as explicit gap states rather than filled with invented data.
 
 ## Prerequisites
 

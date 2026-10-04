@@ -183,10 +183,16 @@ private fun WorkerShell() {
         WorkerTab.SUPPORT to support,
         WorkerTab.PROFILE to profile,
     )
-    AppShell(
-        backStack = stacks.getValue(selected),
-        bottomBar = { SnabbitBottomBar(WorkerTab.entries, selected, { selected = it }) },
+    val navigation = WorkerNavigation(
+        openJob = { bookingId, visitIndex -> jobs.add(WorkerJobDetailsRoute(bookingId, visitIndex)) },
+        back = { if (jobs.size > 1) jobs.removeLastOrNull() },
     )
+    CompositionLocalProvider(LocalWorkerNavigation provides navigation) {
+        AppShell(
+            backStack = stacks.getValue(selected),
+            bottomBar = { SnabbitBottomBar(WorkerTab.entries, selected, { selected = it }) },
+        )
+    }
 }
 
 @OptIn(KoinExperimentalAPI::class)

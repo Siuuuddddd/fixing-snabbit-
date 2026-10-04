@@ -2,7 +2,7 @@
 
 This map was derived from the current Spring controllers, DTOs, enums, gateway routes/security, OTP services, exception handlers, Razorpay webhook flow, tracking endpoints, and worker endpoints. `ProblemDetail` means the backend's RFC 7807-style response with at least HTTP `status` and `detail`. Money fields are integer minor units.
 
-Implementation status: customer screens and shared states 1–19 are implemented. Screens 16 and 18 are constrained by the missing booking-list and profile-read contracts documented in `api-gaps.md`: Android retains IDs for bookings created on the current install and composes customer settings status from existing owned endpoints. Worker screens 20–23 remain placeholders.
+Implementation status: all 23 design-board destinations are implemented. Screens 16, 18, and 23 are constrained by the missing booking-list, profile-read, and worker-earnings contracts documented in `api-gaps.md`; each UI labels that limitation instead of presenting prototype data as authoritative.
 
 ## Authentication and gateway rules
 
@@ -33,10 +33,10 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 17 | Notifications | Customer `/api/v1/notifications`; worker `/api/v1/worker/notifications`; read, device registration/removal, and `/live` WebSockets | Authenticated owner | 403/404; 422 invalid device. FCM foreground receipt triggers authoritative history refresh. |
 | 18 | Profile | Address, household, and Plus reads for customer summary; JWT subject for both roles | Customer/worker | General name/phone/avatar read/update is missing and is labelled unavailable; logout unregisters the backend device and FCM instance before clearing local auth. |
 | 19 | Empty/error/offline | No endpoint | None | Shared localized presentation for transport/offline, `ProblemDetail`, loading, empty, and retry states |
-| 20 | Worker app landing | Worker OTP plus availability/jobs contracts | Worker | 401/403; no self-registration contract |
-| 21 | Worker job feed | `GET /api/v1/worker/bookings/offers`; `GET /api/v1/worker/bookings/jobs`; accept/reject endpoints | Worker | 404 offer/job; 409 offer expired/already resolved/state conflict |
-| 22 | Worker job details & flow | Accept/reject plus visit arrive/start/complete endpoints; availability and location endpoints | Worker assigned to job | 403/404; 409 invalid transition; 422 availability/location |
-| 23 | Worker earnings | No earnings endpoint | Worker | Recorded in `api-gaps.md` |
+| 20 | Worker app landing | Worker OTP plus `GET/PUT /api/v1/workers/me/availability` | Worker | 401/403; 422 date/window validation; no self-registration contract |
+| 21 | Worker job feed | `GET /api/v1/worker/bookings/offers`; `GET /api/v1/worker/bookings/jobs`; accept/reject endpoints | Worker | Backend `offerExpiresAt` drives the countdown; 404 offer/job; 409 offer expired/already resolved/state conflict |
+| 22 | Worker job details & flow | Visit arrive/start/complete endpoints and `POST /api/v1/workers/me/location` | Worker assigned to job | 403/404; 409 invalid transition; 422 proximity, accuracy, timestamp, or state validation |
+| 23 | Worker earnings | No earnings endpoint | Worker | The app explicitly shows the missing-contract state and no fabricated amount; recorded in `api-gaps.md` |
 
 ## Request and response contracts
 
@@ -128,14 +128,14 @@ Notification history returns at most 100 records after `afterNotificationId`, or
 |---|---|---|
 | `GET /api/v1/worker/bookings/offers` | Worker identity from JWT | Active job offers |
 | `GET /api/v1/worker/bookings/jobs` | Worker identity | Assigned/current job snapshots |
-| `POST /api/v1/worker/bookings/offers/{offerId}/accept` | Offer ID | Accepted/assigned booking result |
-| `POST /api/v1/worker/bookings/offers/{offerId}/reject` | Offer ID | Rejected acknowledgement |
+| `POST /api/v1/worker/bookings/{bookingId}/offers/{offerId}/accept` | Booking and offer IDs | Accepted booking snapshot; assignment enters the jobs feed after customer payment confirms the hold |
+| `POST /api/v1/worker/bookings/{bookingId}/offers/{offerId}/reject` | Booking and offer IDs | Rejected booking snapshot |
 | `POST /api/v1/worker/bookings/{bookingId}/visits/{visitIndex}/arrive` | Path IDs | Updated visit state |
 | `POST /api/v1/worker/bookings/{bookingId}/visits/{visitIndex}/start` | Path IDs | Updated visit state |
 | `POST /api/v1/worker/bookings/{bookingId}/visits/{visitIndex}/complete` | Path IDs | Updated visit/booking state |
 | `GET /api/v1/workers/me/availability` | Worker identity | Availability records |
-| `PUT /api/v1/workers/me/availability/{date}` | Date plus availability DTO | Updated date availability |
-| `POST /api/v1/workers/me/location` | Coordinates/location timestamp fields | Accepted latest location |
+| `PUT /api/v1/workers/me/availability/{date}` | Date plus `status`; available days send the backend operating window `08:00:00`–`19:00:00` | Updated date availability |
+| `POST /api/v1/workers/me/location` | Consented foreground coordinates, accuracy, and capture timestamp | Accepted latest location. Android publishes on arrival and offers explicit updates while arrived/in progress. |
 
 ## Error mapping policy
 

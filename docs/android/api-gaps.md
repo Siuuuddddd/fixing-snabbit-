@@ -16,7 +16,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | No Plus plan catalogue endpoint | Snabbit Plus | Android isolates the currently configured `MONTHLY` display terms behind `PrototypePlusPlanDataSource`; the purchase request sends only `planCode`, and backend configuration remains authoritative. |
 | No Plus purchase status/read endpoint | Snabbit Plus | Purchase creation returns a provider order, but no customer endpoint exposes that purchase afterward. Android polls the authoritative Plus membership snapshot and stays pending until it becomes active. |
 | No customer refund status/read endpoint | Cancel booking | Cancellation returns the expected refund amount, but the customer cannot query wallet/provider refund processing or settlement. Android therefore shows the refund as requested/pending. |
-| No worker earnings endpoint | Worker earnings | The board requires totals and payout history that are not exposed. |
+| No worker earnings endpoint | Worker earnings | The board requires totals and payout history that are not exposed. Android shows a clearly labelled unavailable state and does not derive or fabricate money from the active-jobs feed. |
 
 ## Important follow-ups
 
@@ -26,7 +26,7 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | Public worker detail/favourite presentation API | Home, assigned worker, favourites | Matching and favourite IDs exist, but the mobile display contract is incomplete. |
 | Notification WebSocket/mobile reconnect validation | Notifications | Durable customer and worker WebSocket routes exist. This chunk uses FCM as a refresh signal plus authoritative history reads; direct WebSocket lifecycle/reconnect behavior remains an optional follow-up. |
 | No durable worker-location SSE replay | Live tracking | The stream emits location IDs but does not consume `Last-Event-ID` or retain event history. Android sends the header, re-fetches the latest snapshot on reconnect, and deduplicates, but cannot replay missed historical points. |
-| Worker schedule aggregate | Worker schedule | Date availability exists, but not the calendar/job aggregate implied by the screen. |
+| Worker schedule aggregate | Worker schedule | Android implements the real per-date availability list/update contract. The richer calendar/job aggregate implied by the board is still unavailable. Missing dates are presented as unavailable and are written only after an explicit worker action. |
 | Support ticket history and attachment contract | Help and support | Live message creation/streaming exists; richer inbox and media contracts need confirmation. |
 | Payment hand-off contract validation | Booking payment, Add money | Razorpay order IDs are returned in existing flows, but the exact mobile SDK hand-off/error/status contract needs an end-to-end test. |
 | Maps/serviceability UI contract | Address, live tracking | Address create/list/delete is implemented with consented device coordinates and backend serviceability verification. Provider autocomplete, map rendering, and route-display contracts remain undefined. |
