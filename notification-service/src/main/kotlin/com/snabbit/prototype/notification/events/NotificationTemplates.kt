@@ -2,11 +2,12 @@ package com.snabbit.prototype.notification.events
 
 import com.snabbit.prototype.notification.dto.response.NotificationTemplate
 import org.springframework.stereotype.Component
-import org.springframework.stereotype.Service
 
 @Component
 class NotificationTemplates {
-    fun forEvent(event: EventEnvelope): NotificationTemplate? = when (event.eventType) {
+    fun forEvent(event: EventEnvelope): NotificationTemplate? = forCustomerEvent(event)
+
+    fun forCustomerEvent(event: EventEnvelope): NotificationTemplate? = when (event.eventType) {
         "BookingHeld" -> NotificationTemplate("Slot held", "Your service slot is held while a worker responds.", false)
         "WorkerOffersCreated" -> NotificationTemplate("New job offer", "A new home-service job is waiting for your response.", true)
         "BookingAwaitingPayment" -> NotificationTemplate("Worker accepted", "Complete payment before the slot hold expires.", true)
@@ -29,6 +30,18 @@ class NotificationTemplates {
         "WalletPaymentRefundRequired", "WalletRefundQueued" ->
             NotificationTemplate("Refund started", "Your refund has been queued securely.", true)
         "WalletRefundCompleted" -> NotificationTemplate("Refund completed", "Your booking refund has completed.", true)
+        else -> null
+    }
+
+    fun forWorkerEvent(event: EventEnvelope): NotificationTemplate? = when (event.eventType) {
+        "WorkerOffersCreated" ->
+            NotificationTemplate("New job offer", "A new home-service job is waiting for your response.", true)
+        "WorkerOfferExpired" ->
+            NotificationTemplate("Offer expired", "This job offer is no longer available.", false)
+        "BookingConfirmed" ->
+            NotificationTemplate("Booking assigned", "The customer payment is confirmed and this job is assigned to you.", true)
+        "BookingCancelled", "BookingCustomerCancelled", "BookingPlatformCancelled" ->
+            NotificationTemplate("Job cancelled", "This booking has been cancelled and is no longer scheduled.", true)
         else -> null
     }
 }

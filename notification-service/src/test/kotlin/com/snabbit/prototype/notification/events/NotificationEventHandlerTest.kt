@@ -59,8 +59,11 @@ class NotificationEventHandlerTest {
     @Test
     fun `worker offer event fans out one privacy-filtered notification per worker`() {
         val resolver = mockk<EventRecipientResolver>()
+        val workerRecipients = mockk<WorkerPushRecipientResolver>()
         val fanoutHandler = mockk<NotificationEventHandler>(relaxed = true)
-        val listener = NotificationEventListener(mapper, resolver, NotificationTemplates(), fanoutHandler)
+        val listener = NotificationEventListener(
+            mapper, resolver, workerRecipients, NotificationTemplates(), fanoutHandler,
+        )
         val firstWorker = UUID.randomUUID()
         val secondWorker = UUID.randomUUID()
         val bookingId = UUID.randomUUID()
@@ -93,6 +96,70 @@ class NotificationEventHandlerTest {
         }
         assertEquals(setOf(firstWorker, secondWorker), capturedWorkers.toSet())
         verify(exactly = 0) { resolver.customerId(any()) }
+    }
+
+    @Test
+    fun `worker lifecycle events deliver expiry assignment and cancellation`() {
+        val resolver = mockk<EventRecipientResolver>()
+        val workerRecipients = mockk<WorkerPushRecipientResolver>()
+        val fanoutHandler = mockk<NotificationEventHandler>(relaxed = true)
+        val listener = NotificationEventListener(
+            mapper, resolver, workerRecipients, NotificationTemplates(), fanoutHandler,
+        )
+        val workerId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val bookingId = UUID.randomUUID()
+        every { resolver.customerId(any()) } returns customerId
+        val storedJob = mapper.createObjectNode().apply {
+            put("workerId", workerId.toString())
+            put("jobId", UUID.randomUUID().toString())
+            put("visitIndex", 0)
+        }
+        every { workerRecipients.targets(bookingId) } returns listOf(WorkerPushTarget(workerId, listOf(storedJob)))
+
+        val expiry = eventWithEntries(
+            "WorkerOfferExpired", bookingId, "offers", workerId,
+            mapOf("offerId" to UUID.randomUUID(), "jobId" to UUID.randomUUID(), "visitIndex" to 0),
+        )
+        val assigned = eventWithEntries(
+            "BookingConfirmed", bookingId, "jobs", workerId,
+            mapOf("jobId" to UUID.randomUUID(), "visitIndex" to 0),
+        )
+        val cancelled = eventWithEntries(
+            "BookingCustomerCancelled", bookingId, "jobs", workerId,
+            mapOf("jobId" to UUID.randomUUID(), "visitIndex" to 0),
+        )
+
+        listOf(expiry, assigned, cancelled).forEach { listener.consume(mapper.writeValueAsString(it)) }
+
+        listOf(expiry, assigned, cancelled).forEach { source ->
+            verify(exactly = 1) {
+                fanoutHandler.handle(source, RecipientType.CUSTOMER, customerId, any())
+            }
+            verify(exactly = 1) {
+                fanoutHandler.handle(
+                    match { it.eventType == source.eventType && it.eventId != source.eventId },
+                    RecipientType.WORKER,
+                    workerId,
+                    any(),
+                )
+            }
+        }
+    }
+
+    private fun eventWithEntries(
+        type: String,
+        bookingId: UUID,
+        field: String,
+        workerId: UUID,
+        values: Map<String, Any>,
+    ): EventEnvelope {
+        val entry = values + ("workerId" to workerId)
+        val payload = mapper.createObjectNode().apply {
+            put("bookingId", bookingId.toString())
+            set<com.fasterxml.jackson.databind.JsonNode>(field, mapper.valueToTree(listOf(entry)))
+        }
+        return EventEnvelope(UUID.randomUUID(), type, "Booking", bookingId.toString(), now, payload)
     }
 
     private fun event(type: String) = EventEnvelope(

@@ -22,4 +22,8 @@ interface DeviceRegistrationRepository : JpaRepository<DeviceRegistration, UUID>
         recipientType: RecipientType,
         recipientId: UUID,
     ): List<DeviceRegistration>
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select device from DeviceRegistration device where device.pushToken in :tokens")
+    fun findAllByPushTokenInForUpdate(@Param("tokens") tokens: Collection<String>): List<DeviceRegistration>
 }

@@ -30,7 +30,8 @@ class NotificationDeliveryStore(private val jdbc: JdbcTemplate) {
             FROM candidates, notification notification
             WHERE delivery.id = candidates.id AND notification.id = delivery.notification_id
             RETURNING delivery.id, delivery.notification_id, notification.recipient_type, notification.recipient_id,
-                      delivery.channel, notification.title, notification.body, delivery.attempts
+                      delivery.channel, notification.event_type, notification.title, notification.body,
+                      notification.payload::text AS payload, delivery.attempts
             """.trimIndent(),
             { result, _ ->
                 ClaimedDelivery(
@@ -39,8 +40,10 @@ class NotificationDeliveryStore(private val jdbc: JdbcTemplate) {
                     RecipientType.valueOf(result.getString("recipient_type")),
                     UUID.fromString(result.getString("recipient_id")),
                     result.getString("channel"),
+                    result.getString("event_type"),
                     result.getString("title"),
                     result.getString("body"),
+                    result.getString("payload"),
                     result.getInt("attempts"),
                 )
             },

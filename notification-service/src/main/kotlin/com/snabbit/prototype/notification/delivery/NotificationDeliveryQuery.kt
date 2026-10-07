@@ -3,6 +3,7 @@ package com.snabbit.prototype.notification.delivery
 import com.snabbit.prototype.notification.domain.enums.RecipientType
 import com.snabbit.prototype.notification.repository.DeviceRegistrationRepository
 import java.util.UUID
+import java.time.Instant
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -11,4 +12,10 @@ class NotificationDeliveryQuery(private val devices: DeviceRegistrationRepositor
     @Transactional(readOnly = true)
     fun pushTokens(recipientType: RecipientType, recipientId: UUID): List<String> =
         devices.findAllByRecipientTypeAndRecipientIdAndActiveTrue(recipientType, recipientId).map { it.pushToken }
+
+    @Transactional
+    fun deactivatePushTokens(tokens: Set<String>, now: Instant) {
+        if (tokens.isEmpty()) return
+        devices.findAllByPushTokenInForUpdate(tokens).forEach { it.deactivate(now) }
+    }
 }

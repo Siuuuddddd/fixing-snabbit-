@@ -5,11 +5,9 @@ import java.time.Clock
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
 import org.springframework.web.client.RestClient
 
 @Configuration
-@Profile("!local & !test")
 @ConditionalOnProperty(prefix = "notifications.push", name = ["provider"], havingValue = "fcm")
 class FcmConfiguration {
     @Bean
@@ -29,5 +27,6 @@ class FcmConfiguration {
         builder: RestClient.Builder,
         tokens: GoogleAccessTokenProvider,
         properties: FcmProperties,
-    ): FcmClient = FcmHttpClient(builder, tokens, properties)
+        objectMapper: ObjectMapper,
+    ): FcmClient = FcmHttpClient(builder, tokens, properties, objectMapper)
 }

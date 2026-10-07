@@ -17,6 +17,7 @@ class NotificationDeliveryScheduler(
     private val contacts: NotificationContactClient,
     private val push: PushDeliveryAdapter,
     private val sms: SmsDeliveryAdapter,
+    private val pushMessages: NotificationPushMessageFactory,
     private val properties: NotificationProperties,
     private val clock: Clock,
 ) {
@@ -34,9 +35,13 @@ class NotificationDeliveryScheduler(
     private fun deliverOne(delivery: ClaimedDelivery, claimId: UUID) {
         try {
             when (delivery.channel) {
-                "PUSH" -> push.send(
-                    query.pushTokens(delivery.recipientType, delivery.recipientId), delivery.title, delivery.body,
-                )
+                "PUSH" -> {
+                    val result = push.send(
+                        query.pushTokens(delivery.recipientType, delivery.recipientId),
+                        pushMessages.create(delivery),
+                    )
+                    query.deactivatePushTokens(result.invalidTokens, clock.instant())
+                }
                 "SMS" -> sms.send(
                     contacts.contact(delivery.recipientType, delivery.recipientId).phoneNumber, delivery.body,
                 )

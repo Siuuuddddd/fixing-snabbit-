@@ -120,6 +120,10 @@ services:
       NOTIFICATION_DB_URL: jdbc:postgresql://notification-db:5432/notifications
       NOTIFICATION_DB_USERNAME: ${NOTIFICATION_DB_USERNAME:-snabbit}
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD in .env}
+      PUSH_PROVIDER: ${PUSH_PROVIDER:-logging}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
+      FCM_SERVICE_ACCOUNT_FILE: ${FCM_SERVICE_ACCOUNT_FILE:-}
+      FCM_BASE_URL: ${FCM_BASE_URL:-https://fcm.googleapis.com}
     depends_on:
       notification-db: { condition: service_healthy }
       kafka: { condition: service_started }

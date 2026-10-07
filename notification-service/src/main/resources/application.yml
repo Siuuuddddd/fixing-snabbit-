@@ -70,7 +70,7 @@ notifications:
   delivery-batch-size: 50
   delivery-max-attempts: 5
   push:
-    provider: ${PUSH_PROVIDER:fcm}
+    provider: ${PUSH_PROVIDER:logging}
     fcm:
       project-id: ${FCM_PROJECT_ID:}
       service-account-file: ${FCM_SERVICE_ACCOUNT_FILE:}

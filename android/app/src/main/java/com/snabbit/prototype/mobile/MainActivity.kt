@@ -1,6 +1,7 @@
 package com.snabbit.prototype.mobile
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,6 +16,8 @@ import com.snabbit.prototype.mobile.domain.payment.CheckoutResult
 import com.snabbit.prototype.mobile.domain.payment.CheckoutPurpose
 import com.snabbit.prototype.mobile.domain.payment.PaymentCheckoutCoordinator
 import com.snabbit.prototype.mobile.navigation.SnabbitApp
+import com.snabbit.prototype.mobile.navigation.AppRole
+import com.snabbit.prototype.mobile.navigation.PushNavigationCoordinator
 import com.snabbit.prototype.mobile.ui.theme.SnabbitTheme
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -22,11 +25,13 @@ import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     private val checkoutCoordinator: PaymentCheckoutCoordinator by inject()
+    private val pushNavigation: PushNavigationCoordinator by inject()
     private var activeCheckout: CheckoutRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activeCheckout = savedInstanceState?.let(::restoreCheckout)
+        handlePushIntent(intent)
         enableEdgeToEdge()
         Checkout.preload(applicationContext)
         lifecycleScope.launch {
@@ -39,6 +44,19 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
                 SnabbitApp()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handlePushIntent(intent)
+    }
+
+    private fun handlePushIntent(intent: Intent) {
+        val data = listOf("type", "bookingId", "jobId", "walletId", "visitIndex")
+            .mapNotNull { key -> intent.getStringExtra(key)?.let { value -> key to value } }
+            .toMap()
+        if (data.isNotEmpty()) pushNavigation.open(data, AppRole.fromBuild())
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

@@ -30,7 +30,7 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 14 | Add money | `GET /api/v1/wallets/{walletId}`; `POST /api/v1/wallets/{walletId}/top-ups` | Customer owner; `Idempotency-Key` for top-up | 404 wallet/payment; 409 duplicate/conflict; 422 amount/rule; 502 provider. Razorpay success only starts balance polling; the shown balance changes only after backend confirmation. |
 | 15 | Snabbit Plus | `GET /api/v1/users/{userId}/plus`; `POST /api/v1/users/{userId}/plus/purchases` | Customer and matching user; `Idempotency-Key` | 404; 409 subscription; wallet/payment failures. Razorpay success only starts membership polling; the UI activates only from the backend snapshot. |
 | 16 | My bookings | No booking-list endpoint; install-local IDs are refreshed with `GET /api/v1/bookings/{bookingId}` | Customer owner | Missing list contract is labelled in UI; 403/404 ownership/stale ID; transport failures remain errors rather than false empty state |
-| 17 | Notifications | Customer `/api/v1/notifications`; worker `/api/v1/worker/notifications`; read, device registration/removal, and `/live` WebSockets | Authenticated owner | 403/404; 422 invalid device. FCM foreground receipt triggers authoritative history refresh. |
+| 17 | Notifications | Customer `/api/v1/notifications`; worker `/api/v1/worker/notifications`; read, device registration/removal, and `/live` WebSockets | Authenticated owner | 403/404; 422 invalid device. FCM foreground receipt triggers authoritative history refresh; invalid Firebase destinations are deactivated server-side. |
 | 18 | Profile | Address, household, and Plus reads for customer summary; JWT subject for both roles | Customer/worker | General name/phone/avatar read/update is missing and is labelled unavailable; logout unregisters the backend device and FCM instance before clearing local auth. |
 | 19 | Empty/error/offline | No endpoint | None | Shared localized presentation for transport/offline, `ProblemDetail`, loading, empty, and retry states |
 | 20 | Worker app landing | Worker OTP plus `GET/PUT /api/v1/workers/me/availability` | Worker | 401/403; 422 date/window validation; no self-registration contract |
@@ -121,6 +121,8 @@ Plus purchase creation returns `purchaseId`, `walletId`, `customerId`, `planCode
 | `GET /api/v1/support/tickets/{ticketId}/stream` | SSE request | Live support message stream |
 
 Notification history returns at most 100 records after `afterNotificationId`, ordered ascending. Android follows the cursor to build the current history, displays it newest first, and refreshes from the backend after foreground FCM delivery. Customer and worker device registration use their role-specific paths with the same exact `pushToken` body.
+
+Push delivery preserves the durable delivery lease, retry, and idempotency path. Customer booking/payment/wallet events use the `bookings` or `payments` channel. Worker offer, expiry, assignment, and cancellation events are privacy-filtered per worker and use `jobs`. FCM data contains `type`, `channelId`, and the available route identifiers (`bookingId`, `walletId`, `jobId`, and `visitIndex`), which Android maps to the authenticated Navigation 3 destination when the notification is tapped.
 
 ### Worker jobs, availability, and location
 

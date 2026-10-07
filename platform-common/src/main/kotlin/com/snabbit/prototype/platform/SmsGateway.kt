@@ -4,7 +4,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Profile
 import org.springframework.http.MediaType
@@ -64,10 +63,6 @@ class TwilioSmsGateway(
 @ConditionalOnProperty(prefix = "sms", name = ["enabled"], havingValue = "true")
 @EnableConfigurationProperties(SmsProperties::class)
 class SmsGatewayAutoConfiguration {
-    @Bean
-    @ConditionalOnMissingBean(RestClient.Builder::class)
-    fun providerRestClientBuilder(): RestClient.Builder = RestClient.builder()
-
     @Bean
     fun smsGateway(builder: RestClient.Builder, properties: SmsProperties): SmsGateway =
         TwilioSmsGateway(builder, properties)

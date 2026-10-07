@@ -40,6 +40,7 @@ fun SnabbitApp(role: AppRole = AppRole.fromBuild()) {
     var authenticated by rememberSaveable { mutableStateOf(false) }
     val sessionManager = koinInject<SessionManager>()
     val notifications = koinInject<NotificationRepository>()
+    val pushNavigation = koinInject<PushNavigationCoordinator>()
     LaunchedEffect(sessionManager) {
         sessionManager.signedOut.collect { authenticated = false }
     }
@@ -48,8 +49,8 @@ fun SnabbitApp(role: AppRole = AppRole.fromBuild()) {
     }
     if (authenticated) {
         when (role) {
-            AppRole.CUSTOMER -> CustomerShell()
-            AppRole.WORKER -> WorkerShell()
+            AppRole.CUSTOMER -> CustomerShell(pushNavigation)
+            AppRole.WORKER -> WorkerShell(pushNavigation)
         }
     } else {
         AuthenticationFlow(role = role, onAuthenticated = { authenticated = true })
@@ -127,7 +128,7 @@ private fun NavBackStack<NavKey>.replaceWith(route: NavKey) {
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
-private fun CustomerShell() {
+private fun CustomerShell(pushNavigation: PushNavigationCoordinator) {
     var selected by rememberSaveable { mutableStateOf(CustomerTab.HOME) }
     val home = rememberNavBackStack(HomeRoute)
     val bookings = rememberNavBackStack(MyBookingsRoute)
@@ -141,6 +142,23 @@ private fun CustomerShell() {
         CustomerTab.PLUS to plus,
         CustomerTab.PROFILE to profile,
     )
+    val pushDestination by pushNavigation.destination.collectAsStateWithLifecycle()
+    LaunchedEffect(pushDestination) {
+        when (val destination = pushDestination) {
+            is PushDestination.CustomerBooking -> {
+                selected = CustomerTab.HOME
+                home.clear()
+                home.add(HomeRoute)
+                home.add(FindingWorkerRoute(destination.bookingId, walletId = null, useWallet = false))
+                pushNavigation.consume(destination)
+            }
+            PushDestination.CustomerWallet -> {
+                selected = CustomerTab.WALLET
+                pushNavigation.consume(destination)
+            }
+            else -> Unit
+        }
+    }
     val navigation = CustomerNavigation(
         openService = { serviceId -> home.add(ServiceDetailsRoute(serviceId)) },
         openAddresses = { serviceId, durationHours -> home.add(AddressServiceabilityRoute(serviceId, durationHours)) },
@@ -169,7 +187,7 @@ private fun CustomerShell() {
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
-private fun WorkerShell() {
+private fun WorkerShell(pushNavigation: PushNavigationCoordinator) {
     var selected by rememberSaveable { mutableStateOf(WorkerTab.JOBS) }
     val jobs = rememberNavBackStack(WorkerJobFeedRoute)
     val schedule = rememberNavBackStack(WorkerLandingRoute)
@@ -183,6 +201,17 @@ private fun WorkerShell() {
         WorkerTab.SUPPORT to support,
         WorkerTab.PROFILE to profile,
     )
+    val pushDestination by pushNavigation.destination.collectAsStateWithLifecycle()
+    LaunchedEffect(pushDestination) {
+        val destination = pushDestination
+        if (destination is PushDestination.WorkerJob) {
+            selected = WorkerTab.JOBS
+            jobs.clear()
+            jobs.add(WorkerJobFeedRoute)
+            jobs.add(WorkerJobDetailsRoute(destination.bookingId, destination.visitIndex))
+            pushNavigation.consume(destination)
+        }
+    }
     val navigation = WorkerNavigation(
         openJob = { bookingId, visitIndex -> jobs.add(WorkerJobDetailsRoute(bookingId, visitIndex)) },
         back = { if (jobs.size > 1) jobs.removeLastOrNull() },

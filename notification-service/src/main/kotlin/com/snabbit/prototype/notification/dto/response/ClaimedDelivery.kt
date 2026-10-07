@@ -9,7 +9,9 @@ data class ClaimedDelivery(
     val recipientType: RecipientType,
     val recipientId: UUID,
     val channel: String,
+    val eventType: String,
     val title: String,
     val body: String,
+    val payload: String,
     val attempts: Int,
 )

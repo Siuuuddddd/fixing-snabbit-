@@ -1,8 +1,10 @@
 package com.snabbit.prototype.notification.integration
 
 import com.snabbit.prototype.notification.delivery.NotificationDeliveryStore
+import com.snabbit.prototype.notification.delivery.NotificationDeliveryQuery
 import com.snabbit.prototype.notification.domain.enums.RecipientType
 import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+import com.snabbit.prototype.notification.events.WorkerPushRecipientResolver
 import com.snabbit.prototype.notification.service.NotificationTransaction
 import java.time.Instant
 import java.util.UUID
@@ -11,14 +13,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.springframework.web.client.RestClient
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -31,17 +29,12 @@ import org.testcontainers.junit.jupiter.Testcontainers
 )
 @Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("test")
-@Import(NotificationPersistenceIntegrationTest.RestClientTestConfiguration::class)
 class NotificationPersistenceIntegrationTest {
-    @TestConfiguration
-    class RestClientTestConfiguration {
-        @Bean
-        fun restClientBuilder(): RestClient.Builder = RestClient.builder()
-    }
-
     @Autowired private lateinit var notifications: NotificationTransaction
     @Autowired private lateinit var jdbc: JdbcTemplate
     @Autowired private lateinit var deliveryStore: NotificationDeliveryStore
+    @Autowired private lateinit var deliveryQuery: NotificationDeliveryQuery
+    @Autowired private lateinit var workerRecipients: WorkerPushRecipientResolver
 
     @BeforeEach
     fun clean() {
@@ -93,6 +86,48 @@ class NotificationPersistenceIntegrationTest {
                 workerNotification.notificationId,
             ),
         )
+    }
+
+    @Test
+    fun `invalid FCM registration is made inactive`() {
+        val customerId = UUID.randomUUID()
+        val token = "invalid-firebase-installation-id-12345"
+        notifications.registerDevice(RecipientType.CUSTOMER, customerId, token)
+
+        deliveryQuery.deactivatePushTokens(setOf(token), Instant.now())
+
+        assertEquals(
+            false,
+            jdbc.queryForObject(
+                "SELECT active FROM device_registration WHERE push_token = ?",
+                Boolean::class.java,
+                token,
+            ),
+        )
+    }
+
+    @Test
+    fun `worker assignment recipients are resolved from durable offer notifications`() {
+        val workerId = UUID.randomUUID()
+        val bookingId = UUID.randomUUID()
+        val jobId = UUID.randomUUID()
+        notifications.record(
+            UUID.randomUUID(),
+            RecipientType.WORKER,
+            workerId,
+            "WorkerOffersCreated",
+            NotificationTemplate("Offer", "Respond", true),
+            """{
+                "bookingId":"$bookingId",
+                "offers":[{"jobId":"$jobId","visitIndex":1,"workerId":"$workerId"}]
+            }""",
+        )
+
+        val target = workerRecipients.targets(bookingId).single()
+
+        assertEquals(workerId, target.workerId)
+        assertEquals(jobId.toString(), target.jobs.single().path("jobId").asText())
+        assertEquals(1, target.jobs.single().path("visitIndex").asInt())
     }
 
     companion object {

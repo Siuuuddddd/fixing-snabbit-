@@ -280,6 +280,9 @@
     <string name="notifications_empty_title">You’re all caught up</string>
     <string name="notifications_empty_body">Booking, payment, and account updates will appear here.</string>
     <string name="notifications_unread">Unread</string>
+    <string name="notification_channel_bookings">Booking updates</string>
+    <string name="notification_channel_payments">Payment and wallet updates</string>
+    <string name="notification_channel_jobs">Worker job updates</string>
     <string name="profile_title">Profile</string>
     <string name="profile_loading">Loading your profile…</string>
     <string name="profile_customer_account">Customer account</string>

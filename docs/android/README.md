@@ -27,6 +27,25 @@ PROTOTYPE_WALLET_ID=
 
 Real secrets never belong in Git. `PROTOTYPE_WALLET_ID` is not a secret; it is an explicit local-only bridge for the documented missing wallet-discovery API and should be blank outside a seeded prototype environment. For push delivery, place an environment-specific, ignored `android/app/google-services.json` containing clients for both flavor application IDs. Without that file the Google Services plugin stays disabled, FCM reports an explicit unavailable state, and all non-push builds and notification history continue to work.
 
+### Real local FCM delivery
+
+The default backend remains safe for development and logs push attempts. To send real Firebase pushes, keep the downloaded service-account JSON outside the repository, then set these ignored `.env` values:
+
+```properties
+PUSH_PROVIDER=fcm
+FCM_PROJECT_ID=your-firebase-project-id
+FCM_SERVICE_ACCOUNT_HOST_FILE=C:/absolute/path/outside/the/repository/firebase-service-account.json
+FCM_SERVICE_ACCOUNT_FILE=/run/secrets/firebase-service-account.json
+```
+
+Start the stack with the additional Compose overlay so only Notification Service receives the key as a read-only mount:
+
+```powershell
+docker compose -f compose.yaml -f compose.apps.yaml -f compose.fcm.yaml up -d
+```
+
+Use one ignored `android/app/google-services.json` whose Firebase project contains both flavor package names. After customer or worker login, Android registers the current Firebase installation with the matching role endpoint. Token refresh re-registers it; logout removes it. Android 13+ also requires notification permission. Pushes use the `bookings`, `payments`, and `jobs` channels and carry route data for notification taps. Never copy the service-account JSON into `android/`, a Docker image, or Git.
+
 Debug uses `http://10.0.2.2:8080/` and permits cleartext only through the debug manifest. Release uses an invalid placeholder until the deployment build supplies its TLS endpoint.
 
 ## Build, test, and install

@@ -48,6 +48,15 @@
 - [x] Worker job details with assigned/arrived/in-progress/completed transitions and consented foreground location publishing
 - [x] Worker earnings gap state that does not invent totals or payout history while the backend contract is missing
 
+## Firebase push milestone
+
+- [x] Optional Google Services configuration supports both customer and worker flavor package names without breaking builds when the ignored file is absent
+- [x] Firebase registration after login, refresh re-registration, logout removal, Android 13+ permission handling, and `bookings` / `payments` / `jobs` channels
+- [x] Foreground notification display, authoritative history refresh, and authenticated Navigation 3 routing from notification taps
+- [x] Local Docker FCM provider selection with an external read-only service-account mount and logging fallback
+- [x] Customer booking/payment notification routing plus privacy-filtered worker offer, expiry, assignment, and cancellation pushes
+- [x] Invalid Firebase destinations are deactivated while durable delivery leasing, retry, and idempotency remain intact
+
 ## Verification record
 
 - Backend baseline: repository-root `.\gradlew.bat build --no-daemon --stacktrace` — passed (55 actionable tasks).
@@ -59,4 +68,6 @@
 - Wallet/Plus milestone: Razorpay checkout is activity-owned; client callbacks only begin backend verification. `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 46 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - Bookings/notifications/profile/shared-states milestone: `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 52 unit tests, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon` passed (55 actionable tasks).
 - Worker screens milestone: worker OTP remains flavor-aware; availability, offer/job feeds, lifecycle transitions, and foreground location publishing use exact backend contracts, while earnings stays an explicit API-gap state. `android\.\gradlew.bat clean build --no-daemon` passed for customer and worker debug/release variants, 57 unit tests per flavor, and lint (195 actionable tasks); repository-root `\.\gradlew.bat build --no-daemon --stacktrace` passed (55 actionable tasks).
-- A final repository-root backend regression build is run immediately before commit.
+- Firebase push milestone: Notification and Support full-context smoke tests cover the shared `RestClient.Builder`; mocked FCM v1 tests cover authenticated payloads and invalid-token deactivation; Android tests cover customer/worker registration and push-route parsing. Local Docker health checks reported `UP` for the gateway and all seven services with the Firebase key mounted read-only.
+- Firebase emulator verification: both debug flavors installed on a Pixel 9 Pro API 36 AVD, customer and worker OTP login completed, both role-specific devices registered, and real FCM v1 messages arrived through `payments` and `jobs`. Foreground delivery used the backend channel, Customer wallet and Worker job tap intents reached their Navigation 3 destinations, and filtered logcat showed no app crash or serialization failure.
+- Final Firebase regression: repository-root `.\gradlew.bat build --no-daemon --max-workers=1` passed (55 actionable tasks); `android\.\gradlew.bat clean build --no-daemon` passed both flavors, unit tests, and lint (199 actionable tasks).

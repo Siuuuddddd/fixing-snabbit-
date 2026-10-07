@@ -25,6 +25,17 @@ class DefaultNotificationRepositoryTest {
         assertTrue(token.unregistered)
         assertEquals(null, store.id)
     }
+
+    @Test fun `refreshed firebase registration uses worker endpoint`() = runTest {
+        val api = FakeNotificationApi()
+        val repository = DefaultNotificationRepository(
+            api, AppRole.WORKER, FakePushTokenDataSource(), FakeDeviceStore(), Json,
+        )
+
+        repository.registerToken("refreshed-firebase-installation-id-456")
+
+        assertEquals("refreshed-firebase-installation-id-456", api.workerRegisteredToken)
+    }
 }
 
 private class FakePushTokenDataSource : PushTokenDataSource {
@@ -42,13 +53,14 @@ private class FakeDeviceStore : DeviceRegistrationStore {
 
 private class FakeNotificationApi : NotificationApi {
     var registeredToken: String? = null
+    var workerRegisteredToken: String? = null
     override suspend fun customerHistory(afterId: Long) = emptyList<NotificationDto>()
     override suspend fun customerMarkRead(id: Long) = notification(id)
     override suspend fun customerRegister(request: RegisterDeviceDto) = device().also { registeredToken = request.pushToken }
     override suspend fun customerUnregister(id: String) = device(active = false)
     override suspend fun workerHistory(afterId: Long) = emptyList<NotificationDto>()
     override suspend fun workerMarkRead(id: Long) = notification(id)
-    override suspend fun workerRegister(request: RegisterDeviceDto) = device()
+    override suspend fun workerRegister(request: RegisterDeviceDto) = device().also { workerRegisteredToken = request.pushToken }
     override suspend fun workerUnregister(id: String) = device(active = false)
 
     private fun notification(id: Long) = NotificationDto(id, "TYPE", "Title", "Body", false, "now")

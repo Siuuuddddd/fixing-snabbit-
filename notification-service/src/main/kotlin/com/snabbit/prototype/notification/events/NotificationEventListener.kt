@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component
 class NotificationEventListener(
     private val mapper: ObjectMapper,
     private val resolver: EventRecipientResolver,
+    private val workerRecipients: WorkerPushRecipientResolver,
     private val templates: NotificationTemplates,
     private val handler: NotificationEventHandler,
 ) {
@@ -33,28 +34,59 @@ class NotificationEventListener(
     )
     fun consume(rawEvent: String) {
         val event = mapper.readValue(rawEvent, EventEnvelope::class.java)
-        val template = templates.forEvent(event) ?: return
-        if (event.eventType == "WorkerOffersCreated") {
-            fanOutWorkerOffers(event, template)
-        } else {
-            handler.handle(
-                event,
-                RecipientType.CUSTOMER,
-                resolver.customerId(event),
-                template,
-            )
+        when (event.eventType) {
+            "WorkerOffersCreated" -> templates.forWorkerEvent(event)?.let {
+                fanOutWorkerOffers(event, it)
+            }
+            "WorkerOfferExpired" -> {
+                handleCustomer(event)
+                templates.forWorkerEvent(event)?.let { fanOutStoredJobs(event, it) }
+            }
+            "BookingConfirmed", "BookingCancelled", "BookingCustomerCancelled", "BookingPlatformCancelled" -> {
+                handleCustomer(event)
+                templates.forWorkerEvent(event)?.let { fanOutStoredJobs(event, it) }
+            }
+            else -> handleCustomer(event)
         }
     }
 
+    private fun handleCustomer(event: EventEnvelope) {
+        val template = templates.forCustomerEvent(event) ?: return
+        handler.handle(event, RecipientType.CUSTOMER, resolver.customerId(event), template)
+    }
+
     private fun fanOutWorkerOffers(event: EventEnvelope, template: NotificationTemplate) {
-        val offersByWorker = event.payload.path("offers")
+        val offersByWorker = event.payload.path("offers").mapIndexed { visitIndex, offer ->
+            offer.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().apply {
+                if (path("jobId").asText().isBlank()) put("jobId", path("slotHoldId").asText())
+                if (path("visitIndex").isMissingNode) put("visitIndex", visitIndex)
+            }
+        }
             .filter { it.path("workerId").asText().isNotBlank() }
             .groupBy { UUID.fromString(it.path("workerId").asText()) }
-        offersByWorker.forEach { (workerId, offers) ->
+        offersByWorker.forEach { (workerId, workerOffers) ->
+            handleWorker(event, workerId, template, "offers", workerOffers)
+        }
+    }
+
+    private fun fanOutStoredJobs(event: EventEnvelope, template: NotificationTemplate) {
+        val bookingId = UUID.fromString(event.payload.path("bookingId").asText())
+        workerRecipients.targets(bookingId).forEach { target ->
+            handleWorker(event, target.workerId, template, "jobs", target.jobs)
+        }
+    }
+
+    private fun handleWorker(
+        event: EventEnvelope,
+        workerId: UUID,
+        template: NotificationTemplate,
+        entriesField: String,
+        workerEntries: List<JsonNode>,
+    ) {
             val recipientEventId = UUID.nameUUIDFromBytes("${event.eventId}:$workerId".toByteArray(Charsets.UTF_8))
             val recipientPayload = mapper.createObjectNode().apply {
                 set<com.fasterxml.jackson.databind.JsonNode>("bookingId", event.payload.path("bookingId"))
-                set<com.fasterxml.jackson.databind.JsonNode>("offers", mapper.valueToTree(offers))
+                set<com.fasterxml.jackson.databind.JsonNode>(entriesField, mapper.valueToTree(workerEntries))
             }
             handler.handle(
                 event.copy(eventId = recipientEventId, payload = recipientPayload),
@@ -62,7 +94,6 @@ class NotificationEventListener(
                 workerId,
                 template,
             )
-        }
     }
 
     @DltHandler

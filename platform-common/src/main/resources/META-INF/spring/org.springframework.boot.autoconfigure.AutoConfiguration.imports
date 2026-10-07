@@ -1,2 +1,3 @@
 com.snabbit.prototype.platform.ProductionConfigurationGuardAutoConfiguration
+com.snabbit.prototype.platform.RestClientConfiguration
 com.snabbit.prototype.platform.SmsGatewayAutoConfiguration

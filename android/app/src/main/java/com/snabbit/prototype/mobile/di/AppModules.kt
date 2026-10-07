@@ -115,6 +115,7 @@ import com.snabbit.prototype.mobile.navigation.WorkerLandingRoute
 import com.snabbit.prototype.mobile.navigation.titleRes
 import com.snabbit.prototype.mobile.navigation.LocalCustomerNavigation
 import com.snabbit.prototype.mobile.navigation.LocalWorkerNavigation
+import com.snabbit.prototype.mobile.navigation.PushNavigationCoordinator
 import com.snabbit.prototype.mobile.ui.address.AddressScreen
 import com.snabbit.prototype.mobile.ui.address.AddressViewModel
 import com.snabbit.prototype.mobile.ui.home.HomeScreen
@@ -237,6 +238,7 @@ private val networkModule = module {
 
 private val repositoryModule = module {
     single { AppRole.fromBuild() }
+    single { PushNavigationCoordinator() }
     single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get()) }
     single<LaunchRepository> { DefaultLaunchRepository(get(), get()) }
     single<SessionIdentityProvider> { JwtSessionIdentityProvider(get(), get()) }

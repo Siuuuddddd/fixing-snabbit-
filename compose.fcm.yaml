@@ -1,0 +1,7 @@
+services:
+  notification-service:
+    volumes:
+      - type: bind
+        source: ${FCM_SERVICE_ACCOUNT_HOST_FILE:?Set FCM_SERVICE_ACCOUNT_HOST_FILE in .env}
+        target: /run/secrets/firebase-service-account.json
+        read_only: true

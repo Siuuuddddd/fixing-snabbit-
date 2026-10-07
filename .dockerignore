@@ -1,6 +1,10 @@
 .git
 .github
 .gradle
+.env
+**/google-services.json
+**/*service-account*.json
+gradle/gradle-daemon-jvm.properties
 .idea
 **/build
 **/.gradle
