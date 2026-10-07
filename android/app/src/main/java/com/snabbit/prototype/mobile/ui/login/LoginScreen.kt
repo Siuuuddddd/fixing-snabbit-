@@ -38,10 +38,12 @@ fun LoginScreen(
     role: AppRole,
     onPhoneChanged: (String) -> Unit,
     onOtpChanged: (String) -> Unit,
+    onDisplayNameChanged: (String) -> Unit,
     onRequestOtp: () -> Unit,
     onVerifyOtp: () -> Unit,
     onResendOtp: () -> Unit,
     onEditPhone: () -> Unit,
+    onRegister: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -62,7 +64,11 @@ fun LoginScreen(
         Spacer(Modifier.height(SnabbitSpacing.large))
         Text(
             text = stringResource(
-                if (state.step == LoginStep.PHONE) R.string.login_title else R.string.otp_title,
+                when (state.step) {
+                    LoginStep.PHONE -> R.string.login_title
+                    LoginStep.OTP -> R.string.otp_title
+                    LoginStep.REGISTRATION -> R.string.registration_title
+                },
             ),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
@@ -74,6 +80,7 @@ fun LoginScreen(
                     if (role == AppRole.WORKER) R.string.login_worker_description else R.string.login_customer_description,
                 )
                 LoginStep.OTP -> stringResource(R.string.otp_description, state.phoneDigits)
+                LoginStep.REGISTRATION -> stringResource(R.string.registration_description)
             },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge,
@@ -83,6 +90,7 @@ fun LoginScreen(
         when (state.step) {
             LoginStep.PHONE -> PhoneEntry(state, onPhoneChanged, onRequestOtp)
             LoginStep.OTP -> OtpEntry(state, onOtpChanged, onVerifyOtp, onResendOtp, onEditPhone)
+            LoginStep.REGISTRATION -> RegistrationEntry(state, onDisplayNameChanged, onRegister)
         }
         state.error?.let { error ->
             Spacer(Modifier.height(SnabbitSpacing.medium))
@@ -95,6 +103,29 @@ fun LoginScreen(
             )
         }
     }
+}
+
+@Composable
+private fun RegistrationEntry(
+    state: LoginUiState,
+    onDisplayNameChanged: (String) -> Unit,
+    onRegister: () -> Unit,
+) {
+    OutlinedTextField(
+        value = state.displayName,
+        onValueChange = onDisplayNameChanged,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !state.isLoading,
+        label = { Text(stringResource(R.string.registration_name_label)) },
+        singleLine = true,
+    )
+    Spacer(Modifier.height(SnabbitSpacing.standard))
+    SnabbitButton(
+        text = stringResource(R.string.action_create_account),
+        onClick = onRegister,
+        enabled = state.isNameValid,
+        loading = state.isLoading,
+    )
 }
 
 @Composable
@@ -175,5 +206,6 @@ private fun LoginError.messageResource(): Int = when (this) {
     LoginError.RATE_LIMITED -> R.string.error_rate_limited
     LoginError.OFFLINE -> R.string.error_offline
     LoginError.SERVER -> R.string.error_server
+    LoginError.WORKER_PROFILE_REQUIRED -> R.string.error_worker_profile_required
     LoginError.UNKNOWN -> R.string.error_unknown
 }

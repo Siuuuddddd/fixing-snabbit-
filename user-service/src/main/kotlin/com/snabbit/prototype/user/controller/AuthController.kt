@@ -2,9 +2,10 @@ package com.snabbit.prototype.user.controller
 
 import com.snabbit.prototype.user.auth.OtpAuthenticationService
 import com.snabbit.prototype.user.dto.request.RequestOtpRequest
+import com.snabbit.prototype.user.dto.request.RegisterCustomerRequest
 import com.snabbit.prototype.user.dto.request.VerifyOtpRequest
-import com.snabbit.prototype.user.dto.response.AccessTokenResult
 import com.snabbit.prototype.user.dto.response.OtpRequestResult
+import com.snabbit.prototype.user.dto.response.OtpVerificationResult
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -19,6 +20,10 @@ class AuthController(private val authentication: OtpAuthenticationService) {
         authentication.requestOtp(request.phoneNumber)
 
     @PostMapping("/otp/verify")
-    fun verify(@Valid @RequestBody request: VerifyOtpRequest): AccessTokenResult =
+    fun verify(@Valid @RequestBody request: VerifyOtpRequest): OtpVerificationResult =
         authentication.verifyOtp(request.phoneNumber, request.otp)
+
+    @PostMapping("/register")
+    fun register(@Valid @RequestBody request: RegisterCustomerRequest): OtpVerificationResult =
+        authentication.register(request.phoneNumber, request.displayName, request.registrationToken)
 }

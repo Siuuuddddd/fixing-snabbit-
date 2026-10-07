@@ -39,6 +39,13 @@ services:
       USER_DB_URL: jdbc:postgresql://user-db:5432/users
       USER_DB_USERNAME: ${USER_DB_USERNAME:-snabbit}
       USER_DB_PASSWORD: ${USER_DB_PASSWORD:?Set USER_DB_PASSWORD in .env}
+      OTP_PROVIDER: ${OTP_PROVIDER:-twilio-verify}
+      OTP_EXPOSE_CODE: ${OTP_EXPOSE_CODE:-false}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_API_KEY_SID: ${TWILIO_API_KEY_SID:-}
+      TWILIO_API_KEY_SECRET: ${TWILIO_API_KEY_SECRET:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
     depends_on:
       user-db: { condition: service_healthy }
       redis: { condition: service_started }
@@ -71,6 +78,13 @@ services:
       WORKER_DB_URL: jdbc:postgresql://worker-db:5432/workers
       WORKER_DB_USERNAME: ${WORKER_DB_USERNAME:-snabbit}
       WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:?Set WORKER_DB_PASSWORD in .env}
+      OTP_PROVIDER: ${OTP_PROVIDER:-twilio-verify}
+      OTP_EXPOSE_CODE: ${OTP_EXPOSE_CODE:-false}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_API_KEY_SID: ${TWILIO_API_KEY_SID:-}
+      TWILIO_API_KEY_SECRET: ${TWILIO_API_KEY_SECRET:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
     depends_on:
       worker-db: { condition: service_healthy }
       redis: { condition: service_started }

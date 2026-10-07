@@ -9,6 +9,7 @@ enum class AuthFailureReason {
     RATE_LIMITED,
     OFFLINE,
     SERVER,
+    WORKER_PROFILE_REQUIRED,
     UNKNOWN,
 }
 
@@ -19,5 +20,11 @@ class AuthFailure(
 
 interface AuthRepository {
     suspend fun requestOtp(phoneNumber: String): OtpChallenge
-    suspend fun verifyOtp(phoneNumber: String, otp: String)
+    suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult
+    suspend fun register(phoneNumber: String, displayName: String, registrationToken: String)
+}
+
+sealed interface AuthResult {
+    data object Authenticated : AuthResult
+    data class RegistrationRequired(val token: String) : AuthResult
 }

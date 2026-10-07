@@ -33,6 +33,8 @@ class ProductionConfigurationGuard(
                     "$key must be fcm"
                 key == "sms.provider" && !value.equals("twilio", ignoreCase = true) ->
                     "$key must be twilio"
+                key == "otp.provider" && !value.equals("twilio-verify", ignoreCase = true) ->
+                    "$key must be twilio-verify"
                 else -> null
             }
         }

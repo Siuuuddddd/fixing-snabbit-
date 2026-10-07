@@ -3,7 +3,8 @@ package com.snabbit.prototype.user.staff
 import com.snabbit.prototype.user.auth.AuthConfiguration
 import com.snabbit.prototype.user.auth.AuthProperties
 import com.snabbit.prototype.user.auth.OtpChallengeStore
-import com.snabbit.prototype.user.auth.OtpDelivery
+import com.snabbit.prototype.platform.LoggingPhoneVerificationProvider
+import com.snabbit.prototype.platform.OtpProviderProperties
 import com.snabbit.prototype.user.domain.enums.StaffRole
 import com.snabbit.prototype.user.domain.enums.StaffStatus
 import com.snabbit.prototype.user.domain.StaffAccount
@@ -27,8 +28,6 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 class StaffAuthenticationServiceTest {
     private val staff = mockk<StaffAccountRepository>()
     private val challenges = ChallengeStore()
-    private val delivery = mockk<OtpDelivery>()
-    private val code = slot<String>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
     private val secret = "staff-test-jwt-secret-that-is-at-least-32-bytes"
     private val properties = AuthProperties(
@@ -36,7 +35,7 @@ class StaffAuthenticationServiceTest {
         Duration.ofMinutes(5), Duration.ofMinutes(1), Duration.ofMinutes(15), 5, true,
     )
     private val service = StaffAuthenticationService(
-        staff, challenges, delivery, AuthConfiguration().jwtEncoder(properties), properties,
+        staff, challenges, LoggingPhoneVerificationProvider(OtpProviderProperties(provider = "logging", exposeCode = true), Clock.fixed(now, ZoneOffset.UTC)), AuthConfiguration().jwtEncoder(properties), properties,
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
@@ -47,13 +46,11 @@ class StaffAuthenticationServiceTest {
             StaffStatus.ACTIVE, now,
         )
         every { staff.findByPhoneE164(account.phoneE164) } returns account
-        every { delivery.deliver(account.phoneE164, capture(code)) } returns Unit
 
         val request = service.requestOtp(account.phoneE164)
         val token = service.verifyOtp(account.phoneE164, request.debugOtp!!)
         val jwt = decoder().decode(token.accessToken)
 
-        assertEquals(code.captured, request.debugOtp)
         assertEquals(account.id.toString(), jwt.subject)
         assertEquals(listOf("SUPPORT_AGENT"), jwt.getClaimAsStringList("roles"))
     }

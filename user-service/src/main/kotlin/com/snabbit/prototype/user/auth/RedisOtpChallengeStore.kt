@@ -9,6 +9,8 @@ class RedisOtpChallengeStore(private val redis: StringRedisTemplate) : OtpChalle
     override fun acquireRequestCooldown(key: String, ttl: Duration): Boolean =
         redis.opsForValue().setIfAbsent("auth:otp:cooldown:$key", "1", ttl) == true
 
+    override fun releaseRequestCooldown(key: String) { redis.delete("auth:otp:cooldown:$key") }
+
     override fun save(key: String, codeHash: String, ttl: Duration) {
         redis.opsForValue().set("auth:otp:code:$key", codeHash, ttl)
         redis.delete("auth:otp:attempts:$key")

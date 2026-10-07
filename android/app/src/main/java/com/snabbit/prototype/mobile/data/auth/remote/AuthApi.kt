@@ -10,6 +10,9 @@ interface AuthApi {
     @POST("api/v1/auth/otp/verify")
     suspend fun verifyCustomerOtp(@Body request: OtpVerificationDto): AccessTokenDto
 
+    @POST("api/v1/auth/register")
+    suspend fun registerCustomer(@Body request: CustomerRegistrationDto): AccessTokenDto
+
     @POST("api/v1/worker-auth/otp/request")
     suspend fun requestWorkerOtp(@Body request: OtpRequestDto): OtpChallengeDto
 

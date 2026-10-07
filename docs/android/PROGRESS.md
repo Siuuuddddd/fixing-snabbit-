@@ -19,6 +19,7 @@
 - [x] Splash animation with persisted-session routing and auto-login
 - [x] Three-page onboarding with persisted completion state
 - [x] Flavor-aware customer/worker phone login and OTP verification
+- [x] Twilio Verify real-SMS OTP, post-verification customer self-registration, and verified existing-worker enforcement
 - [x] Real customer and worker OTP endpoints with exact backend DTO field names
 - [x] Encrypted access-token persistence after successful verification
 - [x] Resend cooldown, loading, validation, offline, throttling, server, and invalid/expired-code states

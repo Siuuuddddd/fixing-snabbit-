@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.snabbit.prototype.mobile.domain.auth.AuthFailure
 import com.snabbit.prototype.mobile.domain.auth.AuthFailureReason
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
+import com.snabbit.prototype.mobile.domain.auth.AuthResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 enum class LoginStep {
     PHONE,
     OTP,
+    REGISTRATION,
 }
 
 enum class LoginError {
@@ -26,6 +28,7 @@ enum class LoginError {
     RATE_LIMITED,
     OFFLINE,
     SERVER,
+    WORKER_PROFILE_REQUIRED,
     UNKNOWN,
 }
 
@@ -33,6 +36,8 @@ data class LoginUiState(
     val step: LoginStep = LoginStep.PHONE,
     val phoneDigits: String = "",
     val otp: String = "",
+    val displayName: String = "",
+    val registrationToken: String? = null,
     val isLoading: Boolean = false,
     val error: LoginError? = null,
     val resendSeconds: Int = 0,
@@ -40,6 +45,7 @@ data class LoginUiState(
 ) {
     val isPhoneValid: Boolean get() = PHONE_REGEX.matches(phoneDigits)
     val isOtpValid: Boolean get() = otp.length == OTP_LENGTH
+    val isNameValid: Boolean get() = displayName.trim().length in 2..60
 
     private companion object {
         val PHONE_REGEX = Regex("[6-9][0-9]{9}")
@@ -63,6 +69,10 @@ class LoginViewModel(
     fun updateOtp(value: String) {
         val digits = value.filter(Char::isDigit).take(OTP_DIGITS)
         _uiState.update { it.copy(otp = digits, error = null) }
+    }
+
+    fun updateDisplayName(value: String) {
+        _uiState.update { it.copy(displayName = value.take(60), error = null) }
     }
 
     fun requestOtp() {
@@ -91,8 +101,26 @@ class LoginViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             runCatching {
                 authRepository.verifyOtp(fullPhoneNumber(), _uiState.value.otp)
-            }.onSuccess {
+            }.onSuccess { result ->
                 timerJob?.cancel()
+                when (result) {
+                    AuthResult.Authenticated -> _uiState.update { it.copy(isLoading = false, authenticated = true) }
+                    is AuthResult.RegistrationRequired -> _uiState.update {
+                        it.copy(step = LoginStep.REGISTRATION, registrationToken = result.token, isLoading = false)
+                    }
+                }
+            }.onFailure(::showFailure)
+        }
+    }
+
+    fun register() {
+        val state = _uiState.value
+        if (state.isLoading || !state.isNameValid) return
+        viewModelScope.launch(dispatcher) {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            runCatching {
+                authRepository.register(fullPhoneNumber(), state.displayName.trim(), requireNotNull(state.registrationToken))
+            }.onSuccess {
                 _uiState.update { it.copy(isLoading = false, authenticated = true) }
             }.onFailure(::showFailure)
         }
@@ -136,6 +164,7 @@ class LoginViewModel(
             AuthFailureReason.RATE_LIMITED -> LoginError.RATE_LIMITED
             AuthFailureReason.OFFLINE -> LoginError.OFFLINE
             AuthFailureReason.SERVER -> LoginError.SERVER
+            AuthFailureReason.WORKER_PROFILE_REQUIRED -> LoginError.WORKER_PROFILE_REQUIRED
             AuthFailureReason.UNKNOWN, null -> LoginError.UNKNOWN
         }
         _uiState.update { it.copy(isLoading = false, error = error) }

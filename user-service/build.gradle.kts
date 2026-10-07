@@ -29,4 +29,8 @@ dependencies {
 }
 
 kotlin { compilerOptions { freeCompilerArgs.add("-Xjsr305=strict") } }
-tasks.withType<Test> { useJUnitPlatform() }
+tasks.withType<Test> {
+    useJUnitPlatform()
+    systemProperty("otp.provider", "logging")
+    systemProperty("otp.expose-code", "true")
+}

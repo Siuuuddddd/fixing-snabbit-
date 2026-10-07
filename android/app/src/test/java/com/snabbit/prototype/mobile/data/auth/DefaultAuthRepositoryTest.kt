@@ -35,6 +35,9 @@ private class RecordingRemoteDataSource : AuthRemoteDataSource {
         this.role = role
         return AccessTokenDto("secure-access-token", "Bearer", 900)
     }
+
+    override suspend fun registerCustomer(phoneNumber: String, displayName: String, registrationToken: String) =
+        AccessTokenDto(accessToken = "secure-access-token", tokenType = "Bearer", expiresInSeconds = 900)
 }
 
 private class InMemoryTokenStore : TokenStore {

@@ -1,6 +1,8 @@
 package com.snabbit.prototype.worker.auth
 
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
+import com.snabbit.prototype.platform.LoggingPhoneVerificationProvider
+import com.snabbit.prototype.platform.OtpProviderProperties
 import com.snabbit.prototype.worker.domain.enums.WorkerTier
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.exception.InvalidWorkerOtp
@@ -27,8 +29,6 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 class WorkerAuthenticationServiceTest {
     private val workers = mockk<WorkerProfileRepository>()
     private val store = MemoryStore()
-    private val delivery = mockk<WorkerOtpDelivery>()
-    private val code = slot<String>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
     private val secret = "worker-unit-test-secret-that-is-at-least-32-bytes"
     private val properties = WorkerAuthProperties(
@@ -44,7 +44,7 @@ class WorkerAuthenticationServiceTest {
     private val service = WorkerAuthenticationService(
         workers,
         store,
-        delivery,
+        LoggingPhoneVerificationProvider(OtpProviderProperties(provider = "logging", exposeCode = true), Clock.fixed(now, ZoneOffset.UTC)),
         WorkerAuthConfiguration().workerJwtEncoder(properties),
         properties,
         Clock.fixed(now, ZoneOffset.UTC),
@@ -55,12 +55,10 @@ class WorkerAuthenticationServiceTest {
     fun `active worker receives one-time OTP and worker role token`() {
         val worker = worker()
         every { workers.findByPhoneE164(phone) } returns worker
-        every { delivery.deliver(phone, capture(code)) } returns Unit
 
         val challenge = service.requestOtp(phone)
         val token = service.verifyOtp(phone, challenge.debugOtp!!)
 
-        assertEquals(code.captured, challenge.debugOtp)
         val decoded = decoder().decode(token.accessToken)
         assertEquals(worker.id.toString(), decoded.subject)
         assertEquals(listOf("WORKER"), decoded.getClaimAsStringList("roles"))
@@ -95,8 +93,7 @@ class WorkerAuthenticationServiceTest {
         var attempts = 0L
 
         override fun acquireCooldown(key: String, ttl: Duration): Boolean = if (cooldown) false else true.also { cooldown = true }
-        override fun save(key: String, hash: String, ttl: Duration) { value = hash; attempts = 0 }
-        override fun hash(key: String): String? = value
+        override fun releaseCooldown(key: String) { cooldown = false }
         override fun incrementAttempts(key: String, ttl: Duration): Long = ++attempts
         override fun clear(key: String) { value = null; attempts = 0 }
     }

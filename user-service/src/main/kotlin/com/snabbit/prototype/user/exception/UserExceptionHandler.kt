@@ -1,5 +1,7 @@
 package com.snabbit.prototype.user.exception
 
+import com.snabbit.prototype.platform.UnverifiedTrialRecipient
+import com.snabbit.prototype.platform.VerificationProviderUnavailable
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -7,6 +9,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class UserExceptionHandler {
+    @ExceptionHandler(UnverifiedTrialRecipient::class)
+    fun unverifiedTrial(error: UnverifiedTrialRecipient): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {
+            it.setProperty("errorCode", "TWILIO_TRIAL_NUMBER_UNVERIFIED")
+        }
+
+    @ExceptionHandler(VerificationProviderUnavailable::class)
+    fun providerUnavailable(error: VerificationProviderUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, error.message.orEmpty()).also {
+            it.setProperty("errorCode", "OTP_PROVIDER_UNAVAILABLE")
+        }
     @ExceptionHandler(UserNotFound::class)
     fun notFound(error: UserNotFound): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, error.message.orEmpty())

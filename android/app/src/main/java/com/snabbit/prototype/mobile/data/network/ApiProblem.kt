@@ -9,4 +9,5 @@ data class ApiProblem(
     val status: Int? = null,
     val detail: String? = null,
     val instance: String? = null,
+    val errorCode: String? = null,
 )

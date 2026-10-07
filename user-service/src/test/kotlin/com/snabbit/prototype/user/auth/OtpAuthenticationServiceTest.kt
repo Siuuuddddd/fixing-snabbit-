@@ -1,6 +1,8 @@
 package com.snabbit.prototype.user.auth
 
 import com.snabbit.prototype.user.domain.enums.UserStatus
+import com.snabbit.prototype.platform.LoggingPhoneVerificationProvider
+import com.snabbit.prototype.platform.OtpProviderProperties
 import com.snabbit.prototype.user.domain.UserProfile
 import com.snabbit.prototype.user.exception.InvalidOtp
 import com.snabbit.prototype.user.exception.OtpRateLimited
@@ -26,8 +28,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 class OtpAuthenticationServiceTest {
     private val users = mockk<UserProfileRepository>()
     private val store = InMemoryChallengeStore()
-    private val delivery = mockk<OtpDelivery>()
-    private val deliveredCode = slot<String>()
+    private val grants = mockk<RegistrationGrantStore>()
     private val now = Instant.parse("2026-10-02T04:00:00Z")
     private val secret = "unit-test-jwt-secret-that-is-at-least-32-bytes"
     private val properties = AuthProperties(
@@ -43,7 +44,8 @@ class OtpAuthenticationServiceTest {
     private val service = OtpAuthenticationService(
         users,
         store,
-        delivery,
+        LoggingPhoneVerificationProvider(OtpProviderProperties(provider = "logging", exposeCode = true), Clock.fixed(now, ZoneOffset.UTC)),
+        grants,
         AuthConfiguration().jwtEncoder(properties),
         properties,
         Clock.fixed(now, ZoneOffset.UTC),
@@ -54,15 +56,14 @@ class OtpAuthenticationServiceTest {
     fun `registered Indian phone receives one-time OTP and signed customer token`() {
         val user = user()
         every { users.findByPhoneE164(phone) } returns user
-        every { delivery.deliver(phone, capture(deliveredCode)) } returns Unit
 
         val requested = service.requestOtp(phone)
         val verified = service.verifyOtp(phone, requested.debugOtp!!)
 
-        assertEquals(deliveredCode.captured, requested.debugOtp)
+        assertEquals("AUTHENTICATED", verified.status)
         assertEquals("Bearer", verified.tokenType)
         assertEquals(900, verified.expiresInSeconds)
-        val jwt = decoder().decode(verified.accessToken)
+        val jwt = decoder().decode(verified.accessToken!!)
         assertEquals(user.id.toString(), jwt.subject)
         assertEquals("https://auth.snabbit.test", jwt.issuer.toString())
         assertEquals(listOf("CUSTOMER"), jwt.getClaimAsStringList("roles"))
@@ -73,7 +74,6 @@ class OtpAuthenticationServiceTest {
     @Test
     fun `OTP requests are throttled per phone`() {
         every { users.findByPhoneE164(phone) } returns user()
-        every { delivery.deliver(phone, any()) } returns Unit
 
         service.requestOtp(phone)
 
@@ -81,20 +81,23 @@ class OtpAuthenticationServiceTest {
     }
 
     @Test
-    fun `unregistered phone receives generic response without a challenge`() {
+    fun `unregistered phone receives generic response with a verification challenge`() {
         every { users.findByPhoneE164(phone) } returns null
+        every { grants.issue(phone, properties.otpTtl) } returns "one-time-registration-token"
 
         val response = service.requestOtp(phone)
+        val verified = service.verifyOtp(phone, response.debugOtp!!)
 
         assertEquals("OTP_SENT", response.status)
-        assertNull(response.debugOtp)
+        org.junit.jupiter.api.Assertions.assertNotNull(response.debugOtp)
+        assertEquals("REGISTRATION_REQUIRED", verified.status)
+        assertEquals("one-time-registration-token", verified.registrationToken)
         assertNull(store.hash)
     }
 
     @Test
     fun `challenge is destroyed after maximum failed attempts`() {
         every { users.findByPhoneE164(phone) } returns user()
-        every { delivery.deliver(phone, capture(deliveredCode)) } returns Unit
         val response = service.requestOtp(phone)
         val wrongCode = if (response.debugOtp == "000000") "111111" else "000000"
 
@@ -135,6 +138,8 @@ class OtpAuthenticationServiceTest {
             cooldown = true
             true
         }
+
+        override fun releaseRequestCooldown(key: String) { cooldown = false }
 
         override fun save(key: String, codeHash: String, ttl: Duration) {
             hash = codeHash

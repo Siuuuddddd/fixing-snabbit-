@@ -3,6 +3,7 @@ package com.snabbit.prototype.mobile.ui.login
 import com.snabbit.prototype.mobile.domain.auth.AuthFailure
 import com.snabbit.prototype.mobile.domain.auth.AuthFailureReason
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
+import com.snabbit.prototype.mobile.domain.auth.AuthResult
 import com.snabbit.prototype.mobile.domain.auth.OtpChallenge
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -111,9 +112,12 @@ private class FakeAuthRepository(
         return OtpChallenge(expiresInSeconds = 120)
     }
 
-    override suspend fun verifyOtp(phoneNumber: String, otp: String) {
+    override suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult {
         verifyFailure?.let { throw it }
         verifiedPhone = phoneNumber
         verifiedOtp = otp
+        return AuthResult.Authenticated
     }
+
+    override suspend fun register(phoneNumber: String, displayName: String, registrationToken: String) = Unit
 }

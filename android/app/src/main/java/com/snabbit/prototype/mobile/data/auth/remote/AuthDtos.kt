@@ -22,7 +22,16 @@ data class OtpChallengeDto(
 
 @Serializable
 data class AccessTokenDto(
-    val accessToken: String,
-    val tokenType: String,
-    val expiresInSeconds: Long,
+    val accessToken: String? = null,
+    val tokenType: String? = null,
+    val expiresInSeconds: Long? = null,
+    val status: String? = null,
+    val registrationToken: String? = null,
+)
+
+@Serializable
+data class CustomerRegistrationDto(
+    val phoneNumber: String,
+    val displayName: String,
+    val registrationToken: String,
 )

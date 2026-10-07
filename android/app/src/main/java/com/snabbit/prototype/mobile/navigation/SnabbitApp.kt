@@ -108,10 +108,12 @@ private fun AuthenticationFlow(
                     role = role,
                     onPhoneChanged = viewModel::updatePhone,
                     onOtpChanged = viewModel::updateOtp,
+                    onDisplayNameChanged = viewModel::updateDisplayName,
                     onRequestOtp = viewModel::requestOtp,
                     onVerifyOtp = viewModel::verifyOtp,
                     onResendOtp = viewModel::resendOtp,
                     onEditPhone = viewModel::editPhone,
+                    onRegister = viewModel::register,
                 )
             }
         },

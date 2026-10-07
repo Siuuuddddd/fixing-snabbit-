@@ -16,7 +16,7 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 |---:|---|---|---|---|
 | 1 | Splash | No endpoint | None | Local startup/config/session state only |
 | 2 | Onboarding | No endpoint | None | Local completion state only |
-| 3 | Login + OTP | `POST /api/v1/auth/otp/request`, `POST /api/v1/auth/otp/verify`; worker flavor uses `/api/v1/worker-auth/otp/request` and `/verify` | Public | 401 invalid/expired OTP; 429 rate limit. Request remains generic for unknown/inactive accounts. |
+| 3 | Login + OTP | `POST /api/v1/auth/otp/request`, `POST /api/v1/auth/otp/verify`, then `POST /api/v1/auth/register` for a verified new customer; worker flavor uses `/api/v1/worker-auth/otp/request` and `/verify` | Public | Twilio Verify owns code generation/checking. Customer existence is disclosed only after verification; workers remain existing-account only. |
 | 4 | Home | `GET /api/v1/services`; household, favourites, Plus endpoints described below | Customer | 401/403; 404 user; 409 favourite/Plus rules |
 | 5 | Service details | `GET /api/v1/services`; pricing is finalized through booking availability/hold | Customer | 422 booking rule; 409 unavailable slot |
 | 6 | Address & serviceability | `GET/POST /api/v1/users/{userId}/addresses`, `DELETE .../{addressId}` | Customer and matching user identity | 403 identity mismatch; 404; 422 address/location validation |
@@ -45,9 +45,10 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | Method and path | Request fields | Success response fields |
 |---|---|---|
 | `POST /api/v1/auth/otp/request` | `phoneNumber` | `status`, `expiresInSeconds`, optional test-only `debugOtp` |
-| `POST /api/v1/auth/otp/verify` | `phoneNumber`, `otp` | `accessToken`, `tokenType`, `expiresInSeconds` |
+| `POST /api/v1/auth/otp/verify` | `phoneNumber`, `otp` | `status = AUTHENTICATED` plus token fields, or `status = REGISTRATION_REQUIRED` plus a short-lived one-time `registrationToken` |
+| `POST /api/v1/auth/register` | `phoneNumber`, `displayName`, `registrationToken` | `status = AUTHENTICATED`, `accessToken`, `tokenType`, `expiresInSeconds` |
 | `POST /api/v1/worker-auth/otp/request` | `phoneNumber` | Same shape as customer request |
-| `POST /api/v1/worker-auth/otp/verify` | `phoneNumber`, `otp` | Same token shape; JWT role is worker |
+| `POST /api/v1/worker-auth/otp/verify` | `phoneNumber`, `otp` | Token shape with worker JWT; a verified number without an active worker profile returns `WORKER_PROFILE_REQUIRED` |
 
 There is no signup request, account-type discovery, or refresh response.
 
