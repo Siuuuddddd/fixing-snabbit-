@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.snabbit.prototype.mobile.domain.booking.BookingAvailability
 import com.snabbit.prototype.mobile.domain.booking.BookingDraft
 import com.snabbit.prototype.mobile.domain.booking.BookingRepository
+import com.snabbit.prototype.mobile.domain.common.DataFailure
 import com.snabbit.prototype.mobile.domain.household.HouseholdPreferences
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletBalance
@@ -12,6 +13,7 @@ import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
 import com.snabbit.prototype.mobile.ui.common.UiDataError
 import com.snabbit.prototype.mobile.ui.common.toUiDataError
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 
 data class BookingSummaryUiState(
     val draft: BookingDraft? = null,
@@ -66,13 +69,34 @@ class BookingSummaryViewModel(
 
     private fun load() = viewModelScope.launch(dispatcher) {
         _uiState.update { it.copy(isLoading = true, error = null) }
-        runCatching {
-            val availability = async { bookingRepository.availability(draft) }
-            val household = async { householdRepository.preferences() }
-            val wallet = async { walletRepository.balance() }
-            Triple(availability.await(), household.await(), wallet.await())
-        }.onSuccess { (availability, household, wallet) ->
-            _uiState.update { it.copy(isLoading = false, availability = availability, household = household, wallet = wallet) }
-        }.onFailure { failure -> _uiState.update { it.copy(isLoading = false, error = failure.toUiDataError()) } }
+        try {
+            val (availability, household, wallet) = supervisorScope {
+                val availability = async { bookingRepository.availability(draft) }
+                val household = async { householdRepository.preferences() }
+                val wallet = async { walletBalanceOrNull() }
+                Triple(availability.await(), household.await(), wallet.await())
+            }
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    availability = availability,
+                    household = household,
+                    wallet = wallet,
+                    useWallet = wallet != null,
+                )
+            }
+        } catch (failure: CancellationException) {
+            throw failure
+        } catch (failure: Throwable) {
+            _uiState.update { it.copy(isLoading = false, error = failure.toUiDataError()) }
+        }
+    }
+
+    private suspend fun walletBalanceOrNull(): WalletBalance? = try {
+        walletRepository.balance()
+    } catch (failure: CancellationException) {
+        throw failure
+    } catch (_: DataFailure) {
+        null
     }
 }

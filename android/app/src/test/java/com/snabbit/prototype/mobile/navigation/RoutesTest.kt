@@ -1,6 +1,7 @@
 package com.snabbit.prototype.mobile.navigation
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class RoutesTest {
@@ -33,5 +34,15 @@ class RoutesTest {
         )
 
         assertEquals(23, routes.distinct().size)
+    }
+
+    @Test
+    fun `booking summary route rejects missing and invalid arguments without throwing`() {
+        assertNull(BookingSummaryRoute().toBookingDraftOrNull())
+        assertNull(
+            BookingSummaryRoute(
+                "service-id", "address-id", 2, "NOT_A_BOOKING_TYPE", listOf("not-an-instant"),
+            ).toBookingDraftOrNull(),
+        )
     }
 }

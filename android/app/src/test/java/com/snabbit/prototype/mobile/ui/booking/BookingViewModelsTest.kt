@@ -8,12 +8,15 @@ import com.snabbit.prototype.mobile.domain.booking.BookingRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingStatus
 import com.snabbit.prototype.mobile.domain.booking.BookingType
 import com.snabbit.prototype.mobile.domain.booking.VisitAvailability
+import com.snabbit.prototype.mobile.domain.common.DataFailure
+import com.snabbit.prototype.mobile.domain.common.DataFailureReason
 import com.snabbit.prototype.mobile.domain.household.HouseholdPreferences
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletBalance
 import com.snabbit.prototype.mobile.domain.wallet.WalletLedgerEntry
 import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletTopUp
+import com.snabbit.prototype.mobile.ui.common.UiDataErrorReason
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -96,6 +99,34 @@ class BookingViewModelsTest {
     }
 
     @Test
+    fun `summary keeps booking available when configured wallet belongs to another customer`() = runTest {
+        val viewModel = BookingSummaryViewModel(
+            sampleDraft(), FakeBookingRepository(), FakeHouseholdRepository(), ForbiddenWalletRepository(),
+            StandardTestDispatcher(testScheduler), "summary-key",
+        )
+        runCurrent()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(null, viewModel.uiState.value.error)
+        assertTrue(viewModel.uiState.value.availability?.allVisitsAvailable == true)
+        assertEquals(null, viewModel.uiState.value.wallet)
+        assertFalse(viewModel.uiState.value.useWallet)
+    }
+
+    @Test
+    fun `summary exposes booking API failure as recoverable error state`() = runTest {
+        val viewModel = BookingSummaryViewModel(
+            sampleDraft(), FailingAvailabilityRepository(), FakeHouseholdRepository(), FakeWalletRepository(),
+            StandardTestDispatcher(testScheduler), "summary-key",
+        )
+        runCurrent()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(UiDataErrorReason.SERVER, viewModel.uiState.value.error?.reason)
+        assertEquals(null, viewModel.uiState.value.availability)
+    }
+
+    @Test
     fun `finding worker starts authoritative payment only after worker accepts`() = runTest {
         val bookings = FakeBookingRepository(status = BookingStatus.AWAITING_PAYMENT)
         val viewModel = FindingWorkerViewModel(
@@ -153,6 +184,28 @@ private class FakeWalletRepository : WalletRepository {
         WalletTopUp("top-up", "wallet", amountMinor, "PENDING", "order")
     override suspend fun history(): List<WalletLedgerEntry> = emptyList()
     override suspend fun recordPrototypeEntry(entry: WalletLedgerEntry) = Unit
+}
+
+private class ForbiddenWalletRepository : WalletRepository {
+    override suspend fun balance(): WalletBalance? =
+        throw DataFailure(DataFailureReason.FORBIDDEN, "Authenticated customer does not own this wallet")
+    override suspend fun createTopUp(amountMinor: Long, idempotencyKey: String) = error("unused")
+    override suspend fun history(): List<WalletLedgerEntry> = emptyList()
+    override suspend fun recordPrototypeEntry(entry: WalletLedgerEntry) = Unit
+}
+
+private class FailingAvailabilityRepository : BookingRepository {
+    override suspend fun availability(draft: BookingDraft): BookingAvailability =
+        throw DataFailure(DataFailureReason.SERVER, "Booking availability is temporarily unavailable")
+    override suspend fun matchAndHold(draft: BookingDraft, idempotencyKey: String) = error("unused")
+    override suspend fun booking(bookingId: String) = error("unused")
+    override suspend fun cancelHold(bookingId: String) = error("unused")
+    override suspend fun startPayment(
+        bookingId: String,
+        walletId: String,
+        useWallet: Boolean,
+        idempotencyKey: String,
+    ) = error("unused")
 }
 
 private fun sampleDraft() = BookingDraft(

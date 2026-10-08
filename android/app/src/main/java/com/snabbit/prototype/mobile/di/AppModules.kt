@@ -67,7 +67,6 @@ import com.snabbit.prototype.mobile.domain.address.DeviceLocationDataSource
 import com.snabbit.prototype.mobile.domain.catalog.CatalogRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingDraft
 import com.snabbit.prototype.mobile.domain.booking.BookingRepository
-import com.snabbit.prototype.mobile.domain.booking.BookingType
 import com.snabbit.prototype.mobile.domain.bookings.BookingListRepository
 import com.snabbit.prototype.mobile.domain.bookings.KnownBookingDataSource
 import com.snabbit.prototype.mobile.domain.household.HouseholdRepository
@@ -107,6 +106,7 @@ import com.snabbit.prototype.mobile.navigation.NotificationsRoute
 import com.snabbit.prototype.mobile.navigation.ProfileRoute
 import com.snabbit.prototype.mobile.navigation.ServiceDetailsRoute
 import com.snabbit.prototype.mobile.navigation.SlotSelectionRoute
+import com.snabbit.prototype.mobile.navigation.toBookingDraftOrNull
 import com.snabbit.prototype.mobile.navigation.SnabbitPlusRoute
 import com.snabbit.prototype.mobile.navigation.WorkerEarningsRoute
 import com.snabbit.prototype.mobile.navigation.WorkerJobDetailsRoute
@@ -128,6 +128,7 @@ import com.snabbit.prototype.mobile.ui.splash.SplashViewModel
 import com.snabbit.prototype.mobile.ui.service.ServiceDetailsScreen
 import com.snabbit.prototype.mobile.ui.service.ServiceDetailsViewModel
 import com.snabbit.prototype.mobile.ui.booking.BookingSummaryScreen
+import com.snabbit.prototype.mobile.ui.booking.BookingSummaryUiState
 import com.snabbit.prototype.mobile.ui.booking.BookingSummaryViewModel
 import com.snabbit.prototype.mobile.ui.booking.FindingWorkerScreen
 import com.snabbit.prototype.mobile.ui.booking.FindingWorkerViewModel
@@ -160,6 +161,8 @@ import com.snabbit.prototype.mobile.ui.worker.WorkerJobFeedScreen
 import com.snabbit.prototype.mobile.ui.worker.WorkerJobFeedViewModel
 import com.snabbit.prototype.mobile.ui.worker.WorkerScheduleScreen
 import com.snabbit.prototype.mobile.ui.worker.WorkerScheduleViewModel
+import com.snabbit.prototype.mobile.ui.common.UiDataError
+import com.snabbit.prototype.mobile.ui.common.UiDataErrorReason
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -389,16 +392,29 @@ private val navigationModule = module {
     }
     navigation<BookingSummaryRoute> { route ->
         val navigation = LocalCustomerNavigation.current
-        val draft = BookingDraft(route.serviceId, route.addressId, BookingType.valueOf(route.bookingType), route.durationHours, route.startsAt)
-        val viewModel = koinViewModel<BookingSummaryViewModel> { parametersOf(draft) }
-        val state by viewModel.uiState.collectAsStateWithLifecycle()
-        LaunchedEffect(state.createdBookingId) {
-            state.createdBookingId?.let {
-                viewModel.consumeCreatedBooking()
-                navigation.openFindingWorker(it, state.wallet?.walletId, state.useWallet)
+        val draft = route.toBookingDraftOrNull()
+        if (draft == null) {
+            BookingSummaryScreen(
+                state = BookingSummaryUiState(
+                    isLoading = false,
+                    error = UiDataError(UiDataErrorReason.VALIDATION),
+                ),
+                onBack = navigation.back,
+                onRetry = navigation.back,
+                onUseWalletChanged = {},
+                onConfirm = {},
+            )
+        } else {
+            val viewModel = koinViewModel<BookingSummaryViewModel> { parametersOf(draft) }
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.createdBookingId) {
+                state.createdBookingId?.let {
+                    viewModel.consumeCreatedBooking()
+                    navigation.openFindingWorker(it, state.wallet?.walletId, state.useWallet)
+                }
             }
+            BookingSummaryScreen(state, navigation.back, viewModel::retry, viewModel::setUseWallet, viewModel::confirm)
         }
-        BookingSummaryScreen(state, navigation.back, viewModel::retry, viewModel::setUseWallet, viewModel::confirm)
     }
     navigation<FindingWorkerRoute> { route ->
         val navigation = LocalCustomerNavigation.current

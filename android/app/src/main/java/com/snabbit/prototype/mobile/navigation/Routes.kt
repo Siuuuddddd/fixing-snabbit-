@@ -3,6 +3,9 @@ package com.snabbit.prototype.mobile.navigation
 import androidx.annotation.StringRes
 import androidx.navigation3.runtime.NavKey
 import com.snabbit.prototype.mobile.R
+import com.snabbit.prototype.mobile.domain.booking.BookingDraft
+import com.snabbit.prototype.mobile.domain.booking.BookingType
+import java.time.Instant
 import kotlinx.serialization.Serializable
 
 sealed interface SnabbitRoute : NavKey
@@ -19,8 +22,8 @@ sealed interface SnabbitRoute : NavKey
     val bookingType: String, val startsAt: List<String>,
 ) : SnabbitRoute
 @Serializable data class BookingSummaryRoute(
-    val serviceId: String, val addressId: String, val durationHours: Int,
-    val bookingType: String, val startsAt: List<String>,
+    val serviceId: String = "", val addressId: String = "", val durationHours: Int = 0,
+    val bookingType: String = "", val startsAt: List<String> = emptyList(),
 ) : SnabbitRoute
 @Serializable data class FindingWorkerRoute(val bookingId: String, val walletId: String?, val useWallet: Boolean) : SnabbitRoute
 @Serializable data class LiveTrackingRoute(val bookingId: String, val visitIndex: Int) : SnabbitRoute
@@ -36,6 +39,13 @@ sealed interface SnabbitRoute : NavKey
 @Serializable data object WorkerJobFeedRoute : SnabbitRoute
 @Serializable data class WorkerJobDetailsRoute(val bookingId: String, val visitIndex: Int) : SnabbitRoute
 @Serializable data object WorkerEarningsRoute : SnabbitRoute
+
+internal fun BookingSummaryRoute.toBookingDraftOrNull(): BookingDraft? {
+    val type = BookingType.entries.firstOrNull { it.name == bookingType } ?: return null
+    if (serviceId.isBlank() || addressId.isBlank() || durationHours <= 0 || startsAt.isEmpty()) return null
+    if (startsAt.any { runCatching { Instant.parse(it) }.isFailure }) return null
+    return BookingDraft(serviceId, addressId, type, durationHours, startsAt)
+}
 
 @StringRes
 fun SnabbitRoute.titleRes(): Int = when (this) {
