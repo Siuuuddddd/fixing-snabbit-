@@ -118,6 +118,7 @@ import com.snabbit.prototype.mobile.navigation.NotificationsRoute
 import com.snabbit.prototype.mobile.navigation.ProfileRoute
 import com.snabbit.prototype.mobile.navigation.ServiceDetailsRoute
 import com.snabbit.prototype.mobile.navigation.ScheduleRoute
+import com.snabbit.prototype.mobile.navigation.ScheduleStartTimeRoute
 import com.snabbit.prototype.mobile.navigation.toBookingDraftOrNull
 import com.snabbit.prototype.mobile.navigation.SnabbitPlusRoute
 import com.snabbit.prototype.mobile.navigation.WorkerEarningsRoute
@@ -147,8 +148,10 @@ import com.snabbit.prototype.mobile.ui.booking.FindingWorkerScreen
 import com.snabbit.prototype.mobile.ui.booking.FindingWorkerViewModel
 import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesScreen
 import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesViewModel
-import com.snabbit.prototype.mobile.ui.booking.ScheduleScreen
-import com.snabbit.prototype.mobile.ui.booking.ScheduleViewModel
+import com.snabbit.prototype.mobile.ui.booking.ScheduleDateDurationScreen
+import com.snabbit.prototype.mobile.ui.booking.ScheduleDateDurationViewModel
+import com.snabbit.prototype.mobile.ui.booking.ScheduleStartTimeScreen
+import com.snabbit.prototype.mobile.ui.booking.ScheduleStartTimeViewModel
 import com.snabbit.prototype.mobile.ui.tracking.LiveTrackingScreen
 import com.snabbit.prototype.mobile.ui.tracking.LiveTrackingViewModel
 import com.snabbit.prototype.mobile.ui.completed.BookingCompletedScreen
@@ -303,8 +306,11 @@ private val viewModelModule = module {
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { (serviceId: String) -> ServiceDetailsViewModel(serviceId, get()) }
     viewModel { AddressViewModel(get(), get()) }
-    viewModel { (serviceId: String, addressId: String) ->
-        ScheduleViewModel(serviceId, addressId, get(), get(), get(), get(), get())
+    viewModel { (serviceId: String) ->
+        ScheduleDateDurationViewModel(get(), get(), get(), get(), serviceId)
+    }
+    viewModel { (serviceId: String, addressId: String, dates: List<String>, durationHours: Int) ->
+        ScheduleStartTimeViewModel(serviceId, addressId, dates, durationHours, get(), get(), get())
     }
     viewModel { HouseholdPreferencesViewModel(get()) }
     viewModel { (draft: BookingDraft) -> BookingSummaryViewModel(draft, get(), get(), get()) }
@@ -401,9 +407,31 @@ private val navigationModule = module {
     }
     navigation<ScheduleRoute> { route ->
         val navigation = LocalCustomerNavigation.current
-        val viewModel = koinViewModel<ScheduleViewModel> { parametersOf(route.serviceId, route.addressId) }
+        val viewModel = koinViewModel<ScheduleDateDurationViewModel> { parametersOf(route.serviceId) }
         val state by viewModel.uiState.collectAsStateWithLifecycle()
-        ScheduleScreen(
+        LaunchedEffect(viewModel) {
+            viewModel.navigation.collect { selection ->
+                navigation.openScheduleStartTime(
+                    route.serviceId,
+                    route.addressId,
+                    selection.dates,
+                    selection.durationHours,
+                )
+            }
+        }
+        ScheduleDateDurationScreen(
+            state = state,
+            onBack = navigation.back,
+            onEvent = viewModel::onEvent,
+        )
+    }
+    navigation<ScheduleStartTimeRoute> { route ->
+        val navigation = LocalCustomerNavigation.current
+        val viewModel = koinViewModel<ScheduleStartTimeViewModel> {
+            parametersOf(route.serviceId, route.addressId, route.dates, route.durationHours)
+        }
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        ScheduleStartTimeScreen(
             state = state,
             onBack = navigation.back,
             onEvent = viewModel::onEvent,

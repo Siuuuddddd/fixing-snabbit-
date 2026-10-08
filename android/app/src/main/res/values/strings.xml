@@ -189,6 +189,9 @@
     <string name="schedule_multi_day_past">Past dates cannot be booked.</string>
     <string name="schedule_multi_day_outside_window">Choose dates within the next 7 days.</string>
     <string name="schedule_select_duration">Select Duration</string>
+    <string name="schedule_auto_continue_hint">Choose a duration to continue to start times.</string>
+    <string name="schedule_your_selection">Your selection</string>
+    <string name="action_done">Done</string>
     <plurals name="schedule_duration_hours"><item quantity="one">%1$d hr</item><item quantity="other">%1$d hrs</item></plurals>
     <string name="schedule_whole_hour_note">Available in whole-hour durations supported by booking.</string>
     <string name="schedule_select_start_time">Select Start Time</string>

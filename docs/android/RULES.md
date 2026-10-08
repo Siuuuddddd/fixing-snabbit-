@@ -9,7 +9,7 @@ These rules are mandatory for every change under `android/`.
 5. Keep feature boundaries explicit: UI, ViewModel, repository, remote/local data sources, and DTO/domain mapping must not be collapsed into one class.
 6. A composable does not call Retrofit, databases, secure storage, or SDKs directly.
 7. Put user-visible text in string resources. Give meaningful icons and images a resource-backed content description; decorative imagery uses `null`.
-8. Use the shared design tokens and components. The primary color is `#F80E78`; use Inter; keep 4/8/12/16/24/32 dp spacing and 16/20 dp radii.
+8. Use the shared design tokens and components. The primary color is `#F80E78`; all text uses the central `SnabbitFontFamily` switch (the bundled system sans/Roboto fallback until licensed Google Sans files are supplied); keep 4/8/12/16/24/32 dp spacing and 16/20 dp radii. Schedule page titles use the named 22sp SemiBold style and section headings use the named 16sp SemiBold style.
 9. Design against the Google Pixel 9 Pro reference viewport (1280 × 2856, approximately 20:9) while remaining responsive to other Android sizes, font scales, and system insets.
 10. Keep customer and worker experiences in product flavors. Shared behavior belongs in `main`; role-specific implementation belongs in the appropriate source set when it actually diverges.
 11. Never put secrets in source, resources, Gradle files, logs, screenshots, or commits. Local SDK/payment/map values belong in ignored `android/local.properties`; production values come from the build/deployment environment.

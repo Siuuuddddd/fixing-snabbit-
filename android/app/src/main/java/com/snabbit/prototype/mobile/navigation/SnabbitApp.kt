@@ -165,6 +165,10 @@ private fun CustomerShell(pushNavigation: PushNavigationCoordinator) {
         openService = { serviceId -> home.add(ServiceDetailsRoute(serviceId)) },
         openAddresses = { serviceId, durationHours -> home.add(AddressServiceabilityRoute(serviceId, durationHours)) },
         openSchedule = { serviceId, addressId -> home.add(ScheduleRoute(serviceId, addressId)) },
+        openScheduleStartTime = { serviceId, addressId, dates, durationHours ->
+            val destination = ScheduleStartTimeRoute(serviceId, addressId, dates, durationHours)
+            if (home.lastOrNull() != destination) home.add(destination)
+        },
         openHousehold = { serviceId, addressId, durationHours, bookingType, startsAt ->
             home.add(HouseholdPreferencesRoute(serviceId, addressId, durationHours, bookingType, startsAt))
         },

@@ -1,5 +1,7 @@
 package com.snabbit.prototype.mobile.navigation
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -44,5 +46,17 @@ class RoutesTest {
                 "service-id", "address-id", 2, "NOT_A_BOOKING_TYPE", listOf("not-an-instant"),
             ).toBookingDraftOrNull(),
         )
+    }
+
+    @Test
+    fun `schedule start-time route carries date and duration selection`() {
+        val route = ScheduleStartTimeRoute(
+            serviceId = "service-id",
+            addressId = "address-id",
+            dates = listOf("2026-10-10", "2026-10-12"),
+            durationHours = 3,
+        )
+
+        assertEquals(route, Json.decodeFromString<ScheduleStartTimeRoute>(Json.encodeToString(route)))
     }
 }
