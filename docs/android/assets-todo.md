@@ -15,3 +15,9 @@ No AI-generated or copied worker photography has been added to the repository. T
 | Notification/status icons | Vector drawables | Confirmed, pending, cancelled, refund, location |
 
 For every asset record its owner, license, source file, export settings, and accessibility description. Keep large originals outside the APK and check compressed output into the appropriate density/resource directory.
+
+## Home redesign assets
+
+- Instant-card worker mascot: supply an approved transparent SVG/WebP sized for the card edge; the app currently uses the named `Worker mascot placeholder` Material icon and must not reconstruct the reference artwork.
+- Favourite-expert avatars: supply three rights-cleared square portraits with focal-point metadata; the app currently uses named overlapping avatar placeholders, with expert names kept as live accessible text when an API exposes them.
+- Habit-pack ticket: supply approved transparent SVG/vector art without baked-in visit count, prices, or offer copy; the app currently uses the named `Habit pack ticket artwork placeholder` Material icon.

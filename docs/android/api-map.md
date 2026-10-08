@@ -17,7 +17,7 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 1 | Splash | No endpoint | None | Local startup/config/session state only |
 | 2 | Onboarding | No endpoint | None | Local completion state only |
 | 3 | Login + OTP | `POST /api/v1/auth/otp/request`, `POST /api/v1/auth/otp/verify`, then `POST /api/v1/auth/register` for a verified new customer; worker flavor uses `/api/v1/worker-auth/otp/request` and `/verify` | Public | Twilio Verify owns code generation/checking. Customer existence is disclosed only after verification; workers remain existing-account only. |
-| 4 | Home | `GET /api/v1/services`; household, favourites, Plus endpoints described below | Customer | 401/403; 404 user; 409 favourite/Plus rules |
+| 4 | Home | `GET /api/v1/services`; `GET /api/v1/users/{userId}/addresses` | Customer and matching user identity for address | Catalogue and selected address are authoritative. Favourites preview and habit-pack promo have no read/catalogue contracts, so they use isolated fake repositories documented in `api-gaps.md`; service/offline failures use the shared recoverable state. |
 | 5 | Service details | `GET /api/v1/services`; pricing is finalized through booking availability/hold | Customer | 422 booking rule; 409 unavailable slot |
 | 6 | Address & serviceability | `GET/POST /api/v1/users/{userId}/addresses`, `DELETE .../{addressId}` | Customer and matching user identity | 403 identity mismatch; 404; 422 address/location validation |
 | 7 | Slot selection | `POST /api/v1/bookings/availability` | Customer | 422 invalid date/duration/rules; service errors surfaced as `ProblemDetail` |

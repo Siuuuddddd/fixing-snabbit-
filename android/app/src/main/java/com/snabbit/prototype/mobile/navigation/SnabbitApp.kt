@@ -177,6 +177,9 @@ private fun CustomerShell(pushNavigation: PushNavigationCoordinator) {
         openCancellation = { bookingId -> home.add(CancelBookingRoute(bookingId)) },
         returnHome = { home.clear(); home.add(HomeRoute) },
         openNotifications = { home.add(NotificationsRoute) },
+        openWallet = { selected = CustomerTab.WALLET },
+        openRewards = { selected = CustomerTab.PLUS },
+        openProfile = { selected = CustomerTab.PROFILE },
         back = { if (home.size > 1) home.removeLastOrNull() },
     )
     CompositionLocalProvider(LocalCustomerNavigation provides navigation) {

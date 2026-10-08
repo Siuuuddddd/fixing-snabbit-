@@ -22,6 +22,8 @@ import com.snabbit.prototype.mobile.data.catalog.DefaultCatalogRepository
 import com.snabbit.prototype.mobile.data.catalog.remote.CatalogApi
 import com.snabbit.prototype.mobile.data.catalog.remote.CatalogRemoteDataSource
 import com.snabbit.prototype.mobile.data.catalog.remote.RetrofitCatalogRemoteDataSource
+import com.snabbit.prototype.mobile.data.home.fake.FakeHabitPackPromoRepository
+import com.snabbit.prototype.mobile.data.home.fake.FakeHomeFavoritesRepository
 import com.snabbit.prototype.mobile.data.booking.DefaultBookingRepository
 import com.snabbit.prototype.mobile.data.booking.remote.BookingApi
 import com.snabbit.prototype.mobile.data.bookings.DataStoreKnownBookingDataSource
@@ -65,6 +67,12 @@ import com.snabbit.prototype.mobile.domain.auth.AuthRepository
 import com.snabbit.prototype.mobile.domain.address.AddressRepository
 import com.snabbit.prototype.mobile.domain.address.DeviceLocationDataSource
 import com.snabbit.prototype.mobile.domain.catalog.CatalogRepository
+import com.snabbit.prototype.mobile.domain.home.GetFavoritesUseCase
+import com.snabbit.prototype.mobile.domain.home.GetHabitPackPromoUseCase
+import com.snabbit.prototype.mobile.domain.home.GetHomeServicesUseCase
+import com.snabbit.prototype.mobile.domain.home.GetSelectedAddressUseCase
+import com.snabbit.prototype.mobile.domain.home.HabitPackPromoRepository
+import com.snabbit.prototype.mobile.domain.home.HomeFavoritesRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingDraft
 import com.snabbit.prototype.mobile.domain.booking.BookingRepository
 import com.snabbit.prototype.mobile.domain.bookings.BookingListRepository
@@ -120,6 +128,7 @@ import com.snabbit.prototype.mobile.ui.address.AddressScreen
 import com.snabbit.prototype.mobile.ui.address.AddressViewModel
 import com.snabbit.prototype.mobile.ui.home.HomeScreen
 import com.snabbit.prototype.mobile.ui.home.HomeViewModel
+import com.snabbit.prototype.mobile.ui.home.HomeUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
 import com.snabbit.prototype.mobile.ui.placeholder.PlaceholderScreen
@@ -247,6 +256,12 @@ private val repositoryModule = module {
     single<SessionIdentityProvider> { JwtSessionIdentityProvider(get(), get()) }
     single<SessionManager> { DefaultSessionManager(get()) }
     single<CatalogRepository> { DefaultCatalogRepository(get(), get()) }
+    single<HomeFavoritesRepository> { FakeHomeFavoritesRepository() }
+    single<HabitPackPromoRepository> { FakeHabitPackPromoRepository() }
+    single { GetHomeServicesUseCase(get()) }
+    single { GetSelectedAddressUseCase(get()) }
+    single { GetFavoritesUseCase(get()) }
+    single { GetHabitPackPromoUseCase(get()) }
     single<AddressRepository> { DefaultAddressRepository(get(), get(), get()) }
     single<DeviceLocationDataSource> { AndroidDeviceLocationDataSource(androidContext()) }
     single<KnownBookingDataSource> { DataStoreKnownBookingDataSource(get(), get()) }
@@ -277,7 +292,7 @@ private val viewModelModule = module {
     viewModel { SplashViewModel(get()) }
     viewModel { OnboardingViewModel(get()) }
     viewModel { LoginViewModel(get()) }
-    viewModel { HomeViewModel(get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { (serviceId: String) -> ServiceDetailsViewModel(serviceId, get()) }
     viewModel { AddressViewModel(get(), get()) }
     viewModel { (serviceId: String, addressId: String, durationHours: Int) ->
@@ -314,11 +329,19 @@ private val navigationModule = module {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         HomeScreen(
             state = state,
-            onRefresh = viewModel::refresh,
-            onRetry = viewModel::retry,
-            onServiceSelected = navigation.openService,
-            onAddressesSelected = { navigation.openAddresses(null, null) },
-            onNotificationsSelected = navigation.openNotifications,
+            onEvent = { event ->
+                viewModel.onEvent(event)
+                when (event) {
+                    HomeUiEvent.AddressSelected -> navigation.openAddresses(null, null)
+                    HomeUiEvent.WalletSelected -> navigation.openWallet()
+                    HomeUiEvent.RewardsSelected,
+                    HomeUiEvent.PromoSelected,
+                    -> navigation.openRewards()
+                    HomeUiEvent.ProfileSelected -> navigation.openProfile()
+                    is HomeUiEvent.ServiceSelected -> navigation.openService(event.serviceId)
+                    else -> Unit
+                }
+            },
         )
     }
     navigation<ServiceDetailsRoute> { route ->

@@ -14,6 +14,9 @@ data class CustomerNavigation(
     val openCancellation: (String) -> Unit,
     val returnHome: () -> Unit,
     val openNotifications: () -> Unit,
+    val openWallet: () -> Unit,
+    val openRewards: () -> Unit,
+    val openProfile: () -> Unit,
     val back: () -> Unit,
 )
 
