@@ -73,6 +73,10 @@ import com.snabbit.prototype.mobile.domain.home.GetHomeServicesUseCase
 import com.snabbit.prototype.mobile.domain.home.GetSelectedAddressUseCase
 import com.snabbit.prototype.mobile.domain.home.HabitPackPromoRepository
 import com.snabbit.prototype.mobile.domain.home.HomeFavoritesRepository
+import com.snabbit.prototype.mobile.domain.schedule.GetAvailableSlotsUseCase
+import com.snabbit.prototype.mobile.domain.schedule.GetDateOptionsUseCase
+import com.snabbit.prototype.mobile.domain.schedule.GetDurationsWithPriceUseCase
+import com.snabbit.prototype.mobile.domain.schedule.ValidateMultiDaySelectionUseCase
 import com.snabbit.prototype.mobile.domain.booking.BookingDraft
 import com.snabbit.prototype.mobile.domain.booking.BookingRepository
 import com.snabbit.prototype.mobile.domain.bookings.BookingListRepository
@@ -113,7 +117,7 @@ import com.snabbit.prototype.mobile.navigation.MyBookingsRoute
 import com.snabbit.prototype.mobile.navigation.NotificationsRoute
 import com.snabbit.prototype.mobile.navigation.ProfileRoute
 import com.snabbit.prototype.mobile.navigation.ServiceDetailsRoute
-import com.snabbit.prototype.mobile.navigation.SlotSelectionRoute
+import com.snabbit.prototype.mobile.navigation.ScheduleRoute
 import com.snabbit.prototype.mobile.navigation.toBookingDraftOrNull
 import com.snabbit.prototype.mobile.navigation.SnabbitPlusRoute
 import com.snabbit.prototype.mobile.navigation.WorkerEarningsRoute
@@ -143,8 +147,8 @@ import com.snabbit.prototype.mobile.ui.booking.FindingWorkerScreen
 import com.snabbit.prototype.mobile.ui.booking.FindingWorkerViewModel
 import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesScreen
 import com.snabbit.prototype.mobile.ui.booking.HouseholdPreferencesViewModel
-import com.snabbit.prototype.mobile.ui.booking.SlotSelectionScreen
-import com.snabbit.prototype.mobile.ui.booking.SlotSelectionViewModel
+import com.snabbit.prototype.mobile.ui.booking.ScheduleScreen
+import com.snabbit.prototype.mobile.ui.booking.ScheduleViewModel
 import com.snabbit.prototype.mobile.ui.tracking.LiveTrackingScreen
 import com.snabbit.prototype.mobile.ui.tracking.LiveTrackingViewModel
 import com.snabbit.prototype.mobile.ui.completed.BookingCompletedScreen
@@ -262,6 +266,10 @@ private val repositoryModule = module {
     single { GetSelectedAddressUseCase(get()) }
     single { GetFavoritesUseCase(get()) }
     single { GetHabitPackPromoUseCase(get()) }
+    single { GetDateOptionsUseCase() }
+    single { GetDurationsWithPriceUseCase(get()) }
+    single { GetAvailableSlotsUseCase(get()) }
+    single { ValidateMultiDaySelectionUseCase() }
     single<AddressRepository> { DefaultAddressRepository(get(), get(), get()) }
     single<DeviceLocationDataSource> { AndroidDeviceLocationDataSource(androidContext()) }
     single<KnownBookingDataSource> { DataStoreKnownBookingDataSource(get(), get()) }
@@ -295,8 +303,8 @@ private val viewModelModule = module {
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { (serviceId: String) -> ServiceDetailsViewModel(serviceId, get()) }
     viewModel { AddressViewModel(get(), get()) }
-    viewModel { (serviceId: String, addressId: String, durationHours: Int) ->
-        SlotSelectionViewModel(serviceId, addressId, durationHours, get())
+    viewModel { (serviceId: String, addressId: String) ->
+        ScheduleViewModel(serviceId, addressId, get(), get(), get(), get(), get())
     }
     viewModel { HouseholdPreferencesViewModel(get()) }
     viewModel { (draft: BookingDraft) -> BookingSummaryViewModel(draft, get(), get(), get()) }
@@ -339,6 +347,14 @@ private val navigationModule = module {
                     -> navigation.openRewards()
                     HomeUiEvent.ProfileSelected -> navigation.openProfile()
                     is HomeUiEvent.ServiceSelected -> navigation.openService(event.serviceId)
+                    HomeUiEvent.ScheduleSelected -> {
+                        val serviceId = state.services.firstNotNullOfOrNull { it.serviceId }
+                        if (serviceId != null) {
+                            val addressId = state.selectedAddress?.id
+                            if (addressId != null) navigation.openSchedule(serviceId, addressId)
+                            else navigation.openAddresses(serviceId, 0)
+                        }
+                    }
                     else -> Unit
                 }
             },
@@ -379,20 +395,28 @@ private val navigationModule = module {
             onAddressSelected = { addressId ->
                 val serviceId = route.serviceId
                 val duration = route.durationHours
-                if (serviceId != null && duration != null) navigation.openSlots(serviceId, addressId, duration)
+                if (serviceId != null && duration != null) navigation.openSchedule(serviceId, addressId)
             },
         )
     }
-    navigation<SlotSelectionRoute> { route ->
+    navigation<ScheduleRoute> { route ->
         val navigation = LocalCustomerNavigation.current
-        val viewModel = koinViewModel<SlotSelectionViewModel> { parametersOf(route.serviceId, route.addressId, route.durationHours) }
+        val viewModel = koinViewModel<ScheduleViewModel> { parametersOf(route.serviceId, route.addressId) }
         val state by viewModel.uiState.collectAsStateWithLifecycle()
-        SlotSelectionScreen(
-            state, navigation.back, viewModel::selectType, viewModel::toggleDate, viewModel::selectTime,
-            viewModel::checkAvailability, viewModel::retry,
+        ScheduleScreen(
+            state = state,
+            onBack = navigation.back,
+            onEvent = viewModel::onEvent,
             onContinue = {
-                val draft = viewModel.draft()
-                navigation.openHousehold(route.serviceId, route.addressId, route.durationHours, draft.bookingType.name, draft.startsAt)
+                viewModel.draftOrNull()?.let { draft ->
+                    navigation.openSummary(
+                        route.serviceId,
+                        route.addressId,
+                        draft.durationHours,
+                        draft.bookingType.name,
+                        draft.startsAt,
+                    )
+                }
             },
         )
     }

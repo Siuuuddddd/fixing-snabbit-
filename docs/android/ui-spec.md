@@ -48,6 +48,12 @@ Customer tabs: Home, Bookings, Wallet, Plus, Profile. Worker tabs: Jobs, Schedul
 
 All 23 board destinations are registered as typed routes. Implementation status is tracked in `PROGRESS.md`; routes not yet completed still render a clearly labelled foundation placeholder.
 
+## Customer Schedule flow
+
+Schedule is one progressive, vertically scrolling screen. It reveals a rounded date card first, a horizontally scrolling duration card after a valid date selection, and Morning/Afternoon/Evening availability after a duration is selected; a fixed promo/action area stays above the system navigation inset. Today, Tomorrow, and Multi-day are mutually exclusive, while Multi-day accepts any 2–7 distinct choices from the next seven UI dates and clears downstream selections whenever its dates change.
+
+The screen follows the backend’s actual 1–4 whole-hour duration and 8 AM–7 PM operating contracts. Visible day-part slots use 15-minute increments and real availability reads; past Today candidates are hidden, sold-out candidates remain visible and disabled, and the selected backend price drives the bottom total. Large text changes the time grid from four to two columns.
+
 ## Required screen states
 
 Every real screen must define loading, content, empty, recoverable error, offline, and retry behavior. Money and booking screens also need pending/idempotent, success, rejected, expired, and unknown-provider states. Live tracking needs stale-location and stream-reconnect states. OTP needs resend cooldown and generic unknown-account behavior.

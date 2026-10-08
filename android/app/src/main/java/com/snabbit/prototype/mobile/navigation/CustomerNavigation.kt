@@ -5,7 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 data class CustomerNavigation(
     val openService: (String) -> Unit,
     val openAddresses: (String?, Int?) -> Unit,
-    val openSlots: (String, String, Int) -> Unit,
+    val openSchedule: (String, String) -> Unit,
     val openHousehold: (String, String, Int, String, List<String>) -> Unit,
     val openSummary: (String, String, Int, String, List<String>) -> Unit,
     val openFindingWorker: (String, String?, Boolean) -> Unit,

@@ -18,7 +18,8 @@ This list records gaps found by reading the current controllers, DTOs, gateway r
 | No customer refund status/read endpoint | Cancel booking | Cancellation returns the expected refund amount, but the customer cannot query wallet/provider refund processing or settlement. Android therefore shows the refund as requested/pending. |
 | No worker earnings endpoint | Worker earnings | The board requires totals and payout history that are not exposed. Android shows a clearly labelled unavailable state and does not derive or fabricate money from the active-jobs feed. |
 | No favourites read/list or home-preview endpoint | Home favourites banner | Add/remove contracts exist, but the customer cannot fetch favourite experts or a count. Android keeps the temporary preview behind `HomeFavoritesRepository` and marks its data source as fake. |
-| No habit-pack catalogue, price, or claim endpoint | Home promo strip | The reference promotion cannot be fetched or purchased authoritatively. Android keeps the temporary offer behind `HabitPackPromoRepository`; the UI does not invent a network request. |
+| No habit-pack catalogue, price, or claim endpoint | Home and Schedule promo strips | The reference promotion cannot be fetched or purchased authoritatively. Android keeps the temporary offer behind `HabitPackPromoRepository`; Schedule’s Add action is a localized coming-soon snackbar and does not invent a network request. |
+| No original/list promotional price in service or availability responses | Schedule duration cards | The catalogue exposes only `basePricePerHourMinor`, while availability exposes current lowest price per visit. Android shows the authoritative current price without fabricating a struck-through original amount. |
 
 ## Important follow-ups
 

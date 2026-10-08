@@ -17,11 +17,6 @@ import com.snabbit.prototype.mobile.domain.wallet.WalletLedgerEntry
 import com.snabbit.prototype.mobile.domain.wallet.WalletRepository
 import com.snabbit.prototype.mobile.domain.wallet.WalletTopUp
 import com.snabbit.prototype.mobile.ui.common.UiDataErrorReason
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -34,37 +29,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BookingViewModelsTest {
-    private val fixedClock = Clock.fixed(Instant.parse("2026-10-04T02:30:00Z"), ZoneId.of("Asia/Kolkata"))
-
-    @Test
-    fun `slot selection sends exact multi-day draft and exposes availability`() = runTest {
-        val repository = FakeBookingRepository()
-        val viewModel = SlotSelectionViewModel("service", "address", 2, repository, fixedClock, StandardTestDispatcher(testScheduler))
-        viewModel.selectType(BookingType.MULTI_DAY)
-        viewModel.toggleDate(LocalDate.of(2026, 10, 5))
-        viewModel.toggleDate(LocalDate.of(2026, 10, 6))
-        viewModel.selectTime(LocalTime.of(10, 0))
-        viewModel.checkAvailability()
-        runCurrent()
-
-        assertEquals(BookingType.MULTI_DAY, repository.lastDraft?.bookingType)
-        assertEquals(2, repository.lastDraft?.startsAt?.size)
-        assertTrue(viewModel.uiState.value.canContinue)
-    }
-
-    @Test
-    fun `multi-day requires at least two distinct days`() = runTest {
-        val repository = FakeBookingRepository()
-        val viewModel = SlotSelectionViewModel("service", "address", 2, repository, fixedClock, StandardTestDispatcher(testScheduler))
-        viewModel.selectType(BookingType.MULTI_DAY)
-        viewModel.toggleDate(LocalDate.of(2026, 10, 5))
-        viewModel.selectTime(LocalTime.of(10, 0))
-        viewModel.checkAvailability()
-
-        assertEquals(null, repository.lastDraft)
-        assertEquals(SlotValidationError.MULTI_DAY_COUNT, viewModel.uiState.value.validationError)
-    }
-
     @Test
     fun `household saves backend enum values`() = runTest {
         val repository = FakeHouseholdRepository()

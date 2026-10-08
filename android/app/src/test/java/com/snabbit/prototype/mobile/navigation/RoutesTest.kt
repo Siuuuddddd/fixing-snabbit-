@@ -14,7 +14,7 @@ class RoutesTest {
             HomeRoute,
             ServiceDetailsRoute("service-id"),
             AddressServiceabilityRoute(),
-            SlotSelectionRoute("service-id", "address-id", 2),
+            ScheduleRoute("service-id", "address-id"),
             HouseholdPreferencesRoute("service-id", "address-id", 2, "SCHEDULED", listOf("2026-10-05T04:30:00Z")),
             BookingSummaryRoute("service-id", "address-id", 2, "SCHEDULED", listOf("2026-10-05T04:30:00Z")),
             FindingWorkerRoute("booking-id", "wallet-id", true),

@@ -11,6 +11,7 @@ private val ColorWhite = androidx.compose.ui.graphics.Color.White
 
 private val LightColors = lightColorScheme(
     primary = SnabbitPink,
+    primaryContainer = ScheduleSelectedFill,
     secondary = Saffron,
     tertiary = ConfirmedGreen,
     background = WarmWhite,
@@ -23,6 +24,7 @@ private val LightColors = lightColorScheme(
 
 private val DarkColors = darkColorScheme(
     primary = SnabbitPinkDark,
+    primaryContainer = ScheduleSelectedFillDark,
     secondary = Saffron,
     tertiary = Mint,
     onPrimary = Charcoal,

@@ -16,7 +16,7 @@ sealed interface SnabbitRoute : NavKey
 @Serializable data object HomeRoute : SnabbitRoute
 @Serializable data class ServiceDetailsRoute(val serviceId: String) : SnabbitRoute
 @Serializable data class AddressServiceabilityRoute(val serviceId: String? = null, val durationHours: Int? = null) : SnabbitRoute
-@Serializable data class SlotSelectionRoute(val serviceId: String, val addressId: String, val durationHours: Int) : SnabbitRoute
+@Serializable data class ScheduleRoute(val serviceId: String, val addressId: String) : SnabbitRoute
 @Serializable data class HouseholdPreferencesRoute(
     val serviceId: String, val addressId: String, val durationHours: Int,
     val bookingType: String, val startsAt: List<String>,
@@ -55,7 +55,7 @@ fun SnabbitRoute.titleRes(): Int = when (this) {
     HomeRoute -> R.string.screen_home
     is ServiceDetailsRoute -> R.string.screen_service_details
     is AddressServiceabilityRoute -> R.string.screen_address_serviceability
-    is SlotSelectionRoute -> R.string.screen_slot_selection
+    is ScheduleRoute -> R.string.schedule_title
     is HouseholdPreferencesRoute -> R.string.screen_household_preferences
     is BookingSummaryRoute -> R.string.screen_booking_summary
     is FindingWorkerRoute -> R.string.screen_finding_worker
