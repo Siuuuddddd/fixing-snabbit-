@@ -19,4 +19,5 @@ data class BookingSnapshot(
     val cancellationFeeMinor: Long? = null,
     val refundAmountMinor: Long? = null,
     val cancelledAt: Instant? = null,
+    val holdExpiresAt: Instant? = visits.minOfOrNull(VisitSnapshot::holdExpiresAt),
 )

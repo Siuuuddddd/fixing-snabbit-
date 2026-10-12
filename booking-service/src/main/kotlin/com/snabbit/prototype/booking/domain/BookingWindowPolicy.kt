@@ -15,8 +15,8 @@ class BookingWindowPolicy(
     private val clock: Clock,
 ) {
     fun validate(type: BookingType, startsAt: Instant, duration: Duration) {
-        if (startsAt.isBefore(clock.instant())) {
-            throw BookingRuleViolation("Visit start time cannot be in the past")
+        if (startsAt.isBefore(clock.instant().plus(properties.minimumLeadTime))) {
+            throw BookingRuleViolation("Visit start time does not meet the minimum lead time")
         }
         val localStart = startsAt.atZone(properties.zoneId)
         val localEnd = localStart.plus(duration)
@@ -31,8 +31,11 @@ class BookingWindowPolicy(
         ) {
             throw BookingRuleViolation("Visit must fit within operating hours 08:00-19:00")
         }
-        if (localStart.toLocalDate().isBefore(today) || localStart.toLocalDate().isAfter(today.plusDays(7))) {
-            throw BookingRuleViolation("Bookings are available only from today through the next seven days")
+        val lastBookableDate = today.plusDays((properties.advanceWindowDays - 1).toLong())
+        if (localStart.toLocalDate().isBefore(today) || localStart.toLocalDate().isAfter(lastBookableDate)) {
+            throw BookingRuleViolation(
+                "Bookings are available only from today through $lastBookableDate (${properties.advanceWindowDays} calendar days)",
+            )
         }
         if (type == BookingType.INSTANT && localStart.toLocalDate() != today) {
             throw BookingRuleViolation("Instant bookings must start today")

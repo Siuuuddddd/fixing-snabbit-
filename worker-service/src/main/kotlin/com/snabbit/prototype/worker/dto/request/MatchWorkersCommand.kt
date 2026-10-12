@@ -24,4 +24,8 @@ data class MatchWorkersCommand(
     val accessibilityNeeds: List<String>,
     val favouriteWorkerIds: List<UUID>,
     val plusActive: Boolean,
+    val expertPreference: String = "ANY",
+    val favouriteWorkerId: UUID? = null,
+    val fallbackPolicy: String = "AUTO_ASSIGN",
+    val requiredTier: String? = null,
 )

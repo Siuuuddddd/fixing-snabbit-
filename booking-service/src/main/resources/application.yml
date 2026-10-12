@@ -36,6 +36,13 @@ booking:
   worker-offer-duration: PT1M
   expiry-scan-delay: PT30S
   expiry-batch-size: 100
+  advance-window-days: ${BOOKING_ADVANCE_WINDOW_DAYS:10}
+  min-multi-day-visits: ${BOOKING_MIN_MULTI_DAY_VISITS:2}
+  max-multi-day-visits: ${BOOKING_MAX_MULTI_DAY_VISITS:${BOOKING_ADVANCE_WINDOW_DAYS:10}}
+  minimum-lead-time: ${BOOKING_MINIMUM_LEAD_TIME:PT0S}
+  payment-hold-extension: ${BOOKING_PAYMENT_HOLD_EXTENSION:PT10M}
+  maximum-total-hold-time: ${BOOKING_MAXIMUM_TOTAL_HOLD_TIME:PT20M}
+  plus-veteran-upgrade-free: ${BOOKING_PLUS_VETERAN_UPGRADE_FREE:true}
   arrival-accuracy-meters: 100
   arrival-radius-meters: 200
 

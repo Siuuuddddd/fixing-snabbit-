@@ -46,7 +46,7 @@ class WorkerMatchingService(
         val compatibility = compatibilityRepository.findAllByWorkerIdIn(candidateIds).associateBy { it.workerId }
         val favouriteIds = command.favouriteWorkerIds.toSet()
 
-        return candidateIds.mapNotNull { workerId ->
+        val ranked = candidateIds.mapNotNull { workerId ->
             val profile = profiles.getValue(workerId)
             val workerCompatibility = compatibility[workerId] ?: return@mapNotNull null
             if (!compatible(command, workerCompatibility)) return@mapNotNull null
@@ -74,7 +74,33 @@ class WorkerMatchingService(
             compareByDescending<RankedMatch> { it.score }
                 .thenBy { it.value.distanceKm }
                 .thenBy { it.value.workerId.toString() },
-        ).take(10).map(RankedMatch::value)
+        ).map(RankedMatch::value)
+        val tierEligible = command.requiredTier?.uppercase()?.let { tier -> ranked.filter { it.tier == tier } } ?: ranked
+        return when (command.expertPreference.uppercase()) {
+            "ANY" -> tierEligible.map { it.copy(assignmentType = "PREFERRED") }
+            "VETERAN" -> tierEligible.filter { it.tier == "VETERAN" }
+                .map { it.copy(assignmentType = "PREFERRED") }
+            "FAVOURITE" -> {
+                val favouriteId = command.favouriteWorkerId
+                    ?: throw InvalidMatchRequest("favouriteWorkerId is required for FAVOURITE preference")
+                val favourite = tierEligible.filter { it.workerId == favouriteId }
+                    .map { it.copy(assignmentType = "PREFERRED") }
+                if (favourite.isNotEmpty() || command.fallbackPolicy.uppercase() == "SKIP_AND_REFUND") favourite
+                else {
+                    val tier = profiles[favouriteId]?.tier?.name
+                    val sameTier = tierEligible.filter { it.tier == tier }
+                        .sortedBy(WorkerMatch::distanceKm)
+                        .map { it.copy(assignmentType = "FALLBACK_SAME_TIER") }
+                    if (sameTier.isNotEmpty()) sameTier
+                    else if (command.plusActive) {
+                        tierEligible.filter { it.tier == "VETERAN" }
+                            .sortedBy(WorkerMatch::distanceKm)
+                            .map { it.copy(assignmentType = "FALLBACK_PLUS_UPGRADE") }
+                    } else emptyList()
+                }
+            }
+            else -> throw InvalidMatchRequest("Unsupported expert preference")
+        }.take(10)
     }
 
     private fun compatible(command: MatchWorkersCommand, worker: WorkerCompatibility): Boolean {

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component
 class LocalBookingSeedInitializer(
     private val jdbc: JdbcTemplate,
     private val clock: Clock,
+    private val properties: BookingProperties? = null,
 ) : ApplicationRunner {
     override fun run(args: ApplicationArguments) {
         val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Kolkata")))
@@ -26,10 +27,11 @@ class LocalBookingSeedInitializer(
                 ('10000000-0000-0000-0000-000000000001'::uuid),
                 ('10000000-0000-0000-0000-000000000002'::uuid)
             ) AS workers(worker_id)
-            CROSS JOIN generate_series(0, 6) AS day_offset
+            CROSS JOIN generate_series(0, ?) AS day_offset
             ON CONFLICT (worker_id, service_date) DO NOTHING
             """.trimIndent(),
             today,
+            (properties?.advanceWindowDays ?: 10) - 1,
         )
     }
 }

@@ -22,12 +22,16 @@ import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
 import com.snabbit.prototype.booking.dto.response.RatingContextSnapshot
 import com.snabbit.prototype.booking.dto.response.RatingVisitSnapshot
 import com.snabbit.prototype.booking.dto.response.VisitSnapshot
+import com.snabbit.prototype.booking.dto.response.VisitRecoveryContext
+import com.snabbit.prototype.booking.domain.enums.AssignmentType
 import com.snabbit.prototype.booking.exception.BookingNotFound
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import com.snabbit.prototype.booking.exception.CustomerAccessDenied
 import com.snabbit.prototype.booking.exception.InvalidBookingState
 import com.snabbit.prototype.booking.exception.OfferUnavailable
 import com.snabbit.prototype.booking.exception.SlotUnavailable
+import com.snabbit.prototype.booking.exception.AtomicSlotReservationFailed
+import com.snabbit.prototype.booking.exception.ConcurrentVisitFailure
 import com.snabbit.prototype.booking.repository.BookingRepository
 import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerDayCapacityRepository
@@ -76,6 +80,11 @@ class BookingLifecycleService(
         if ((command.plusPassId == null) != (command.plusDiscountMinor == 0L)) {
             throw BookingRuleViolation("A Plus pass and discount must be supplied together")
         }
+        if (command.visits.any { it.quotedPriceMinor > 0 } &&
+            command.visits.sumOf(VisitCommand::quotedPriceMinor) != command.quotedTotalMinor
+        ) {
+            throw BookingRuleViolation("Per-visit prices must equal the booking quote")
+        }
         if (command.serviceAddressId != null &&
             listOf(
                 command.serviceAddressLabel,
@@ -92,8 +101,13 @@ class BookingLifecycleService(
         validateInternalOverlaps(command)
         command.visits.forEach { visit ->
             bookingWindowPolicy.validate(command.bookingType, visit.startsAt, command.duration)
-            validateCapacityAndOverlap(visit, command.duration.toMinutes(), capacities, now)
         }
+        val unavailableVisits = command.visits.mapIndexedNotNull { index, visit ->
+            runCatching { validateCapacityAndOverlap(visit, command.duration.toMinutes(), capacities, now) }
+                .exceptionOrNull()
+                ?.let { ConcurrentVisitFailure(index, visit.startsAt, it.message.orEmpty()) }
+        }
+        if (unavailableVisits.isNotEmpty()) throw AtomicSlotReservationFailed(unavailableVisits)
 
         val booking = bookingRepository.saveAndFlush(
             Booking(
@@ -118,6 +132,10 @@ class BookingLifecycleService(
                 serviceAddressPincode = command.serviceAddressPincode,
                 idempotencyKey = command.idempotencyKey,
                 requestFingerprint = command.requestFingerprint,
+                expertPreference = command.expertPreference,
+                favouriteWorkerId = command.favouriteWorkerId,
+                fallbackPolicy = command.fallbackPolicy,
+                maximumHoldExpiresAt = now.plus(properties.maximumTotalHoldTime),
             ),
         )
 
@@ -134,6 +152,11 @@ class BookingLifecycleService(
                 status = SlotHoldStatus.HELD,
                 expiresAt = now.plus(properties.slotHoldDuration),
                 createdAt = now,
+                quotedPriceMinor = visit.quotedPriceMinor,
+                assignmentType = visit.assignmentType,
+                preferredWorkerId = visit.preferredWorkerId,
+                        assignedWorkerTier = visit.assignedWorkerTier,
+                requirementsSnapshot = command.requirements,
             )
         }
         slotHoldRepository.saveAll(holds)
@@ -442,7 +465,38 @@ class BookingLifecycleService(
             mapOf("bookingId" to bookingId, "paymentReference" to paymentReference),
             now,
         )
+        holds.forEach { hold ->
+            outboxWriter.append(
+                bookingId,
+                "VisitAssigned",
+                mapOf(
+                    "bookingId" to bookingId,
+                    "customerId" to booking.customerId,
+                    "visitIndex" to hold.visitIndex,
+                    "workerId" to hold.workerId,
+                    "startsAt" to hold.startsAt,
+                    "assignmentType" to hold.assignmentType.name,
+                ),
+                now,
+            )
+        }
         return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun extendHoldsForPayment(bookingId: UUID): PaymentQuoteSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        if (booking.status != BookingStatus.AWAITING_PAYMENT) {
+            throw InvalidBookingState("Booking is not awaiting payment")
+        }
+        val holds = requireHolds(bookingId)
+        if (holds.any { !it.isActive(now) }) throw InvalidBookingState("Booking slot hold has expired")
+        val maximum = booking.maximumHoldExpiresAt ?: booking.createdAt.plus(properties.maximumTotalHoldTime)
+        val extended = minOf(now.plus(properties.paymentHoldExtension), maximum)
+        if (!extended.isAfter(now)) throw InvalidBookingState("Booking maximum hold time has expired")
+        holds.forEach { it.extendHold(extended) }
+        return paymentQuote(bookingId)
     }
 
     @Transactional
@@ -460,6 +514,145 @@ class BookingLifecycleService(
         requireHolds(bookingId).forEach(SlotHold::release)
         closeRemainingOffers(bookingId, now)
         outboxWriter.append(bookingId, "BookingCancelled", mapOf("bookingId" to bookingId), now)
+        return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun cancelVisit(bookingId: UUID, visitIndex: Int, customerId: UUID, reason: String?): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        if (booking.customerId != customerId) throw CustomerAccessDenied()
+        if (booking.status != BookingStatus.CONFIRMED) {
+            throw InvalidBookingState("Only a visit in a confirmed booking can be cancelled")
+        }
+        val hold = slotHoldRepository.findVisitForUpdate(bookingId, visitIndex)
+            ?: throw InvalidBookingState("Booking visit does not exist")
+        if (hold.refundStatus.name != "NONE") return currentSnapshot(booking)
+        if (hold.jobStatus != JobStatus.ASSIGNED || !hold.startsAt.isAfter(now)) {
+            throw InvalidBookingState("Only an unstarted future visit can be cancelled")
+        }
+        val refundKey = UUID.randomUUID()
+        hold.markRefundPending(hold.quotedPriceMinor, refundKey, now)
+        outboxWriter.append(
+            bookingId,
+            "VisitRefundRequested",
+            mapOf(
+                "bookingId" to bookingId,
+                "customerId" to customerId,
+                "visitIndex" to visitIndex,
+                "amountMinor" to hold.quotedPriceMinor,
+                "refundIdempotencyKey" to refundKey,
+                "reason" to (reason ?: "Customer cancelled visit"),
+            ),
+            now,
+        )
+        return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun completeVisitRefund(refundIdempotencyKey: UUID) {
+        val hold = slotHoldRepository.findByRefundIdempotencyKey(refundIdempotencyKey) ?: return
+        hold.markRefundCompleted()
+        val now = clock.instant()
+        outboxWriter.append(
+            hold.bookingId,
+            "VisitRefunded",
+            mapOf(
+                "bookingId" to hold.bookingId,
+                "customerId" to hold.customerId,
+                "visitIndex" to hold.visitIndex,
+                "amountMinor" to (hold.refundAmountMinor ?: 0),
+                "refundIdempotencyKey" to refundIdempotencyKey,
+            ),
+            now,
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun recoveryContext(bookingId: UUID, visitIndex: Int, failedWorkerId: UUID): VisitRecoveryContext {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        if (booking.status != BookingStatus.CONFIRMED) throw InvalidBookingState("Booking is not confirmed")
+        val hold = slotHoldRepository.findAllByBookingIdOrderByVisitIndex(bookingId)
+            .firstOrNull { it.visitIndex == visitIndex } ?: throw InvalidBookingState("Booking visit does not exist")
+        if (hold.workerId != failedWorkerId || hold.jobStatus != JobStatus.ASSIGNED) {
+            throw InvalidBookingState("Visit is not assigned to the reported worker")
+        }
+        return VisitRecoveryContext(
+            booking.id, booking.customerId, booking.serviceId, visitIndex, failedWorkerId,
+            hold.startsAt, booking.durationMinutes, hold.quotedPriceMinor, hold.assignedWorkerTier,
+            booking.serviceLatitude ?: throw InvalidBookingState("Booking has no service latitude"),
+            booking.serviceLongitude ?: throw InvalidBookingState("Booking has no service longitude"),
+            hold.requirementsSnapshot, booking.expertPreference, booking.favouriteWorkerId, booking.fallbackPolicy,
+        )
+    }
+
+    @Transactional
+    fun reassignVisit(
+        bookingId: UUID,
+        visitIndex: Int,
+        failedWorkerId: UUID,
+        replacementWorkerId: UUID,
+        replacementWorkerTier: String,
+        assignmentType: AssignmentType,
+    ): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        val hold = slotHoldRepository.findVisitForUpdate(bookingId, visitIndex)
+            ?: throw InvalidBookingState("Booking visit does not exist")
+        if (booking.status != BookingStatus.CONFIRMED || hold.workerId != failedWorkerId || hold.jobStatus != JobStatus.ASSIGNED) {
+            throw InvalidBookingState("Visit can no longer be reassigned")
+        }
+        val date = hold.startsAt.atZone(properties.zoneId).toLocalDate()
+        val capacity = capacityRepository.findForUpdate(replacementWorkerId, date)
+            ?: throw SlotUnavailable("Replacement worker has no availability on $date")
+        val localStart = hold.startsAt.atZone(properties.zoneId)
+        val localEnd = hold.endsAt.atZone(properties.zoneId)
+        if (localStart.toLocalTime() < capacity.availableFrom || localEnd.toLocalTime() > capacity.availableUntil ||
+            slotHoldRepository.hasActiveOverlap(replacementWorkerId, hold.startsAt, hold.endsAt, now)
+        ) throw SlotUnavailable("Replacement worker slot is no longer available")
+        hold.workerId = replacementWorkerId
+        hold.assignedWorkerTier = replacementWorkerTier
+        hold.assignmentType = assignmentType
+        outboxWriter.append(
+            bookingId,
+            "VisitAssignmentChanged",
+            mapOf(
+                "bookingId" to bookingId,
+                "customerId" to booking.customerId,
+                "visitIndex" to visitIndex,
+                "previousWorkerId" to failedWorkerId,
+                "workerId" to replacementWorkerId,
+                "quotedPriceMinor" to hold.quotedPriceMinor,
+            ),
+            now,
+        )
+        return currentSnapshot(booking)
+    }
+
+    @Transactional
+    fun refundVisitForDropout(bookingId: UUID, visitIndex: Int, failedWorkerId: UUID): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        val hold = slotHoldRepository.findVisitForUpdate(bookingId, visitIndex)
+            ?: throw InvalidBookingState("Booking visit does not exist")
+        if (booking.status != BookingStatus.CONFIRMED || hold.workerId != failedWorkerId || hold.jobStatus != JobStatus.ASSIGNED) {
+            throw InvalidBookingState("Visit can no longer be refunded")
+        }
+        val key = UUID.randomUUID()
+        hold.markRefundPending(hold.quotedPriceMinor, key, now)
+        outboxWriter.append(
+            bookingId,
+            "VisitRefundRequested",
+            mapOf(
+                "bookingId" to bookingId,
+                "customerId" to booking.customerId,
+                "visitIndex" to visitIndex,
+                "amountMinor" to hold.quotedPriceMinor,
+                "refundIdempotencyKey" to key,
+                "reason" to "Worker unavailable",
+            ),
+            now,
+        )
         return currentSnapshot(booking)
     }
 
@@ -529,8 +722,10 @@ class BookingLifecycleService(
     private fun validateVisitCollection(command: CreateBookingCommand) {
         val count = command.visits.size
         when (command.bookingType) {
-            BookingType.MULTI_DAY -> if (count !in 2..7) {
-                throw BookingRuleViolation("Multi-day bookings require 2 to 7 visits")
+            BookingType.MULTI_DAY -> if (count !in properties.minMultiDayVisits..properties.maxMultiDayVisits) {
+                throw BookingRuleViolation(
+                    "Multi-day bookings require ${properties.minMultiDayVisits} to ${properties.maxMultiDayVisits} visits",
+                )
             }
             BookingType.INSTANT, BookingType.SCHEDULED -> if (count != 1) {
                 throw BookingRuleViolation("Instant and scheduled bookings require exactly one visit")
@@ -701,6 +896,15 @@ class BookingLifecycleService(
                     arrivedAt = hold.arrivedAt,
                     startedAt = hold.startedAt,
                     completedAt = hold.completedAt,
+                    date = hold.startsAt.atZone(properties.zoneId).toLocalDate(),
+                    startTime = hold.startsAt.atZone(properties.zoneId).toLocalTime(),
+                    durationMinutes = booking.durationMinutes,
+                    quotedPriceMinor = hold.quotedPriceMinor,
+                    assignmentType = hold.assignmentType.name,
+                    refundStatus = hold.refundStatus.name,
+                    refundAmountMinor = hold.refundAmountMinor,
+                    refundIdempotencyKey = hold.refundIdempotencyKey,
+                    cancelledAt = hold.cancelledAt,
                 )
             },
             cancellationType = booking.cancellationType,

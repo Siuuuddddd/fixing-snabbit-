@@ -14,6 +14,9 @@ import java.time.Instant
 import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import com.snabbit.prototype.booking.domain.enums.AssignmentType
+import com.snabbit.prototype.booking.domain.enums.VisitRefundStatus
+import com.snabbit.prototype.booking.domain.BookingRequirements
 
 @Entity
 @Table(name = "slot_hold")
@@ -27,7 +30,7 @@ class SlotHold(
     @Column(name = "customer_id", nullable = false)
     val customerId: UUID,
     @Column(name = "worker_id", nullable = false)
-    val workerId: UUID,
+    var workerId: UUID,
     @Column(name = "service_id", nullable = false)
     val serviceId: UUID,
     @Column(name = "starts_at", nullable = false)
@@ -39,7 +42,7 @@ class SlotHold(
     @Column(nullable = false, columnDefinition = "slot_hold_status")
     var status: SlotHoldStatus,
     @Column(name = "expires_at", nullable = false)
-    val expiresAt: Instant,
+    var expiresAt: Instant,
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant,
     @Enumerated(EnumType.STRING)
@@ -58,6 +61,27 @@ class SlotHold(
     var arrivalLongitude: BigDecimal? = null,
     @Column(name = "arrival_accuracy_meters")
     var arrivalAccuracyMeters: BigDecimal? = null,
+    @Column(name = "quoted_price_minor", nullable = false)
+    val quotedPriceMinor: Long = 0,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assignment_type", nullable = false)
+    var assignmentType: AssignmentType = AssignmentType.PREFERRED,
+    @Column(name = "preferred_worker_id")
+    val preferredWorkerId: UUID? = null,
+    @Column(name = "assigned_worker_tier", nullable = false)
+    var assignedWorkerTier: String = "STANDARD",
+    @Enumerated(EnumType.STRING)
+    @Column(name = "refund_status", nullable = false)
+    var refundStatus: VisitRefundStatus = VisitRefundStatus.NONE,
+    @Column(name = "refund_amount_minor")
+    var refundAmountMinor: Long? = null,
+    @Column(name = "refund_idempotency_key")
+    var refundIdempotencyKey: UUID? = null,
+    @Column(name = "cancelled_at")
+    var cancelledAt: Instant? = null,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "requirements_snapshot", nullable = false, columnDefinition = "jsonb")
+    val requirementsSnapshot: BookingRequirements = BookingRequirements(),
     @Version
     var version: Long = 0,
 ) {
@@ -93,6 +117,26 @@ class SlotHold(
 
     fun isActive(now: Instant): Boolean =
         status == SlotHoldStatus.CONFIRMED || (status == SlotHoldStatus.HELD && expiresAt.isAfter(now))
+
+    fun extendHold(newExpiry: Instant) {
+        if (status == SlotHoldStatus.HELD && newExpiry.isAfter(expiresAt)) expiresAt = newExpiry
+    }
+
+    fun markRefundPending(amountMinor: Long, key: UUID, now: Instant) {
+        require(amountMinor in 0..quotedPriceMinor)
+        if (refundStatus == VisitRefundStatus.NONE) {
+            refundStatus = VisitRefundStatus.PENDING
+            refundAmountMinor = amountMinor
+            refundIdempotencyKey = key
+            cancelledAt = now
+            if (status == SlotHoldStatus.CONFIRMED) status = SlotHoldStatus.RELEASED
+            jobStatus = null
+        }
+    }
+
+    fun markRefundCompleted() {
+        if (refundStatus == VisitRefundStatus.PENDING) refundStatus = VisitRefundStatus.COMPLETED
+    }
 
     fun arrive(latitude: BigDecimal, longitude: BigDecimal, accuracyMeters: BigDecimal, now: Instant) {
         if (jobStatus == JobStatus.ARRIVED) return

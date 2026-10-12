@@ -11,4 +11,5 @@ data class WorkerMatchResponse(
     val distanceKm: BigDecimal,
     val favourite: Boolean,
     val priceMinor: Long,
+    val assignmentType: String = "PREFERRED",
 )

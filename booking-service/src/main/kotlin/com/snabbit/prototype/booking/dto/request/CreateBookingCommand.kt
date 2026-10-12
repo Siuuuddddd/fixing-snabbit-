@@ -5,6 +5,8 @@ import com.snabbit.prototype.booking.domain.enums.BookingType
 import java.math.BigDecimal
 import java.time.Duration
 import java.util.UUID
+import com.snabbit.prototype.booking.domain.enums.ExpertPreference
+import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
 
 data class CreateBookingCommand(
     val customerId: UUID,
@@ -26,4 +28,7 @@ data class CreateBookingCommand(
     val serviceAddressPincode: String? = null,
     val idempotencyKey: String? = null,
     val requestFingerprint: String? = null,
+    val expertPreference: ExpertPreference = ExpertPreference.ANY,
+    val favouriteWorkerId: UUID? = null,
+    val fallbackPolicy: FallbackPolicy = FallbackPolicy.AUTO_ASSIGN,
 )

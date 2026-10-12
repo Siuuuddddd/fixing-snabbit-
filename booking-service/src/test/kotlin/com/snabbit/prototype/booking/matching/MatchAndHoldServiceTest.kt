@@ -16,6 +16,8 @@ import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
 import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
 import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
 import com.snabbit.prototype.booking.exception.SlotUnavailable
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
+import com.snabbit.prototype.booking.exception.PlanValidationException
 import com.snabbit.prototype.booking.service.BookingLifecycleService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -49,31 +51,29 @@ class MatchAndHoldServiceTest {
     )
 
     @Test
-    fun `Plus selects favourite worker continuously across every visit`() {
-        val favourite = UUID.randomUUID()
-        val other = UUID.randomUUID()
-        val household = household(plusActive = true, favourites = listOf(favourite))
-        val candidates = listOf(
-            listOf(match(other), match(favourite)),
-            listOf(match(favourite), match(other)),
-            listOf(match(other), match(favourite)),
-        )
+    fun `validates configured visit counts at one minimum maximum and maximum plus one`() {
+        val starts = (0 until properties.maxMultiDayVisits + 1).map { day ->
+            Instant.parse("2026-10-02T05:30:00Z").plus(Duration.ofDays(day.toLong()))
+        }
 
-        val selected = service.selectWorkers(candidates, household)
-
-        assertEquals(listOf(favourite, favourite, favourite), selected)
+        assertThrows<BookingRuleViolation> { service.validateRequest(command(starts.take(1))) }
+        service.validateRequest(command(starts.take(properties.minMultiDayVisits)))
+        service.validateRequest(command(starts.take(properties.maxMultiDayVisits)))
+        assertThrows<BookingRuleViolation> {
+            service.validateRequest(command(starts.take(properties.maxMultiDayVisits + 1)))
+        }
     }
 
     @Test
-    fun `falls back to best worker per visit when continuity is impossible`() {
-        val first = UUID.randomUUID()
-        val second = UUID.randomUUID()
-        val selected = service.selectWorkers(
-            listOf(listOf(match(first)), listOf(match(second))),
-            household(plusActive = true, favourites = emptyList()),
-        )
+    fun `duplicate local dates return an indexed error for every duplicate visit`() {
+        val first = Instant.parse("2026-10-03T04:30:00Z")
+        val second = Instant.parse("2026-10-03T06:30:00Z")
 
-        assertEquals(listOf(first, second), selected)
+        val error = assertThrows<PlanValidationException> {
+            service.validateRequest(command(listOf(first, second)))
+        }
+
+        assertEquals(listOf(0, 1), error.visitErrors.map { it.visitIndex })
     }
 
     @Test
@@ -353,5 +353,14 @@ class MatchAndHoldServiceTest {
         plusPassId = passId,
         requirements = BookingRequirements(),
         visits = emptyList(),
+    )
+
+    private fun command(startsAt: List<Instant>) = MatchAndHoldCommand(
+        customerId = UUID.randomUUID(),
+        serviceId = UUID.randomUUID(),
+        bookingType = BookingType.MULTI_DAY,
+        duration = Duration.ofHours(1),
+        addressId = UUID.randomUUID(),
+        startsAt = startsAt,
     )
 }

@@ -14,6 +14,8 @@ import java.time.Instant
 import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import com.snabbit.prototype.booking.domain.enums.ExpertPreference
+import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
 
 @Entity
 @Table(name = "booking")
@@ -81,6 +83,16 @@ class Booking(
     val idempotencyKey: String? = null,
     @Column(name = "request_fingerprint", length = 64)
     val requestFingerprint: String? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "expert_preference", nullable = false)
+    val expertPreference: ExpertPreference = ExpertPreference.ANY,
+    @Column(name = "favourite_worker_id")
+    val favouriteWorkerId: UUID? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fallback_policy", nullable = false)
+    val fallbackPolicy: FallbackPolicy = FallbackPolicy.AUTO_ASSIGN,
+    @Column(name = "maximum_hold_expires_at")
+    val maximumHoldExpiresAt: Instant? = null,
     @Version
     var version: Long = 0,
 ) {

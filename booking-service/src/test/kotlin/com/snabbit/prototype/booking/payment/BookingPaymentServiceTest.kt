@@ -5,6 +5,7 @@ import com.snabbit.prototype.booking.dto.response.BookingPaymentSnapshot
 import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.exception.CustomerAccessDenied
 import com.snabbit.prototype.booking.exception.InvalidBookingState
+import com.snabbit.prototype.booking.exception.PaymentServiceUnavailable
 import com.snabbit.prototype.booking.service.BookingLifecycleService
 import io.mockk.every
 import io.mockk.mockk
@@ -28,6 +29,8 @@ class BookingPaymentServiceTest {
         val command = command()
         val expected = payment(command)
         every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
+        every { bookings.extendHoldsForPayment(command.bookingId) } returns
+            quote(command.bookingId, command.authenticatedCustomerId).copy(holdExpiresAt = now.plusSeconds(600))
         every { client.start(command) } returns expected
 
         val result = service.start(command)
@@ -55,6 +58,19 @@ class BookingPaymentServiceTest {
         assertThrows(CustomerAccessDenied::class.java) { service.start(command) }
 
         verify(exactly = 0) { client.start(any()) }
+    }
+
+    @Test
+    fun `payment initiation failure releases the booking holds`() {
+        val command = command()
+        every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
+        every { bookings.extendHoldsForPayment(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
+        every { client.start(command) } throws PaymentServiceUnavailable("offline", IllegalStateException())
+        every { bookings.cancel(command.bookingId, command.authenticatedCustomerId) } returns mockk()
+
+        assertThrows(PaymentServiceUnavailable::class.java) { service.start(command) }
+
+        verify(exactly = 1) { bookings.cancel(command.bookingId, command.authenticatedCustomerId) }
     }
 
     private fun command() = StartBookingPaymentCommand(

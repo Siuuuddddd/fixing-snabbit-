@@ -7,6 +7,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(PlanValidationException::class)
+    fun planValidation(error: PlanValidationException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {
+            it.setProperty("code", "INVALID_VISITS")
+            it.setProperty("visitErrors", error.visitErrors)
+        }
+    @ExceptionHandler(AtomicHoldUnavailable::class)
+    fun atomicHoldUnavailable(error: AtomicHoldUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "ATOMIC_HOLD_UNAVAILABLE")
+            it.setProperty("visitFailures", error.failures)
+        }
     @ExceptionHandler(BookingRuleViolation::class)
     fun bookingRuleViolation(error: BookingRuleViolation): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())

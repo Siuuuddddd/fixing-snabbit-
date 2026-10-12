@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param
 
 interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
     fun findAllByBookingIdOrderByVisitIndex(bookingId: UUID): List<SlotHold>
+    fun findByRefundIdempotencyKey(refundIdempotencyKey: UUID): SlotHold?
 
     fun findByWorkerIdAndStatusAndJobStatusInAndStartsAtAfterOrderByStartsAtAsc(
         workerId: UUID,

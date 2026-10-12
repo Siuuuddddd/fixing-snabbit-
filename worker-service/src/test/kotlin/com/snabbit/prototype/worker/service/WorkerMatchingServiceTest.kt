@@ -56,6 +56,48 @@ class WorkerMatchingServiceTest {
     }
 
     @Test
+    fun `Veteran preference returns only veteran workers`() {
+        val standard = profile(WorkerTier.STANDARD, "Standard")
+        val veteran = profile(WorkerTier.VETERAN, "Veteran")
+        stubCandidates(standard, veteran, acceptsPets = true)
+
+        val matches = service.match(command(UUID.randomUUID(), false).copy(expertPreference = "VETERAN"))
+
+        assertEquals(listOf(veteran.id), matches.map { it.workerId })
+    }
+
+    @Test
+    fun `unavailable favourite falls back to nearest compatible worker in the same tier`() {
+        val favourite = profile(WorkerTier.VETERAN, "Favourite")
+        val near = profile(WorkerTier.VETERAN, "Near").apply {
+            currentLongitude = BigDecimal("72.878000")
+            ratingSum = 30
+        }
+        val far = profile(WorkerTier.VETERAN, "Far").apply {
+            currentLongitude = BigDecimal("72.900000")
+            ratingSum = 50
+        }
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(favourite, near, far)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(near.id), skill(far.id))
+        every {
+            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
+        } returns listOf(available(near.id), available(far.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
+            compatibility(near.id, true), compatibility(far.id, true),
+        )
+
+        val matches = service.match(
+            command(favourite.id, false).copy(
+                expertPreference = "FAVOURITE",
+                favouriteWorkerId = favourite.id,
+                fallbackPolicy = "AUTO_ASSIGN",
+            ),
+        )
+
+        assertEquals(near.id, matches.first().workerId)
+    }
+
+    @Test
     fun `utensil worker and chemical constraints are hard compatibility filters`() {
         val incompatible = profile(WorkerTier.STANDARD, "Cannot comply")
         val compatible = profile(WorkerTier.STANDARD, "Can comply")

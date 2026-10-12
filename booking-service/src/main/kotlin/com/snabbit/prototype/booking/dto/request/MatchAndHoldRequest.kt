@@ -3,10 +3,10 @@ package com.snabbit.prototype.booking.dto.request
 import com.snabbit.prototype.booking.domain.enums.BookingType
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import jakarta.validation.constraints.NotEmpty
-import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
+import com.snabbit.prototype.booking.domain.enums.ExpertPreference
+import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
 
 data class MatchAndHoldRequest(
     val customerId: UUID,
@@ -15,6 +15,9 @@ data class MatchAndHoldRequest(
     @field:Min(1) @field:Max(4)
     val durationHours: Long,
     val addressId: UUID,
-    @field:NotEmpty @field:Size(max = 7)
-    val startsAt: List<Instant>,
+    val startsAt: List<Instant> = emptyList(),
+    val visits: List<RequestedVisit> = emptyList(),
+    val expertPreference: ExpertPreference = ExpertPreference.ANY,
+    val favouriteWorkerId: UUID? = null,
+    val fallbackPolicy: FallbackPolicy = FallbackPolicy.AUTO_ASSIGN,
 )

@@ -30,6 +30,12 @@ class BookingPaymentService(
         if (quote.quotedTotalMinor <= 0 || quote.currency != "INR") {
             throw BookingRuleViolation("Booking has no valid INR payment quote")
         }
-        return client.start(command)
+        bookings.extendHoldsForPayment(command.bookingId)
+        return try {
+            client.start(command)
+        } catch (error: RuntimeException) {
+            runCatching { bookings.cancel(command.bookingId, command.authenticatedCustomerId) }
+            throw error
+        }
     }
 }

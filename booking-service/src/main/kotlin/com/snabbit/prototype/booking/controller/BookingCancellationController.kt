@@ -29,4 +29,12 @@ class BookingCancellationController(private val service: BookingCancellationServ
         @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
         @Valid @RequestBody request: CancelConfirmedBookingRequest,
     ): BookingSnapshot = service.cancel(bookingId, authenticatedCustomerId, request.reason)
+
+    @PostMapping("/{bookingId}/visits/{visitIndex}/cancellations")
+    fun cancelVisit(
+        @PathVariable bookingId: UUID,
+        @PathVariable visitIndex: Int,
+        @RequestHeader("X-Authenticated-User-Id") authenticatedCustomerId: UUID,
+        @Valid @RequestBody request: CancelConfirmedBookingRequest,
+    ): BookingSnapshot = service.cancelVisit(bookingId, visitIndex, authenticatedCustomerId, request.reason)
 }

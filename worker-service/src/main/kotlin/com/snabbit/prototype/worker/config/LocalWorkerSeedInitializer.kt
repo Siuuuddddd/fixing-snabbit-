@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Profile
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.beans.factory.annotation.Value
 
 /** Keeps prototype worker data useful across long-lived local database volumes. */
 @Component
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class LocalWorkerSeedInitializer(
     private val jdbc: JdbcTemplate,
     private val clock: Clock,
+    @param:Value("\${worker.local-seed-days:10}") private val seedDays: Int = 10,
 ) : ApplicationRunner {
     @Transactional
     override fun run(args: ApplicationArguments) {
@@ -35,7 +37,7 @@ class LocalWorkerSeedInitializer(
             INSERT INTO worker_availability (id, worker_id, service_date, available_from, available_until, status)
             SELECT gen_random_uuid(), worker.id, ?::date + day_offset, '08:00', '19:00', 'AVAILABLE'
             FROM worker_profile worker
-            CROSS JOIN generate_series(0, 6) AS day_offset
+            CROSS JOIN generate_series(0, ?) AS day_offset
             WHERE worker.id IN (
                 '10000000-0000-0000-0000-000000000001'::uuid,
                 '10000000-0000-0000-0000-000000000002'::uuid
@@ -43,6 +45,7 @@ class LocalWorkerSeedInitializer(
             ON CONFLICT (worker_id, service_date) DO NOTHING
             """.trimIndent(),
             today,
+            seedDays - 1,
         )
     }
 }

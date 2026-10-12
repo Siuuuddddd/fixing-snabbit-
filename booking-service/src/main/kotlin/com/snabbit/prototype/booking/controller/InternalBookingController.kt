@@ -12,6 +12,7 @@ import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
 import com.snabbit.prototype.booking.dto.response.RatingContextSnapshot
 import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.service.AssignmentRecoveryService
 import jakarta.validation.Valid
 import java.time.Duration
 import java.util.UUID
@@ -26,7 +27,10 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/internal/v1/bookings")
-class InternalBookingController(private val service: BookingLifecycleService) {
+class InternalBookingController(
+    private val service: BookingLifecycleService,
+    private val recovery: AssignmentRecoveryService,
+) {
     @GetMapping("/{bookingId}/plus-pass-context")
     fun plusPassContext(@PathVariable bookingId: UUID): PlusPassBookingContext = service.plusPassContext(bookingId)
 
@@ -65,4 +69,11 @@ class InternalBookingController(private val service: BookingLifecycleService) {
         @PathVariable bookingId: UUID,
         @Valid @RequestBody request: ConfirmPaymentRequest,
     ): BookingSnapshot = service.confirmPayment(bookingId, request.paymentReference)
+
+    @PostMapping("/{bookingId}/visits/{visitIndex}/worker-dropout/{workerId}")
+    suspend fun workerDropout(
+        @PathVariable bookingId: UUID,
+        @PathVariable visitIndex: Int,
+        @PathVariable workerId: UUID,
+    ): BookingSnapshot = recovery.recover(bookingId, visitIndex, workerId)
 }

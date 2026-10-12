@@ -30,4 +30,8 @@ data class MatchWorkersRequest(
     val accessibilityNeeds: List<String> = emptyList(),
     val favouriteWorkerIds: List<UUID> = emptyList(),
     val plusActive: Boolean = false,
+    val expertPreference: String = "ANY",
+    val favouriteWorkerId: UUID? = null,
+    val fallbackPolicy: String = "AUTO_ASSIGN",
+    val requiredTier: String? = null,
 )

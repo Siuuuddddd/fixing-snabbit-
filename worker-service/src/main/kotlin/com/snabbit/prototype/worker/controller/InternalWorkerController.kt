@@ -47,6 +47,10 @@ class InternalWorkerController(
             accessibilityNeeds = request.accessibilityNeeds,
             favouriteWorkerIds = request.favouriteWorkerIds,
             plusActive = request.plusActive,
+            expertPreference = request.expertPreference,
+            favouriteWorkerId = request.favouriteWorkerId,
+            fallbackPolicy = request.fallbackPolicy,
+            requiredTier = request.requiredTier,
         ),
     )
 

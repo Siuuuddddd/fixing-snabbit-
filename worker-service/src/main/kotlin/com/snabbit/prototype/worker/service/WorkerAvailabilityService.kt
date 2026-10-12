@@ -15,6 +15,7 @@ import java.time.ZoneId
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.beans.factory.annotation.Value
 
 @Service
 class WorkerAvailabilityService(
@@ -22,6 +23,7 @@ class WorkerAvailabilityService(
     private val availability: WorkerAvailabilityRepository,
     private val clock: Clock,
     private val outbox: WorkerOutboxWriter,
+    @param:Value("\${worker.booking-window-days:10}") private val bookingWindowDays: Int = 10,
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
     private val openingTime = LocalTime.of(8, 0)
@@ -31,7 +33,7 @@ class WorkerAvailabilityService(
     fun list(workerId: UUID, from: LocalDate?, to: LocalDate?): List<WorkerAvailabilitySnapshot> {
         val today = LocalDate.now(clock.withZone(zone))
         val rangeStart = from ?: today
-        val rangeEnd = to ?: today.plusDays(7)
+        val rangeEnd = to ?: today.plusDays((bookingWindowDays - 1).toLong())
         validateRange(rangeStart, rangeEnd, today)
         if (!workers.existsById(workerId)) throw InvalidWorkerAvailability("Worker was not found")
         return availability.findAllByWorkerIdAndServiceDateBetweenOrderByServiceDate(

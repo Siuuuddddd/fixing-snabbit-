@@ -35,6 +35,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
         "booking.expiry-scan-delay=PT24H",
         "eventing.outbox-enabled=false",
         "spring.kafka.listener.auto-startup=false",
+        "booking.advance-window-days=11",
     ],
 )
 @Testcontainers(disabledWithoutDocker = true)
@@ -114,6 +115,37 @@ class SlotHoldConcurrencyTest {
         assertTrue(result.exceptionOrNull() is SlotUnavailable)
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM booking", Long::class.java))
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM slot_hold", Long::class.java))
+    }
+
+    @Test
+    fun `ten day plan persists every independently priced visit atomically`() {
+        val customerId = UUID.randomUUID()
+        val visits = (0 until 10).map { index ->
+            val start = startsAt.plusDays(index.toLong())
+            if (index > 0) {
+                jdbc.update(
+                    "INSERT INTO worker_day_capacity (id, worker_id, service_date, available_from, available_until, version) VALUES (?, ?, ?, '08:00', '19:00', 0)",
+                    UUID.randomUUID(), workerId, start.toLocalDate(),
+                )
+            }
+            VisitCommand(workerId, start.toInstant(), quotedPriceMinor = 1_000)
+        }
+
+        val result = service.create(
+            CreateBookingCommand(
+                customerId = customerId,
+                serviceId = serviceId,
+                bookingType = BookingType.MULTI_DAY,
+                duration = Duration.ofHours(2),
+                visits = visits,
+                quotedTotalMinor = 10_000,
+                grossTotalMinor = 10_000,
+            ),
+        )
+
+        assertEquals(10, result.visits.size)
+        assertEquals(10_000, result.visits.sumOf { it.quotedPriceMinor })
+        assertEquals(10, jdbc.queryForObject("SELECT count(*) FROM slot_hold", Int::class.java))
     }
 
     @Test

@@ -40,6 +40,9 @@ class BookingCancellationService(
         return lifecycle.cancelConfirmed(bookingId, customerId, household.plusActive, reason, policy)
     }
 
+    fun cancelVisit(bookingId: UUID, visitIndex: Int, customerId: UUID, reason: String?): BookingSnapshot =
+        lifecycle.cancelVisit(bookingId, visitIndex, customerId, reason)
+
     private fun requireCancellableOwner(bookingId: UUID, customerId: UUID): CancellationContext {
         val context = lifecycle.cancellationContext(bookingId)
         if (context.customerId != customerId) throw CustomerAccessDenied()
