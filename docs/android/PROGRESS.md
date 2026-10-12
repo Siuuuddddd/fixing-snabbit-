@@ -32,22 +32,22 @@
 - [x] Service details with typed service navigation, backend catalogue pricing, duration selection, and pull-to-refresh
 - [x] Address and serviceability with JWT-subject ownership, saved-address list/create/delete, runtime location consent, and backend verification
 - [x] Screens 4–6 ViewModel, repository, identity, route, and endpoint-contract unit tests
-- [x] Slot selection for instant, scheduled, and 2–7 day bookings with authoritative availability
+- [x] Backend slot selection for instant, scheduled, and configurable 2–10 day bookings in a 10-calendar-day Asia/Kolkata window, with per-visit start times and authoritative availability
 - [x] Customer Schedule split into typed Navigation 3 date/duration and start-time pages with independently scoped ViewModels, retained Back state, duplicate-navigation protection, explicit 2–7 day Multi-day Apply, real 15-minute availability, backend-supported 1–4 hour pricing, sold-out/past-slot handling, a documented Habit Pack placeholder, and handoff to the existing booking-summary/payment flow.
 - [x] Household preferences read/update with exact matching constraint values
 - [x] Booking summary with advisory wallet/UPI estimate and idempotent match-and-hold
 - [x] Booking summary isolates parallel-load failures, degrades an inaccessible prototype wallet to the existing wallet-unavailable state, and rejects invalid restored route arguments without crashing
-- [x] Worker matching polling, hold cancellation, post-acceptance payment creation, and authoritative split
+- [x] Worker matching polling, expert preference/fallback policy, atomic multi-visit holds with alternatives, bounded payment hold extension, post-acceptance payment creation, and authoritative split
 - [x] Live tracking with latest-snapshot replay, SSE `Last-Event-ID`, reconnect backoff, stale-location state, and completion transition
 - [x] Booking completion with authoritative booking details and 1–5 star worker rating
-- [x] Cancellation with authoritative early/late quote, Plus benefit, fee/refund breakdown, optional reason, and pending refund state
+- [x] Whole-booking cancellation plus unstarted per-visit cancellation with independent durable refund keys/status, authoritative fee/refund breakdown, and wallet/online partial refund allocation
 - [x] Wallet summary and Add Money with Razorpay test checkout, process-local prototype history, and backend-confirmed balance updates
 - [x] Snabbit Plus status and purchase with prototype plan display and backend-confirmed membership activation
 - [x] My Bookings with persisted subject-scoped known booking IDs and authoritative per-booking backend refresh
 - [x] Notification history/read states, notification permission, and customer/worker FCM device registration
 - [x] Customer/worker profile summary, backend-backed customer settings status, device cleanup, and logout
 - [x] Shared loading, empty, recoverable error, and offline presentation used across real screens
-- [x] Worker landing/schedule with seven-day backend availability and explicit day updates
+- [x] Worker landing/schedule with backend availability aligned to the default 10-day booking window and explicit day updates
 - [x] Worker job feed with authoritative offers/jobs, expiry countdown, accept, decline, refresh, empty, offline, and error states
 - [x] Worker job details with assigned/arrived/in-progress/completed transitions and consented foreground location publishing
 - [x] Worker earnings gap state that does not invent totals or payout history while the backend contract is missing
@@ -58,8 +58,9 @@
 - [x] Firebase registration after login, refresh re-registration, logout removal, Android 13+ permission handling, and `bookings` / `payments` / `jobs` channels
 - [x] Foreground notification display, authoritative history refresh, and authenticated Navigation 3 routing from notification taps
 - [x] Local Docker FCM provider selection with an external read-only service-account mount and logging fallback
-- [x] Customer booking/payment notification routing plus privacy-filtered worker offer, expiry, assignment, and cancellation pushes
+- [x] Customer booking/payment notification routing plus durable visit-assigned, assignment-changed, and visit-refunded notifications and privacy-filtered worker delivery
 - [x] Invalid Firebase destinations are deactivated while durable delivery leasing, retry, and idempotency remain intact
+- [x] Backend multi-day workflow persists per-visit price/assignment/household/refund data, reassigns worker dropouts independently or refunds only the failed visit, preserves the legacy `startsAt` contract, and keeps one signed-webhook-confirmed payment for the plan. See `docs/backend/multi-day-workflow.md`.
 
 ## Verification record
 
@@ -79,3 +80,4 @@
 - Home redesign regression: focused Home use-case/ViewModel tests passed; `android\.\gradlew.bat build --no-daemon` passed both flavors, unit tests, and lint (198 actionable tasks), and repository-root `.\gradlew.bat build --no-daemon --max-workers=1` passed (55 actionable tasks). The customer debug APK installed and launched on the running emulator, but the preserved session had expired, so authenticated Home screenshot comparison requires a new private SMS OTP.
 - Schedule redesign regression: focused Schedule domain, ViewModel, and Navigation 3 tests passed; customer debug assembly/tests/lint passed (56 actionable tasks), `android\.\gradlew.bat build --no-daemon` passed both flavors, unit tests, and lint (198 actionable tasks), and repository-root `.\gradlew.bat build --no-daemon --max-workers=1` passed (55 actionable tasks). Deterministic previews cover the progressive steps, dark mode, and 200% text; emulator screenshot comparison was unavailable because no emulator or device was running.
 - Two-page Schedule/availability regression: the date-duration and start-time pages now have separate Navigation 3 keys and ViewModels, named 22sp/16sp Schedule typography, explicit Multi-day Apply, retained Back state, and duplicate-navigation protection. The local all-sold-out cause was the seeded customer's `HEARING_SUPPORT` household constraint not matching either seeded worker (with long-lived fixed-date availability/capacity also becoming stale); `local`-profile-only initializers now add the missing stable-worker capability and rolling seven-day rows without touching production profiles. Pixel 9 Pro API 36 checks reached Home and both Schedule pages for Today, Tomorrow, and Multi-day through real endpoints, showed selectable slots, and saved inspected screenshots under the git-ignored `docs/android/run-screenshots/`. Both-flavor unit tests/lint passed (75 actionable tasks), `android\.\gradlew.bat build --no-daemon` passed both debug/release flavors (198 actionable tasks), repository-root `.\gradlew.bat build --no-daemon --max-workers=1` passed (55 actionable tasks), ports 8080–8086 reported `UP`, and final filtered logcat contained no crash or serialization failure. Google Sans was not embedded because it is absent from the open Google Fonts catalogue; both flavors now share the legal system-sans/Roboto fallback behind one future replacement point.
+- Backend 10-day multi-visit regression: the forced root test run executed all 40 test tasks, and the final reports contain 238 tests with 0 failures, 0 errors, and 0 skips, including Docker-backed atomic holds, contention, hold expiry/extension, idempotent refunds, and dropout reassignment. The root build passed (55 tasks). User, Worker, Booking, Wallet, and Notification images were rebuilt and recreated one at a time from the verified boot JARs after the in-container Gradle download failed with `zip END header not found` and a connection timeout; Flyway reached user v8, worker v8, booking v15, and wallet v8, and health endpoints 8080–8086 all reported `UP`.

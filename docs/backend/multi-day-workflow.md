@@ -17,7 +17,7 @@ Final status after implementation and verification on 2026-10-12.
 11. **DONE — Payment hold extension and release.** Payment start extends every hold only to the configured total-lifetime cap; failure/expiry releases all local holds and emits the durable booking event that releases a reserved pass.
 12. **DONE — Cancellation and refunds.** Whole-booking, one-visit, and platform cancellation paths use durable UUID visit-refund keys; Wallet supports multiple idempotent partial refunds per payment.
 13. **DONE — Worker dropout.** `AUTO_ASSIGN` tries the nearest compatible same-tier replacement and emits an assignment-change event; `SKIP_AND_REFUND` or no match refunds only that visit.
-14. **DONE — Visit lifecycle events.** `VisitAssigned`, `VisitAssignmentChanged`, and `VisitRefunded` are mapped to durable booking/notification paths; the separate Notification/Support startup issue may still limit Docker verification.
+14. **DONE — Visit lifecycle events.** `VisitAssigned`, `VisitAssignmentChanged`, and `VisitRefunded` are mapped to durable booking/notification paths; the separate Notification/Support startup concern did not reproduce during final Docker verification.
 15. **DONE — Household snapshot.** Household data is fetched once during matching and copied to the booking and each persisted visit.
 
 ## Scope and invariants
@@ -54,9 +54,9 @@ The duration remains booking-level. The current persistence model, matching API,
 
 ## Verification
 
-- `./gradlew.bat test --rerun-tasks --no-daemon --max-workers=1`: 236 tests, 0 failures, 0 errors, 0 skipped; all 40 Gradle test tasks executed.
+- `./gradlew.bat test --rerun-tasks --no-daemon --max-workers=1`, followed by the final focused booking integration regression: 238 tests, 0 failures, 0 errors, 0 skipped across 75 reports; all 40 Gradle test tasks executed in the forced run.
 - Docker-backed coverage includes atomic rollback across different visit times, two customers competing for the last slot, payment hold extension/failure release, expired-hold release, a real-database dropout reassignment, and independent idempotent visit refunds.
-- User and Worker Testcontainers suites can log a harmless shutdown-time outbox poll after PostgreSQL has stopped; the tests still complete successfully. Notification/Support `RestClient.Builder` startup remains a separate pre-existing concern if it appears during Docker service verification.
+- User and Worker Testcontainers suites can log a harmless shutdown-time outbox poll after PostgreSQL has stopped; the tests still complete successfully. The five changed service images were rebuilt and recreated sequentially, Flyway reached user v8, worker v8, booking v15, and wallet v8, and the gateway plus ports 8081–8086 all reported `UP`; the known Notification/Support `RestClient.Builder` startup concern did not reproduce.
 
 ## Backward compatibility
 
