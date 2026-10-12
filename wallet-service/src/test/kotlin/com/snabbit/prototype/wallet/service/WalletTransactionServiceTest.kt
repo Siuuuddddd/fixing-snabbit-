@@ -280,7 +280,8 @@ class WalletTransactionServiceTest {
         val saved = slot<PaymentRefund>()
         val sourceEventId = UUID.randomUUID()
         every { paymentRepository.findByBookingIdForUpdate(payment.bookingId) } returns payment
-        every { refundRepository.findByBookingPaymentId(payment.id) } returns null
+        every { refundRepository.totalRequested(payment.id) } returns 0
+        every { refundRepository.findAllByBookingPaymentId(payment.id) } returns emptyList()
         every { refundRepository.save(capture(saved)) } answers { firstArg() }
         every { outboxRepository.save(any()) } answers { firstArg() }
 
@@ -289,7 +290,7 @@ class WalletTransactionServiceTest {
         assertEquals(saved.captured.id, refundId)
         assertEquals(10_000, saved.captured.walletAmountMinor)
         assertEquals(2_500, saved.captured.onlineAmountMinor)
-        assertEquals(BookingPaymentStatus.REFUND_PENDING, payment.status)
+        assertEquals(BookingPaymentStatus.COMPLETED, payment.status)
     }
 
     @Test

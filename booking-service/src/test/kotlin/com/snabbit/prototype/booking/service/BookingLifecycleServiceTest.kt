@@ -298,6 +298,26 @@ class BookingLifecycleServiceTest {
     }
 
     @Test
+    fun `payment start extends every hold but never beyond the booking maximum`() {
+        val bookingId = UUID.randomUUID()
+        val maximum = clock.instant().plusSeconds(420)
+        val booking = booking(bookingId, maximumHoldExpiresAt = maximum).apply { awaitPayment(clock.instant()) }
+        val first = hold(bookingId, UUID.randomUUID())
+        val second = hold(bookingId, UUID.randomUUID()).apply {
+            expiresAt = clock.instant().plusSeconds(240)
+        }
+        every { bookingRepository.findForUpdate(bookingId) } returns booking
+        every { bookingRepository.findById(bookingId) } returns Optional.of(booking)
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(bookingId) } returns listOf(first, second)
+
+        val quote = service.extendHoldsForPayment(bookingId)
+
+        assertEquals(maximum, first.expiresAt)
+        assertEquals(maximum, second.expiresAt)
+        assertEquals(maximum, quote.holdExpiresAt)
+    }
+
+    @Test
     fun `customer cannot cancel another customers hold`() {
         val booking = booking(UUID.randomUUID())
         every { bookingRepository.findForUpdate(booking.id) } returns booking
@@ -307,6 +327,35 @@ class BookingLifecycleServiceTest {
         }
 
         verify(exactly = 0) { holdRepository.findAllByBookingIdOrderByVisitIndex(any()) }
+    }
+
+    @Test
+    fun `one future visit cancellation records its own durable refund without cancelling the booking`() {
+        val bookingId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val booking = booking(bookingId, customerId = customerId).apply {
+            awaitPayment(clock.instant())
+            confirm("pay_visit_refund", clock.instant())
+        }
+        val hold = hold(bookingId, UUID.randomUUID(), quotedPriceMinor = 42_000).apply {
+            confirm()
+        }
+        val offer = offer(bookingId, hold.workerId, hold.id).apply { accept(clock.instant()) }
+        every { bookingRepository.findForUpdate(bookingId) } returns booking
+        every { holdRepository.findVisitForUpdate(bookingId, 0) } returns hold
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(bookingId) } returns listOf(hold)
+        every { offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId) } returns listOf(offer)
+        every { outboxRepository.save(any()) } answers { firstArg() }
+
+        val result = service.cancelVisit(bookingId, 0, customerId, "Plans changed")
+
+        assertEquals(BookingStatus.CONFIRMED.name, result.status)
+        assertEquals("PENDING", result.visits.single().refundStatus)
+        assertEquals(hold.quotedPriceMinor, result.visits.single().refundAmountMinor)
+        assertEquals(SlotHoldStatus.RELEASED, hold.status)
+        verify(exactly = 1) {
+            outboxRepository.save(match { it.eventType == "VisitRefundRequested" })
+        }
     }
 
     @Test
@@ -474,6 +523,7 @@ class BookingLifecycleServiceTest {
         customerId: UUID = UUID.randomUUID(),
         idempotencyKey: String? = null,
         requestFingerprint: String? = null,
+        maximumHoldExpiresAt: Instant? = null,
     ) = Booking(
         id = id,
         customerId = customerId,
@@ -491,9 +541,10 @@ class BookingLifecycleServiceTest {
         plusPassId = plusPassId,
         idempotencyKey = idempotencyKey,
         requestFingerprint = requestFingerprint,
+        maximumHoldExpiresAt = maximumHoldExpiresAt,
     )
 
-    private fun hold(bookingId: UUID, workerId: UUID) = SlotHold(
+    private fun hold(bookingId: UUID, workerId: UUID, quotedPriceMinor: Long = 0) = SlotHold(
         id = UUID.randomUUID(),
         bookingId = bookingId,
         visitIndex = 0,
@@ -505,6 +556,7 @@ class BookingLifecycleServiceTest {
         status = SlotHoldStatus.HELD,
         expiresAt = clock.instant().plusSeconds(300),
         createdAt = clock.instant(),
+        quotedPriceMinor = quotedPriceMinor,
     )
 
     private fun offer(bookingId: UUID, workerId: UUID, holdId: UUID) = WorkerOffer(

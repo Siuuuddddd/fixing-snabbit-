@@ -26,7 +26,9 @@ class WalletEventHandler(
             "WalletPaymentFailed" -> bookingService.cancel(bookingId)
             "WalletRefundCompleted" -> {
                 val key = event.payload.path("idempotencyKey").asText()
-                if (key.isNotBlank()) bookingService.completeVisitRefund(UUID.fromString(key))
+                runCatching { UUID.fromString(key) }
+                    .getOrNull()
+                    ?.let(bookingService::completeVisitRefund)
             }
         }
     }

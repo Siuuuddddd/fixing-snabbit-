@@ -7,6 +7,7 @@ import com.snabbit.prototype.wallet.service.CaptureRetryScheduler
 import com.snabbit.prototype.wallet.service.FinanceRefundService
 import com.snabbit.prototype.wallet.service.RazorpayWebhookService
 import com.snabbit.prototype.wallet.service.WalletService
+import com.snabbit.prototype.wallet.service.WalletTransactionService
 import java.nio.charset.StandardCharsets
 import java.sql.Timestamp
 import java.time.Instant
@@ -47,6 +48,9 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class WalletLedgerIntegrationTest {
     @Autowired
     private lateinit var walletService: WalletService
+
+    @Autowired
+    private lateinit var transactions: WalletTransactionService
 
     @Autowired
     private lateinit var webhookService: RazorpayWebhookService
@@ -218,6 +222,29 @@ class WalletLedgerIntegrationTest {
         assertEquals("COMPLETED", refund.status)
         assertEquals(10_000, walletService.balance(walletId).availableMinor)
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM payment_refund", Long::class.java))
+    }
+
+    @Test
+    fun `two visit refunds use independent durable idempotency keys`() {
+        creditWallet(10_000)
+        val bookingId = UUID.randomUUID()
+        quoteAmountMinor = 15_000
+        val payment = walletService.createBookingPayment(walletId, bookingId, true, "booking-partial-refunds")
+        deliverCapture("evt_partial_capture", payment.providerOrderId!!, "pay_partial", 5_000)
+
+        val firstId = transactions.preparePartialRefund(bookingId, 4_000, UUID.randomUUID().toString())!!
+        val secondKey = UUID.randomUUID().toString()
+        val secondId = transactions.preparePartialRefund(bookingId, 3_000, secondKey)!!
+        walletService.executeRefund(firstId)
+        walletService.executeRefund(secondId)
+
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM payment_refund", Int::class.java))
+        assertEquals(7_000, walletService.balance(walletId).availableMinor)
+        assertEquals(
+            "COMPLETED",
+            jdbc.queryForObject("SELECT status FROM booking_payment WHERE id = ?", String::class.java, payment.paymentId),
+        )
+        assertEquals(secondId, transactions.preparePartialRefund(bookingId, 3_000, secondKey))
     }
 
     @Test

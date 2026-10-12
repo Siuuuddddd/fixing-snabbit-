@@ -13,7 +13,19 @@ import org.springframework.data.repository.query.Param
 
 interface PaymentRefundRepository : JpaRepository<PaymentRefund, UUID> {
     fun findByIdempotencyKey(idempotencyKey: String): PaymentRefund?
-    fun findByBookingPaymentId(bookingPaymentId: UUID): PaymentRefund?
+    fun findFirstByBookingPaymentIdOrderByCreatedAtDesc(bookingPaymentId: UUID): PaymentRefund?
+    fun findByBookingPaymentId(bookingPaymentId: UUID): PaymentRefund? =
+        findFirstByBookingPaymentIdOrderByCreatedAtDesc(bookingPaymentId)
+    fun findAllByBookingPaymentId(bookingPaymentId: UUID): List<PaymentRefund>
+
+    @Query("select coalesce(sum(r.walletAmountMinor + r.onlineAmountMinor), 0) from PaymentRefund r where r.bookingPaymentId = :paymentId")
+    fun totalRequested(@Param("paymentId") paymentId: UUID): Long
+
+    @Query(
+        value = "select coalesce(sum(wallet_amount_minor + online_amount_minor), 0) from payment_refund where booking_payment_id = :paymentId and status = 'COMPLETED'",
+        nativeQuery = true,
+    )
+    fun totalCompleted(@Param("paymentId") paymentId: UUID): Long
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select refund from PaymentRefund refund where refund.id = :id")

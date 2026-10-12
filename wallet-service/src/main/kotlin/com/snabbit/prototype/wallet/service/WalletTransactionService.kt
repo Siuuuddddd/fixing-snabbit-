@@ -309,29 +309,16 @@ class WalletTransactionService(
                 null
             }
             BookingPaymentStatus.COMPLETED -> {
-                refundRepository.findByBookingPaymentId(payment.id)?.id ?: run {
-                    val refundTotal = requestedRefundMinor ?: payment.totalAmountMinor
-                    if (refundTotal !in 0..payment.totalAmountMinor) {
-                        throw PaymentConflict("Requested refund must be between zero and the captured payment")
-                    }
-                    val retainedFee = payment.totalAmountMinor - refundTotal
-                    val retainedOnline = minOf(payment.onlineAmountMinor, retainedFee)
-                    val refundOnline = payment.onlineAmountMinor - retainedOnline
-                    val refundWallet = payment.walletAmountMinor - (retainedFee - retainedOnline)
-                    payment.beginRefund(now)
-                    val refund = refundRepository.save(
-                        PaymentRefund(
-                            id = UUID.randomUUID(),
-                            bookingPaymentId = payment.id,
-                            walletId = payment.walletId,
-                            walletAmountMinor = refundWallet,
-                            onlineAmountMinor = refundOnline,
-                            status = RefundStatus.CREATING,
-                            idempotencyKey = "booking-termination:$sourceEventId",
-                            createdAt = now,
-                            updatedAt = now,
-                        ),
-                    )
+                val refundTarget = requestedRefundMinor ?: payment.totalAmountMinor
+                if (refundTarget !in 0..payment.totalAmountMinor) {
+                    throw PaymentConflict("Requested refund must be between zero and the captured payment")
+                }
+                val alreadyRequested = refundRepository.totalRequested(payment.id)
+                val remaining = (refundTarget - alreadyRequested).coerceAtLeast(0)
+                if (remaining == 0L) {
+                    refundRepository.findFirstByBookingPaymentIdOrderByCreatedAtDesc(payment.id)?.id
+                } else {
+                    val refund = createPartialRefund(payment, remaining, "booking-termination:$sourceEventId", now)
                     outboxWriter.append(
                         bookingId,
                         "WalletRefundQueued",
@@ -339,8 +326,8 @@ class WalletTransactionService(
                             "bookingId" to bookingId,
                             "paymentId" to payment.id,
                             "refundId" to refund.id,
-                            "amountMinor" to refundTotal,
-                            "retainedFeeMinor" to retainedFee,
+                            "amountMinor" to remaining,
+                            "retainedFeeMinor" to (payment.totalAmountMinor - refundTarget),
                         ),
                         now,
                     )
@@ -352,6 +339,29 @@ class WalletTransactionService(
             BookingPaymentStatus.REFUNDED,
             -> null
         }
+    }
+
+    @Transactional
+    fun preparePartialRefund(bookingId: UUID, amountMinor: Long, idempotencyKey: String): UUID? {
+        validateIdempotencyKey(idempotencyKey)
+        refundRepository.findByIdempotencyKey(idempotencyKey)?.let { return it.id }
+        val payment = paymentRepository.findByBookingIdForUpdate(bookingId) ?: return null
+        if (payment.status != BookingPaymentStatus.COMPLETED) {
+            throw PaymentConflict("Only completed booking payments can be partially refunded")
+        }
+        val alreadyRequested = refundRepository.totalRequested(payment.id)
+        if (amountMinor <= 0 || alreadyRequested + amountMinor > payment.totalAmountMinor) {
+            throw PaymentConflict("Partial refund exceeds the remaining captured payment")
+        }
+        val now = clock.instant()
+        val refund = createPartialRefund(payment, amountMinor, idempotencyKey, now)
+        outboxWriter.append(
+            bookingId,
+            "WalletRefundQueued",
+            mapOf("bookingId" to bookingId, "paymentId" to payment.id, "refundId" to refund.id, "amountMinor" to amountMinor),
+            now,
+        )
+        return refund.id
     }
 
     @Transactional
@@ -484,21 +494,11 @@ class WalletTransactionService(
         if (payment.status != BookingPaymentStatus.COMPLETED) {
             throw PaymentConflict("Only completed booking payments can be refunded")
         }
+        val alreadyRequested = refundRepository.totalRequested(payment.id)
+        val remaining = payment.totalAmountMinor - alreadyRequested
+        if (remaining <= 0) throw PaymentConflict("The booking payment is already fully refunded or queued")
         val now = clock.instant()
-        payment.beginRefund(now)
-        val refund = refundRepository.save(
-            PaymentRefund(
-                id = UUID.randomUUID(),
-                bookingPaymentId = payment.id,
-                walletId = payment.walletId,
-                walletAmountMinor = payment.walletAmountMinor,
-                onlineAmountMinor = payment.onlineAmountMinor,
-                status = RefundStatus.CREATING,
-                idempotencyKey = idempotencyKey,
-                createdAt = now,
-                updatedAt = now,
-            ),
-        )
+        val refund = createPartialRefund(payment, remaining, idempotencyKey, now)
         return PreparedRefund(refundSnapshot(refund), payment.providerPaymentId)
     }
 
@@ -532,7 +532,13 @@ class WalletTransactionService(
             )
         }
         refund.complete(providerRefund?.id, now)
-        payment.refunded(now)
+        val totalCompleted = refundRepository.totalCompleted(payment.id)
+        if (totalCompleted >= payment.totalAmountMinor && payment.status == BookingPaymentStatus.COMPLETED) {
+            payment.beginRefund(now)
+            payment.refunded(now)
+        } else if (payment.status == BookingPaymentStatus.REFUND_PENDING) {
+            payment.refunded(now)
+        }
         outboxWriter.append(
             payment.bookingId,
             "WalletRefundCompleted",
@@ -541,6 +547,7 @@ class WalletTransactionService(
                 "paymentId" to payment.id,
                 "refundId" to refund.id,
                 "amountMinor" to (refund.walletAmountMinor + refund.onlineAmountMinor),
+                "idempotencyKey" to refund.idempotencyKey,
             ),
             now,
         )
@@ -622,6 +629,30 @@ class WalletTransactionService(
                 updatedAt = now,
             ),
         )
+
+    private fun createPartialRefund(
+        payment: BookingPayment,
+        amountMinor: Long,
+        idempotencyKey: String,
+        now: Instant,
+    ): PaymentRefund {
+        val existing = refundRepository.findAllByBookingPaymentId(payment.id)
+        val remainingWallet = (payment.walletAmountMinor - existing.sumOf(PaymentRefund::walletAmountMinor)).coerceAtLeast(0)
+        val walletPart = minOf(remainingWallet, amountMinor)
+        return refundRepository.save(
+            PaymentRefund(
+                id = UUID.randomUUID(),
+                bookingPaymentId = payment.id,
+                walletId = payment.walletId,
+                walletAmountMinor = walletPart,
+                onlineAmountMinor = amountMinor - walletPart,
+                status = RefundStatus.CREATING,
+                idempotencyKey = idempotencyKey,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+    }
 
     private fun queueCompensationRefund(
         payment: BookingPayment,

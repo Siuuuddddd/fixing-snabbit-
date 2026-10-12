@@ -16,7 +16,7 @@ import java.util.UUID
 class PaymentRefund(
     @Id
     val id: UUID,
-    @Column(name = "booking_payment_id", nullable = false, unique = true)
+    @Column(name = "booking_payment_id", nullable = false)
     val bookingPaymentId: UUID,
     @Column(name = "wallet_id", nullable = false)
     val walletId: UUID,

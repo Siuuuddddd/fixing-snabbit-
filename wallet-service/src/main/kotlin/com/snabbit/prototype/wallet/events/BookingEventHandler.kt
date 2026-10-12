@@ -20,6 +20,7 @@ class BookingEventHandler(
             event.eventType != "BookingCancelled" &&
             event.eventType != "BookingCustomerCancelled" &&
             event.eventType != "BookingPlatformCancelled"
+            && event.eventType != "VisitRefundRequested"
         ) return null
         val bookingId = UUID.fromString(event.aggregateId)
         val requestedRefundMinor = if (
@@ -30,6 +31,15 @@ class BookingEventHandler(
         } else {
             null
         }
-        return transactions.terminateBookingPayment(bookingId, event.eventId, requestedRefundMinor)
+        val visitRefundMinor = if (event.eventType == "VisitRefundRequested") {
+            event.payload.path("amountMinor").asLong(-1).also { require(it >= 0) }
+        } else null
+        return if (visitRefundMinor != null) {
+            val key = event.payload.path("refundIdempotencyKey").asText()
+            require(key.isNotBlank()) { "VisitRefundRequested is missing refundIdempotencyKey" }
+            transactions.preparePartialRefund(bookingId, visitRefundMinor, key)
+        } else {
+            transactions.terminateBookingPayment(bookingId, event.eventId, requestedRefundMinor)
+        }
     }
 }

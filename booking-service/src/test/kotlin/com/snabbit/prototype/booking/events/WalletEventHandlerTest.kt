@@ -45,4 +45,26 @@ class WalletEventHandlerTest {
 
         verify(exactly = 1) { bookingService.confirmPayment(bookingId, "wallet:payment-1") }
     }
+
+    @Test
+    fun `only UUID visit refund keys complete a visit refund`() {
+        val bookingId = UUID.randomUUID()
+        val refundKey = UUID.randomUUID()
+        val visitRefund = EventEnvelope(
+            UUID.randomUUID(), "WalletRefundCompleted", "Wallet", bookingId.toString(), now,
+            ObjectMapper().createObjectNode().put("idempotencyKey", refundKey.toString()),
+        )
+        val wholeBookingRefund = visitRefund.copy(
+            eventId = UUID.randomUUID(),
+            payload = ObjectMapper().createObjectNode().put("idempotencyKey", "booking-termination:${UUID.randomUUID()}"),
+        )
+        every { processed.claim("booking-service", visitRefund.eventId, now) } returns true
+        every { processed.claim("booking-service", wholeBookingRefund.eventId, now) } returns true
+        every { bookingService.completeVisitRefund(refundKey) } returns Unit
+
+        handler.handle(visitRefund)
+        handler.handle(wholeBookingRefund)
+
+        verify(exactly = 1) { bookingService.completeVisitRefund(refundKey) }
+    }
 }

@@ -95,6 +95,52 @@ class WorkerMatchingServiceTest {
         )
 
         assertEquals(near.id, matches.first().workerId)
+        assertEquals("FALLBACK_SAME_TIER", matches.first().assignmentType)
+    }
+
+    @Test
+    fun `Plus favourite fallback upgrades to nearest veteran only after same tier is exhausted`() {
+        val favourite = profile(WorkerTier.STANDARD, "Favourite")
+        val veteran = profile(WorkerTier.VETERAN, "Veteran")
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(favourite, veteran)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(veteran.id))
+        every {
+            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
+        } returns listOf(available(veteran.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(compatibility(veteran.id, true))
+
+        val matches = service.match(
+            command(favourite.id, false).copy(
+                expertPreference = "FAVOURITE",
+                favouriteWorkerId = favourite.id,
+                fallbackPolicy = "AUTO_ASSIGN",
+            ),
+        )
+
+        assertEquals(listOf(veteran.id), matches.map { it.workerId })
+        assertEquals("FALLBACK_PLUS_UPGRADE", matches.single().assignmentType)
+    }
+
+    @Test
+    fun `skip and refund does not substitute an unavailable favourite`() {
+        val favourite = profile(WorkerTier.STANDARD, "Favourite")
+        val other = profile(WorkerTier.STANDARD, "Other")
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(favourite, other)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(other.id))
+        every {
+            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
+        } returns listOf(available(other.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(compatibility(other.id, true))
+
+        val matches = service.match(
+            command(favourite.id, false).copy(
+                expertPreference = "FAVOURITE",
+                favouriteWorkerId = favourite.id,
+                fallbackPolicy = "SKIP_AND_REFUND",
+            ),
+        )
+
+        assertEquals(0, matches.size)
     }
 
     @Test

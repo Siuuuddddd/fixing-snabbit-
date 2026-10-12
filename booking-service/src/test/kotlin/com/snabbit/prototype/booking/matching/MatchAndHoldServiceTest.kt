@@ -18,6 +18,7 @@ import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
 import com.snabbit.prototype.booking.exception.SlotUnavailable
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import com.snabbit.prototype.booking.exception.PlanValidationException
+import com.snabbit.prototype.booking.exception.AtomicHoldUnavailable
 import com.snabbit.prototype.booking.service.BookingLifecycleService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -74,6 +75,53 @@ class MatchAndHoldServiceTest {
         }
 
         assertEquals(listOf(0, 1), error.visitErrors.map { it.visitIndex })
+    }
+
+    @Test
+    fun `atomic hold conflict lists every failed visit and creates no booking`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
+        val customerId = UUID.randomUUID()
+        val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
+        val starts = listOf(
+            Instant.parse("2026-10-03T04:30:00Z"),
+            Instant.parse("2026-10-04T05:30:00Z"),
+        )
+        every { lifecycle.findIdempotent(customerId, any(), any()) } returns null
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.household(customerId) } returns household(false, emptyList()).copy(userId = customerId)
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
+        coEvery { clients.matches(any()) } returns emptyList()
+
+        val error = assertThrows<AtomicHoldUnavailable> {
+            service.matchAndHold(
+                MatchAndHoldCommand(
+                    customerId, serviceId, BookingType.MULTI_DAY, Duration.ofHours(1),
+                    addressId, starts, "booking-request-all-failures",
+                ),
+            )
+        }
+
+        assertEquals(listOf(0, 1), error.failures.map { it.visitIndex })
+        error.failures.forEach { assertEquals(true, it.alternatives.size <= 3) }
+        coVerify(exactly = 0) { clients.reservePass(any(), any()) }
+        verify(exactly = 0) { lifecycle.create(any()) }
+    }
+
+    @Test
+    fun `Plus veteran upgrade never costs more than the original base quote`() {
+        val veteran = match(UUID.randomUUID(), 21_000).copy(tier = "VETERAN", assignmentType = "FALLBACK_PLUS_UPGRADE")
+        val command = command(listOf(Instant.parse("2026-10-03T04:30:00Z"))).copy(
+            duration = Duration.ofHours(1),
+        )
+
+        assertEquals(18_000, service.cappedPrice(command, household(true, emptyList()), veteran, 18_000))
+        assertEquals(21_000, service.cappedPrice(command, household(false, emptyList()), veteran, 18_000))
     }
 
     @Test

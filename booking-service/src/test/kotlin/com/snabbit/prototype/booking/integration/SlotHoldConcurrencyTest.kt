@@ -176,6 +176,28 @@ class SlotHoldConcurrencyTest {
     }
 
     @Test
+    fun `payment hold extension is bounded and payment failure releases the held slot`() {
+        val customerId = UUID.randomUUID()
+        val created = service.create(command(customerId))
+        val originalExpiry = created.holdExpiresAt!!
+        service.acceptOffer(created.bookingId, created.visits.single().offerId, workerId)
+
+        val extended = service.extendHoldsForPayment(created.bookingId)
+        val cancelled = service.cancel(created.bookingId, customerId)
+
+        assertTrue(extended.holdExpiresAt.isAfter(originalExpiry))
+        assertEquals("CANCELLED", cancelled.status)
+        assertEquals(
+            "RELEASED",
+            jdbc.queryForObject(
+                "SELECT status::text FROM slot_hold WHERE booking_id = ?",
+                String::class.java,
+                created.bookingId,
+            ),
+        )
+    }
+
+    @Test
     fun `outbox lease prevents concurrent publishers and becomes retryable`() {
         val eventId = UUID.randomUUID()
         val now = Instant.now()

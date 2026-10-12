@@ -20,7 +20,7 @@ There is no refresh-token endpoint. The Android foundation's authenticator bound
 | 4 | Home | `GET /api/v1/services`; `GET /api/v1/users/{userId}/addresses` | Customer and matching user identity for address | Catalogue and selected address are authoritative. Favourites preview and habit-pack promo have no read/catalogue contracts, so they use isolated fake repositories documented in `api-gaps.md`; service/offline failures use the shared recoverable state. |
 | 5 | Service details | `GET /api/v1/services`; pricing is finalized through booking availability/hold | Customer | 422 booking rule; 409 unavailable slot |
 | 6 | Address & serviceability | `GET/POST /api/v1/users/{userId}/addresses`, `DELETE .../{addressId}` | Customer and matching user identity | 403 identity mismatch; 404; 422 address/location validation |
-| 7 | Schedule | `GET /api/v1/services` for whole-hour prices; `POST /api/v1/bookings/availability` for each visible 15-minute candidate | Customer | Supports Today, Tomorrow, and 2–7 free-choice dates in the seven-day UI window. Backend hours are 8 AM–7 PM and durations are whole hours from 1–4; sold-out candidates are disabled and 422/transport failures use recoverable states. |
+| 7 | Schedule | `GET /api/v1/services` for whole-hour prices; `POST /api/v1/bookings/availability` for each visible 15-minute candidate | Customer | Backend supports configurable 2–10 free-choice dates in a 10-calendar-day Asia/Kolkata window (today included). Each visit may have its own start time; duration remains booking-level. Backend hours are 8 AM–7 PM and durations are whole hours from 1–4. |
 | 8 | Household preferences | `GET/PUT /api/v1/users/{userId}/household`; favourite add/remove endpoints | Customer and matching user | 403; 404; 409 favourite limit/duplicate; 422 invalid preferences |
 | 9 | Booking summary | Re-check `POST /api/v1/bookings/availability`; then `POST /api/v1/bookings/match-and-hold` | Customer; `Idempotency-Key` on hold | 409 slot/offer/state conflict; 422 rules. Price and wallet/UPI values are labelled estimates until payment creation. |
 | 10 | Finding worker | Poll `GET /api/v1/bookings/{bookingId}`; on `AWAITING_PAYMENT`, `POST /api/v1/bookings/{bookingId}/payments`; optional `DELETE .../hold` while waiting | Customer owner; `Idempotency-Key` on payment | Booking status and returned payment split are authoritative; 403/404/409/422/502 surfaced explicitly. |
@@ -73,15 +73,18 @@ The Android client obtains `userId` from the access-token `sub` claim returned b
 | Method and path | Request | Response/use |
 |---|---|---|
 | `GET /api/v1/services` | None | Available service catalog and booking/pricing inputs |
-| `POST /api/v1/bookings/availability` | `customerId`, `serviceId`, `bookingType`, `durationHours`, `addressId`, `startsAt` | Per-visit availability, compatible worker count and lowest price under 8 AM–7 PM and 1–4 hour rules |
-| `POST /api/v1/bookings/match-and-hold` | The same exact request; `Idempotency-Key` | Booking/visit snapshots in `AWAITING_WORKER`, with offers and price snapshot |
+| `POST /api/v1/bookings/availability` | `customerId`, `serviceId`, `bookingType`, `durationHours`, `addressId`; preferred `visits: [{date,startTime}]` or legacy `startsAt`; optional `expertPreference`, `favouriteWorkerId`, `fallbackPolicy` | Per-visit availability, compatible worker count and lowest price under configured window/lead-time rules |
+| `POST /api/v1/bookings/match-and-hold` | The same request; `Idempotency-Key` | Atomic booking/visit holds. A conflict returns `code=ATOMIC_HOLD_UNAVAILABLE`, every failed visit, and up to three nearby alternatives. |
 | `GET /api/v1/bookings/{bookingId}` | Booking ID | Current booking snapshot/status |
 | `DELETE /api/v1/bookings/{bookingId}/hold` | Booking ID | Releases a held booking when allowed |
 | `POST /api/v1/bookings/{bookingId}/payments` | `walletId`, `useWallet`; `Idempotency-Key`. The client never supplies amounts. | Payment snapshot containing authoritative total, wallet amount, online amount, status and provider order ID |
 | `GET /api/v1/bookings/{bookingId}/cancellation-quote` | Booking ID | Refund/fee quote before cancellation |
 | `POST /api/v1/bookings/{bookingId}/cancellations` | Cancellation reason/request fields | Cancelled booking/refund result |
+| `POST /api/v1/bookings/{bookingId}/visits/{visitIndex}/cancellations` | Optional reason | Cancels one unstarted confirmed visit and returns its durable refund state/key in the booking snapshot |
 
-Booking types serialize exactly as `INSTANT`, `SCHEDULED`, and `MULTI_DAY`. Instant/scheduled requests contain one start; multi-day contains 2–7 distinct local dates. Availability is advisory, so match-and-hold repeats validation authoritatively. Payment can start only after worker acceptance changes the booking to `AWAITING_PAYMENT`; device/provider callbacks never prove confirmation.
+Booking types serialize exactly as `INSTANT`, `SCHEDULED`, and `MULTI_DAY`. Instant/scheduled requests contain one start; multi-day defaults to 2–10 distinct local dates within 10 calendar days including today in `Asia/Kolkata`. `expertPreference` is `ANY`, `FAVOURITE` (requires `favouriteWorkerId`), or `VETERAN`. `fallbackPolicy` is `AUTO_ASSIGN` or `SKIP_AND_REFUND`; `ASK_FIRST` is rejected as unsupported. Availability is advisory, so match-and-hold repeats validation authoritatively. Payment start extends holds only up to the configured maximum total lifetime. Device/provider callbacks never prove confirmation; only the signed wallet webhook event confirms all visits.
+
+Booking snapshots include an effective `holdExpiresAt`; each visit includes duration, quoted price, worker, assignment type, refund status/amount/idempotency UUID, and cancellation time. Per-visit prices sum to the charged booking total and never increase during reassignment. Household requirements are loaded once and snapshotted on both the booking and every visit.
 
 ### Tracking and ratings
 

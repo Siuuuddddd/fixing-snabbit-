@@ -208,7 +208,7 @@ class MatchAndHoldService(
         }
     }
 
-    private fun cappedPrice(
+    internal fun cappedPrice(
         command: MatchAndHoldCommand,
         household: HouseholdSnapshotResponse,
         match: WorkerMatchResponse,

@@ -1,0 +1,2 @@
+ALTER TABLE payment_refund DROP CONSTRAINT payment_refund_booking_payment_id_key;
+CREATE INDEX idx_payment_refund_booking_payment ON payment_refund (booking_payment_id, created_at);

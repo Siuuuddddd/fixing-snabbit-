@@ -14,6 +14,9 @@ class NotificationTemplates {
         "WorkerOfferRejected", "WorkerOfferExpired" ->
             NotificationTemplate("Worker unavailable", "We could not confirm this worker. Your held slot was released.", true)
         "BookingConfirmed" -> NotificationTemplate("Booking confirmed", "Payment is verified and your worker is assigned.", true)
+        "VisitAssigned" -> NotificationTemplate("Visit assigned", "An expert has been assigned to your visit.", true)
+        "VisitAssignmentChanged" -> NotificationTemplate("Expert changed", "A different compatible expert has been assigned to your visit.", true)
+        "VisitRefunded" -> NotificationTemplate("Visit refunded", "Your cancelled visit refund has completed.", true)
         "WorkerArrived" -> NotificationTemplate("Worker arrived", "Your worker has arrived at the service location.", true)
         "ServiceStarted" -> NotificationTemplate("Service started", "Your booked home service is now in progress.", false)
         "ServiceCompleted", "BookingCompleted" ->
@@ -40,6 +43,8 @@ class NotificationTemplates {
             NotificationTemplate("Offer expired", "This job offer is no longer available.", false)
         "BookingConfirmed" ->
             NotificationTemplate("Booking assigned", "The customer payment is confirmed and this job is assigned to you.", true)
+        "VisitAssigned", "VisitAssignmentChanged" ->
+            NotificationTemplate("Visit assigned", "A service visit has been assigned to you.", true)
         "BookingCancelled", "BookingCustomerCancelled", "BookingPlatformCancelled" ->
             NotificationTemplate("Job cancelled", "This booking has been cancelled and is no longer scheduled.", true)
         else -> null

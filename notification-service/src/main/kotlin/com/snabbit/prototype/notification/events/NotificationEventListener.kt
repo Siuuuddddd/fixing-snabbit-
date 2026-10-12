@@ -46,6 +46,13 @@ class NotificationEventListener(
                 handleCustomer(event)
                 templates.forWorkerEvent(event)?.let { fanOutStoredJobs(event, it) }
             }
+            "VisitAssigned", "VisitAssignmentChanged" -> {
+                handleCustomer(event)
+                val workerId = event.payload.path("workerId").asText().takeIf(String::isNotBlank)?.let(UUID::fromString)
+                if (workerId != null) templates.forWorkerEvent(event)?.let {
+                    handleWorker(event, workerId, it, "visits", listOf(event.payload))
+                }
+            }
             else -> handleCustomer(event)
         }
     }
