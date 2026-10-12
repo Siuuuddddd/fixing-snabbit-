@@ -4,9 +4,18 @@ import com.snabbit.prototype.booking.domain.enums.BookingType
 import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
 import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.events.OutboxDeliveryStore
+import com.snabbit.prototype.booking.catalog.ServiceCatalogService
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import com.snabbit.prototype.booking.exception.SlotUnavailable
+import com.snabbit.prototype.booking.dto.response.ServiceOfferingSnapshot
+import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
+import com.snabbit.prototype.booking.matching.MatchingClients
+import com.snabbit.prototype.booking.service.AssignmentRecoveryService
 import com.snabbit.prototype.booking.service.BookingLifecycleService
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Duration
 import java.time.Instant
@@ -17,6 +26,7 @@ import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -193,6 +203,79 @@ class SlotHoldConcurrencyTest {
                 "SELECT status::text FROM slot_hold WHERE booking_id = ?",
                 String::class.java,
                 created.bookingId,
+            ),
+        )
+    }
+
+    @Test
+    fun `expired payment hold releases every visit without confirmation`() {
+        val customerId = UUID.randomUUID()
+        val created = service.create(command(customerId))
+        service.acceptOffer(created.bookingId, created.visits.single().offerId, workerId)
+        jdbc.update(
+            "UPDATE slot_hold SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute' WHERE booking_id = ?",
+            created.bookingId,
+        )
+
+        val expired = service.confirmPayment(created.bookingId, "wallet:late-payment")
+
+        assertEquals("EXPIRED", expired.status)
+        assertEquals(
+            "EXPIRED",
+            jdbc.queryForObject(
+                "SELECT status::text FROM slot_hold WHERE booking_id = ?",
+                String::class.java,
+                created.bookingId,
+            ),
+        )
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'BookingExpired'",
+                Int::class.java,
+                created.bookingId.toString(),
+            ),
+        )
+    }
+
+    @Test
+    fun `worker dropout reassigns the confirmed visit to a same-tier replacement`() = runBlocking {
+        val replacementId = UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO worker_day_capacity (id, worker_id, service_date, available_from, available_until, version) VALUES (?, ?, ?, '08:00', '19:00', 0)",
+            UUID.randomUUID(), replacementId, startsAt.toLocalDate(),
+        )
+        val created = service.create(
+            command(UUID.randomUUID()).copy(
+                serviceLatitude = BigDecimal("19.076090"),
+                serviceLongitude = BigDecimal("72.877426"),
+            ),
+        )
+        service.acceptOffer(created.bookingId, created.visits.single().offerId, workerId)
+        service.confirmPayment(created.bookingId, "wallet:dropout-test")
+        val catalog = mockk<ServiceCatalogService>()
+        val clients = mockk<MatchingClients>()
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.matches(any()) } returns listOf(
+            WorkerMatchResponse(
+                replacementId, "Replacement", "STANDARD", BigDecimal("4.8"),
+                BigDecimal.ONE, false, 36_000,
+            ),
+        )
+
+        val recovered = AssignmentRecoveryService(service, catalog, clients)
+            .recover(created.bookingId, 0, workerId)
+
+        assertEquals(replacementId, recovered.visits.single().workerId)
+        assertEquals("FALLBACK_SAME_TIER", recovered.visits.single().assignmentType)
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM outbox_event WHERE aggregate_id = ? AND event_type = 'VisitAssignmentChanged'",
+                Int::class.java,
+                created.bookingId.toString(),
             ),
         )
     }

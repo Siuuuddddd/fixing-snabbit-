@@ -28,9 +28,10 @@ class WorkerTrackingService(
 ) {
     fun latest(bookingId: UUID, visitIndex: Int, customerId: UUID): WorkerTrackingSnapshot {
         val context = authorize(bookingId, visitIndex, customerId)
-        val location = workerLocations.latest(context.visit.workerId)
+        val workerId = assignedWorkerId(context)
+        val location = workerLocations.latest(workerId)
             ?: throw WorkerTrackingUnavailable("Worker location is not available yet")
-        requireDisplayable(location, context.visit.workerId)
+        requireDisplayable(location, workerId)
         return location.toTracking(context)
     }
 
@@ -46,12 +47,12 @@ class WorkerTrackingService(
                 val (context, location) = try {
                     withContext(Dispatchers.IO) {
                         val current = authorize(bookingId, visitIndex, customerId)
-                        current to workerLocations.latest(current.visit.workerId)
+                        current to workerLocations.latest(assignedWorkerId(current))
                     }
                 } catch (_: WorkerLocationServiceUnavailable) {
                     withContext(Dispatchers.IO) { authorize(bookingId, visitIndex, customerId) } to null
                 }
-                if (location != null && isDisplayable(location, context.visit.workerId) &&
+                if (location != null && isDisplayable(location, assignedWorkerId(context)) &&
                     location.locationId != previousLocationId
                 ) {
                     previousLocationId = location.locationId
@@ -90,6 +91,9 @@ class WorkerTrackingService(
             throw WorkerTrackingUnavailable("Worker tracking opens ${properties.visibilityLeadTime.toHours()} hours before the visit")
         }
     }
+
+    private fun assignedWorkerId(context: TrackingContext): UUID =
+        context.visit.workerId ?: throw WorkerTrackingUnavailable("Booking visit has no assigned worker")
 
     private fun requireDisplayable(location: WorkerLocationResponse, expectedWorkerId: UUID) {
         if (location.workerId != expectedWorkerId) {

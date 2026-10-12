@@ -7,7 +7,7 @@ import java.util.UUID
 
 data class VisitSnapshot(
     val visitIndex: Int,
-    val workerId: UUID,
+    val workerId: UUID?,
     val startsAt: Instant,
     val endsAt: Instant,
     val holdExpiresAt: Instant,

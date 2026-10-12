@@ -84,7 +84,7 @@ The Android client obtains `userId` from the access-token `sub` claim returned b
 
 Booking types serialize exactly as `INSTANT`, `SCHEDULED`, and `MULTI_DAY`. Instant/scheduled requests contain one start; multi-day defaults to 2–10 distinct local dates within 10 calendar days including today in `Asia/Kolkata`. `expertPreference` is `ANY`, `FAVOURITE` (requires `favouriteWorkerId`), or `VETERAN`. `fallbackPolicy` is `AUTO_ASSIGN` or `SKIP_AND_REFUND`; `ASK_FIRST` is rejected as unsupported. Availability is advisory, so match-and-hold repeats validation authoritatively. Payment start extends holds only up to the configured maximum total lifetime. Device/provider callbacks never prove confirmation; only the signed wallet webhook event confirms all visits.
 
-Booking snapshots include an effective `holdExpiresAt`; each visit includes duration, quoted price, worker, assignment type, refund status/amount/idempotency UUID, and cancellation time. Per-visit prices sum to the charged booking total and never increase during reassignment. Household requirements are loaded once and snapshotted on both the booking and every visit.
+Booking snapshots include an effective `holdExpiresAt`; each visit includes local `date`, local `startTime`, legacy `startsAt`, duration, quoted price, nullable assigned `workerId`, assignment type, refund status/amount/idempotency UUID, and cancellation time. Assignment types are exactly `PREFERRED`, `FALLBACK_SAME_TIER`, `FALLBACK_PLUS_UPGRADE`, and `UNASSIGNED`. Per-visit prices sum to the charged booking total and never increase during reassignment. Household requirements are loaded once and snapshotted on both the booking and every visit.
 
 ### Tracking and ratings
 

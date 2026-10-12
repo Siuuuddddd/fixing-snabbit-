@@ -38,7 +38,7 @@ class WorkerTrackingServiceTest {
     @Test
     fun `owner receives fresh accurate location for a confirmed upcoming visit`() {
         val booking = booking()
-        val location = location(booking.visits.single().workerId)
+        val location = location(booking.visits.single().workerId!!)
         every { bookings.get(booking.bookingId) } returns booking
         every { locations.latest(location.workerId) } returns location
 
@@ -82,7 +82,7 @@ class WorkerTrackingServiceTest {
         val booking = booking()
         every { bookings.get(booking.bookingId) } returns booking
         every { locations.latest(any()) } returns location(
-            booking.visits.single().workerId,
+            booking.visits.single().workerId!!,
             capturedAt = now.minus(Duration.ofMinutes(3)),
         )
 
@@ -94,7 +94,7 @@ class WorkerTrackingServiceTest {
     @Test
     fun `stream emits changed locations and keep-alive comments`() = runBlocking {
         val booking = booking()
-        val location = location(booking.visits.single().workerId)
+        val location = location(booking.visits.single().workerId!!)
         every { bookings.get(booking.bookingId) } returns booking
         every { locations.latest(location.workerId) } returns location
 

@@ -352,6 +352,8 @@ class BookingLifecycleServiceTest {
         assertEquals(BookingStatus.CONFIRMED.name, result.status)
         assertEquals("PENDING", result.visits.single().refundStatus)
         assertEquals(hold.quotedPriceMinor, result.visits.single().refundAmountMinor)
+        assertEquals("UNASSIGNED", result.visits.single().assignmentType)
+        assertEquals(null, result.visits.single().workerId)
         assertEquals(SlotHoldStatus.RELEASED, hold.status)
         verify(exactly = 1) {
             outboxRepository.save(match { it.eventType == "VisitRefundRequested" })

@@ -885,7 +885,7 @@ class BookingLifecycleService(
                 val offer = offersByHold.getValue(hold.id)
                 VisitSnapshot(
                     visitIndex = hold.visitIndex,
-                    workerId = hold.workerId,
+                    workerId = hold.workerId.takeUnless { hold.assignmentType == AssignmentType.UNASSIGNED },
                     startsAt = hold.startsAt,
                     endsAt = hold.endsAt,
                     holdExpiresAt = hold.expiresAt,

@@ -129,6 +129,7 @@ class SlotHold(
             refundAmountMinor = amountMinor
             refundIdempotencyKey = key
             cancelledAt = now
+            assignmentType = AssignmentType.UNASSIGNED
             if (status == SlotHoldStatus.CONFIRMED) status = SlotHoldStatus.RELEASED
             jobStatus = null
         }
