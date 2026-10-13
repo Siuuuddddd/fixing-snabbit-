@@ -62,7 +62,7 @@ arrival-otp-provider:
   auth-token: ${TWILIO_AUTH_TOKEN:}
   api-key-sid: ${TWILIO_API_KEY_SID:}
   api-key-secret: ${TWILIO_API_KEY_SECRET:}
-  verify-service-sid: ${ARRIVAL_TWILIO_VERIFY_SERVICE_SID:}
+  verify-service-sid: ${ARRIVAL_TWILIO_VERIFY_SERVICE_SID:${TWILIO_VERIFY_SERVICE_SID:}}
 
 cancellation:
   late-window: PT2H
@@ -96,6 +96,11 @@ deployment.production.required-properties:
   - integrations.worker-service-url
   - integrations.wallet-service-url
   - service-auth.token
+  - arrival-otp-provider.provider
+  - arrival-otp-provider.account-sid
+  - arrival-otp-provider.api-key-sid
+  - arrival-otp-provider.api-key-secret
+  - arrival-otp-provider.verify-service-sid
 
 tracking:
   visibility-lead-time: PT2H

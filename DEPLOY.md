@@ -36,10 +36,14 @@ TWILIO_AUTH_TOKEN
 TWILIO_API_KEY_SID
 TWILIO_API_KEY_SECRET
 TWILIO_VERIFY_SERVICE_SID
+ARRIVAL_OTP_PROVIDER=twilio-verify
+ARRIVAL_TWILIO_VERIFY_SERVICE_SID # optional separate Verify service; may equal the login service SID
 SERVICE_AUTH_TOKEN         # long random value shared only by the services
 USER_SERVICE_URL, BOOKING_SERVICE_URL, WORKER_SERVICE_URL
 WALLET_SERVICE_URL, SUPPORT_SERVICE_URL, NOTIFICATION_SERVICE_URL
 ```
+
+Booking Service uses a separate arrival-verification adapter and state machine even when it shares the same Twilio account or Verify service. Production startup requires `ARRIVAL_OTP_PROVIDER=twilio-verify`, API-key credentials, and a Verify service SID; the development `stub` adapter is rejected by the production guard. Never log OTP codes, provider secrets, full home-contact numbers, or Twilio response bodies.
 
 Database variables use the service prefix, for example `USER_DB_URL`, `USER_DB_USERNAME`, `USER_DB_PASSWORD`; repeat with `BOOKING`, `WORKER`, `WALLET`, `SUPPORT` and `NOTIFICATION`. Use `jdbc:postgresql://...?...&sslmode=require` URLs supported by the managed provider.
 

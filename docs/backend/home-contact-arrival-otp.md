@@ -2,7 +2,7 @@
 
 ## Status
 
-Step 0 audit completed against `04bf345` on `feature/backend-foundation`. No feature code exists yet. The implementation must stay backend-only and reuse the booking lifecycle, internal service authentication, transactional outbox, notification delivery, and Twilio Verify foundations described below.
+Implemented on `feature/backend-foundation`. The original audit below records the reuse decisions; the live endpoint and operational contract is in `home-contact-arrival-otp-api.md`.
 
 The shared `platform-common` `RestClientConfiguration` already supplies a prototype-scoped `RestClient.Builder` behind `@ConditionalOnMissingBean`. `NotificationApplicationSmokeTest` and `SupportApplicationSmokeTest` both load their full Spring contexts and assert that bean exists, so the previously reported startup blocker is already fixed.
 

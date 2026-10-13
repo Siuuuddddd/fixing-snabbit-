@@ -35,6 +35,8 @@ class ProductionConfigurationGuard(
                     "$key must be twilio"
                 key == "otp.provider" && !value.equals("twilio-verify", ignoreCase = true) ->
                     "$key must be twilio-verify"
+                key == "arrival-otp-provider.provider" && !value.equals("twilio-verify", ignoreCase = true) ->
+                    "$key must be twilio-verify"
                 else -> null
             }
         }

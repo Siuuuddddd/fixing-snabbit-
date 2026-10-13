@@ -20,6 +20,9 @@ class TwilioArrivalOtpProvider(
         }
         val username = properties.apiKeySid.ifBlank { properties.accountSid }
         val password = properties.apiKeySecret.ifBlank { properties.authToken }
+        if (properties.apiKeySid.isNotBlank()) {
+            require(properties.apiKeySid.matches(Regex("^SK[0-9a-fA-F]{32}$"))) { "Arrival Twilio API key SID is invalid" }
+        }
         require(password.isNotBlank()) { "Arrival Twilio credentials are required" }
         client = builder.clone().baseUrl(properties.baseUrl)
             .defaultHeaders { it.setBasicAuth(username, password) }

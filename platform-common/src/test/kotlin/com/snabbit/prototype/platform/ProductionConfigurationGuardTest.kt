@@ -54,12 +54,16 @@ class ProductionConfigurationGuardTest {
             .withProperty("geocoding.provider", "disabled")
             .withProperty("notifications.push.provider", "logging")
             .withProperty("sms.provider", "logging")
+            .withProperty("arrival-otp-provider.provider", "stub")
 
         assertThrows(IllegalArgumentException::class.java) {
             ProductionConfigurationGuard(
                 environment,
                 ProductionGuardProperties(
-                    listOf("geocoding.provider", "notifications.push.provider", "sms.provider"),
+                    listOf(
+                        "geocoding.provider", "notifications.push.provider", "sms.provider",
+                        "arrival-otp-provider.provider",
+                    ),
                 ),
             )
         }
