@@ -64,4 +64,13 @@ It must retain the existing date-specific availability model, household compatib
 
 ## Checkpoint status
 
-Step 0 is complete when this audit is committed. Later sections will be updated with exact API contracts, migrations, configuration, seed/reset instructions, errors, tests, and final verification as the numbered implementation checkpoints land.
+The audit and implementation checkpoints are complete:
+
+- Worker tenure is calculated at query time in `Asia/Kolkata` from additive `joined_at`, using configurable 6/9 calendar-month thresholds.
+- Tier surcharges are configured and snapshotted per held visit; all later money movement uses the stored quote.
+- Customer requests can select an exact tier, while a favourite's own tier remains authoritative. Availability reports per-tier prices and counts.
+- Plus-only favourites have dedicated endpoints, completed-visit eligibility, concurrent maximum enforcement, phone-free profiles, ranked suggestions, and same-tier fallback.
+- Completed-visit ratings support bounded updates, transactional aggregate deltas, identifier-only events, and Bayesian ranking.
+- The opt-in local/dev seed creates the ten requested workers and demo Plus customer, refreshes rolling availability/capacity, preserves changed ratings and removed defaults, retains normal OTP, and is rejected in production.
+
+Exact mobile-facing request/response/error contracts and reset instructions are in `docs/backend/worker-tiers-favourites-api.md`.
