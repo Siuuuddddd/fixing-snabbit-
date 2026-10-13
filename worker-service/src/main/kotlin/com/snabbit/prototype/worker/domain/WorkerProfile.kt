@@ -43,6 +43,8 @@ class WorkerProfile(
     val createdAt: Instant,
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant,
+    @Column(name = "joined_at", nullable = false)
+    var joinedAt: Instant = createdAt,
     @Version
     var version: Long = 0,
 ) {

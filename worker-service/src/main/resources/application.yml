@@ -29,6 +29,10 @@ management:
 worker:
   local-seed-days: ${WORKER_LOCAL_SEED_DAYS:10}
   booking-window-days: ${WORKER_BOOKING_WINDOW_DAYS:10}
+  tiers:
+    veteran-months: ${WORKER_VETERAN_MONTHS:6}
+    expert-months: ${WORKER_EXPERT_MONTHS:9}
+    zone-id: Asia/Kolkata
 
 auth:
   issuer: https://auth.snabbit.local

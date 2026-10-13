@@ -27,6 +27,7 @@ class WorkerMatchingService(
     private val skillRepository: WorkerSkillRepository,
     private val availabilityRepository: WorkerAvailabilityRepository,
     private val compatibilityRepository: WorkerCompatibilityRepository,
+    private val tierPolicy: WorkerTierPolicy,
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
 
@@ -48,6 +49,7 @@ class WorkerMatchingService(
 
         val ranked = candidateIds.mapNotNull { workerId ->
             val profile = profiles.getValue(workerId)
+            val tier = tierPolicy.currentTier(profile)
             val workerCompatibility = compatibility[workerId] ?: return@mapNotNull null
             if (!compatible(command, workerCompatibility)) return@mapNotNull null
             val distance = distanceKm(
@@ -62,11 +64,11 @@ class WorkerMatchingService(
                 value = WorkerMatch(
                     workerId = profile.id,
                     displayName = profile.displayName,
-                    tier = profile.tier.name,
+                    tier = tier.name,
                     averageRating = profile.averageRating(),
                     distanceKm = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP),
                     favourite = workerId in favouriteIds,
-                    priceMinor = basePrice + profile.tier.surchargeMinor,
+                    priceMinor = basePrice + tier.surchargeMinor,
                 ),
                 score = score(profile, distance, workerId in favouriteIds, command.plusActive),
             )
@@ -87,7 +89,7 @@ class WorkerMatchingService(
                     .map { it.copy(assignmentType = "PREFERRED") }
                 if (favourite.isNotEmpty() || command.fallbackPolicy.uppercase() == "SKIP_AND_REFUND") favourite
                 else {
-                    val tier = profiles[favouriteId]?.tier?.name
+                    val tier = profiles[favouriteId]?.let(tierPolicy::currentTier)?.name
                     val sameTier = tierEligible.filter { it.tier == tier }
                         .sortedBy(WorkerMatch::distanceKm)
                         .map { it.copy(assignmentType = "FALLBACK_SAME_TIER") }

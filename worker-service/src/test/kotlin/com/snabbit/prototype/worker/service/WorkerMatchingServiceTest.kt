@@ -28,7 +28,10 @@ class WorkerMatchingServiceTest {
     private val skills = mockk<WorkerSkillRepository>()
     private val availability = mockk<WorkerAvailabilityRepository>()
     private val compatibility = mockk<WorkerCompatibilityRepository>()
-    private val service = WorkerMatchingService(profiles, skills, availability, compatibility)
+    private val tierPolicy = mockk<WorkerTierPolicy> {
+        every { currentTier(any()) } answers { (invocation.args[0] as WorkerProfile).tier }
+    }
+    private val service = WorkerMatchingService(profiles, skills, availability, compatibility, tierPolicy)
     private val start = Instant.parse("2026-10-03T04:30:00Z")
 
     @Test
