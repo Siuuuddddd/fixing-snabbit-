@@ -77,6 +77,29 @@ class WorkerMatchingServiceTest {
     }
 
     @Test
+    fun `requested tier is matched exactly`() {
+        val standard = profile(WorkerTier.STANDARD, "Standard")
+        val veteran = profile(WorkerTier.VETERAN, "Veteran")
+        val expert = profile(WorkerTier.EXPERT, "Expert")
+        stubCandidates(standard, veteran, acceptsPets = true)
+        every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(standard, veteran, expert)
+        every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns
+            listOf(skill(standard.id), skill(veteran.id), skill(expert.id))
+        every {
+            availability.findAllByServiceDateAndStatus(
+                LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE,
+            )
+        } returns listOf(available(standard.id), available(veteran.id), available(expert.id))
+        every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
+            compatibility(standard.id, true), compatibility(veteran.id, true), compatibility(expert.id, true),
+        )
+
+        val matches = service.match(command(UUID.randomUUID(), false).copy(requiredTier = "EXPERT"))
+
+        assertEquals(listOf(expert.id), matches.map { it.workerId })
+    }
+
+    @Test
     fun `unavailable favourite falls back to nearest compatible worker in the same tier`() {
         val favourite = profile(WorkerTier.VETERAN, "Favourite")
         val near = profile(WorkerTier.VETERAN, "Near").apply {

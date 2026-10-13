@@ -8,4 +8,6 @@ data class VisitAvailabilitySnapshot(
     val available: Boolean,
     val compatibleWorkerCount: Int,
     val lowestPriceMinor: Long?,
+    val tierOptions: List<TierAvailabilitySnapshot> = emptyList(),
+    val selectedTier: String? = null,
 )

@@ -6,6 +6,7 @@ import java.time.Instant
 import java.util.UUID
 import com.snabbit.prototype.booking.domain.enums.ExpertPreference
 import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
+import com.snabbit.prototype.booking.domain.enums.WorkerTierSelection
 
 data class MatchAndHoldCommand(
     val customerId: UUID,
@@ -19,4 +20,5 @@ data class MatchAndHoldCommand(
     val favouriteWorkerId: UUID? = null,
     val fallbackPolicy: FallbackPolicy = FallbackPolicy.AUTO_ASSIGN,
     val visitDurations: List<Duration> = emptyList(),
+    val workerTier: WorkerTierSelection? = null,
 )

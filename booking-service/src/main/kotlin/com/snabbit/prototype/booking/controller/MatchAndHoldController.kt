@@ -79,6 +79,7 @@ private fun MatchAndHoldRequest.toCommand(properties: BookingProperties, idempot
         expertPreference = expertPreference,
         favouriteWorkerId = favouriteWorkerId,
         fallbackPolicy = fallbackPolicy,
+        workerTier = workerTier,
         idempotencyKey = idempotencyKey,
     )
 }

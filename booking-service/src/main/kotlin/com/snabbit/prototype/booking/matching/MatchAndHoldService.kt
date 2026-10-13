@@ -53,8 +53,15 @@ class MatchAndHoldService(
         val offering = catalog.requireActive(command.serviceId)
         val (household, address) = loadCustomerContext(command)
         validateFavourite(command, household)
-        val candidateLists = findCandidates(command, address, offering.code, offering.basePricePerHourMinor, household)
-            .map { eligibleCandidates(command, it) }
+        val allCandidateLists = findCandidates(
+            command, address, offering.code, offering.basePricePerHourMinor, household, allTiers = true,
+        )
+        val candidateLists = if (command.expertPreference == ExpertPreference.FAVOURITE) {
+            findCandidates(command, address, offering.code, offering.basePricePerHourMinor, household)
+                .map { eligibleCandidates(command, it) }
+        } else {
+            allCandidateLists.map { eligibleCandidates(command, it) }
+        }
         val commonWorkers = candidateLists
             .map { candidates -> candidates.map(WorkerMatchResponse::workerId).toSet() }
             .reduceOrNull(Set<UUID>::intersect)
@@ -66,12 +73,24 @@ class MatchAndHoldService(
             sameWorkerAvailableForAllVisits = commonWorkers.isNotEmpty(),
             visits = command.startsAt.mapIndexed { index, startsAt ->
                 val candidates = candidateLists[index]
+                val allCandidates = allCandidateLists[index]
+                val selectedTier = resolvedTier(command, candidates)
                 VisitAvailabilitySnapshot(
                     startsAt,
                     durations[index].toMinutes().toInt(),
                     candidates.isNotEmpty(),
                     candidates.size,
                     candidates.minOfOrNull(WorkerMatchResponse::priceMinor),
+                    tierOptions = listOf("STANDARD", "VETERAN", "EXPERT").map { tier ->
+                        val tierCandidates = allCandidates.filter { it.tier == tier }
+                        com.snabbit.prototype.booking.dto.response.TierAvailabilitySnapshot(
+                            tier = tier,
+                            available = tierCandidates.isNotEmpty(),
+                            compatibleWorkerCount = tierCandidates.size,
+                            lowestPriceMinor = tierCandidates.minOfOrNull(WorkerMatchResponse::priceMinor),
+                        )
+                    },
+                    selectedTier = selectedTier,
                 )
             },
         )
@@ -202,13 +221,25 @@ class MatchAndHoldService(
         command: MatchAndHoldCommand,
         candidates: List<WorkerMatchResponse>,
     ): List<WorkerMatchResponse> = when (command.expertPreference) {
-        ExpertPreference.ANY -> candidates
+        ExpertPreference.ANY -> command.workerTier?.let { requested ->
+            candidates.filter { it.tier == requested.name }
+        } ?: candidates
         ExpertPreference.VETERAN -> candidates.filter { it.tier == "VETERAN" }
         ExpertPreference.FAVOURITE -> {
             val favourite = candidates.filter { it.workerId == command.favouriteWorkerId }
             if (favourite.isNotEmpty() || command.fallbackPolicy == FallbackPolicy.SKIP_AND_REFUND) favourite
             else candidates
         }
+    }
+
+    private fun resolvedTier(
+        command: MatchAndHoldCommand,
+        candidates: List<WorkerMatchResponse>,
+    ): String? = when (command.expertPreference) {
+        ExpertPreference.FAVOURITE -> candidates.firstOrNull { it.workerId == command.favouriteWorkerId }?.tier
+            ?: candidates.firstOrNull()?.tier
+        ExpertPreference.VETERAN -> "VETERAN"
+        ExpertPreference.ANY -> command.workerTier?.name
     }
 
     private fun validateFavourite(command: MatchAndHoldCommand, household: HouseholdSnapshotResponse) {
@@ -283,6 +314,7 @@ class MatchAndHoldService(
         serviceCode: String,
         basePricePerHourMinor: Long,
         household: HouseholdSnapshotResponse,
+        allTiers: Boolean = false,
     ): List<List<WorkerMatchResponse>> = coroutineScope {
         val durations = resolvedDurations(command)
         command.startsAt.mapIndexed { index, start ->
@@ -309,9 +341,16 @@ class MatchAndHoldService(
                         accessibilityNeeds = household.accessibilityNeeds,
                         favouriteWorkerIds = household.favouriteWorkerIds,
                         plusActive = household.plusActive,
-                        expertPreference = command.expertPreference.name,
-                        favouriteWorkerId = command.favouriteWorkerId,
+                        expertPreference = if (allTiers) ExpertPreference.ANY.name else command.expertPreference.name,
+                        favouriteWorkerId = if (allTiers) null else command.favouriteWorkerId,
                         fallbackPolicy = command.fallbackPolicy.name,
+                        requiredTier = if (allTiers || command.expertPreference == ExpertPreference.FAVOURITE) {
+                            null
+                        } else {
+                            command.workerTier?.name ?: command.expertPreference
+                                .takeIf { it == ExpertPreference.VETERAN }
+                                ?.name
+                        },
                     ),
                 )
             }
@@ -387,6 +426,7 @@ class MatchAndHoldService(
             command.expertPreference.name,
             command.favouriteWorkerId,
             command.fallbackPolicy.name,
+            command.workerTier?.name,
         ).joinToString("|")
         return MessageDigest.getInstance("SHA-256")
             .digest(canonical.toByteArray(StandardCharsets.UTF_8))
