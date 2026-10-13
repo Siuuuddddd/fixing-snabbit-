@@ -53,7 +53,7 @@ class WorkerFeedService(
                 service.displayName,
                 hold.startsAt,
                 hold.endsAt,
-                booking.durationMinutes,
+                hold.durationMinutes,
                 offer.expiresAt,
                 booking.requirements,
             )
@@ -85,7 +85,7 @@ class WorkerFeedService(
                 service.displayName,
                 hold.startsAt,
                 hold.endsAt,
-                booking.durationMinutes,
+                hold.durationMinutes,
                 requireNotNull(hold.jobStatus),
                 booking.requirements,
                 booking.serviceLatitude.takeIf { revealLocation },

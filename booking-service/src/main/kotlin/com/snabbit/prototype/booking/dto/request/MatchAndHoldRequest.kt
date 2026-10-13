@@ -13,7 +13,7 @@ data class MatchAndHoldRequest(
     val serviceId: UUID,
     val bookingType: BookingType,
     @field:Min(1) @field:Max(4)
-    val durationHours: Long,
+    val durationHours: Long? = null,
     val addressId: UUID,
     val startsAt: List<Instant> = emptyList(),
     val visits: List<RequestedVisit> = emptyList(),

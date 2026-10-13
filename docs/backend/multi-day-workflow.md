@@ -5,7 +5,7 @@
 Final status after implementation and verification on 2026-10-12.
 
 1. **DONE — Config-driven limits.** Booking configuration defaults to a 10-day Asia/Kolkata window, 2 minimum visits, and a maximum equal to the configured window; additive migrations remove downstream seven-visit index ceilings.
-2. **DONE — Request shape and backward compatibility.** The preferred `visits: [{date, startTime}]` shape converts in the configured zone, duration remains booking-level, and legacy `startsAt` remains accepted.
+2. **DONE — Request shape and backward compatibility.** The preferred `visits: [{date, startTime, durationHours}]` shape converts in the configured zone and supports a different duration for every visit. The top-level `durationHours` and legacy `startsAt` remain accepted as fallbacks for older clients.
 3. **DONE — Validation.** Visit count, distinct local dates, 10-day bounds, same-day lead time, whole-hour duration, and operating hours are enforced; invalid visits return indexed structured errors.
 4. **DONE — Atomic holds and alternatives.** Candidate and lock-time failures report every unavailable visit with up to three nearby alternatives; the booking, offers, and holds roll back together and any pass reservation is compensated.
 5. **DONE — Expert preference.** `ANY`, `FAVOURITE` with ownership validation and worker ID, and `VETERAN` are accepted and passed through matching.
@@ -24,12 +24,12 @@ Final status after implementation and verification on 2026-10-12.
 
 This document audits the existing backend against the multi-day workflow in the supplied UML diagrams. The implementation target is a configurable advance window that defaults to 10 calendar days in `Asia/Kolkata`, including today. A multi-day booking remains one booking and one payment, but every visit is independently scheduled, assigned, priced, cancellable, and refundable. Holding a plan is atomic: either every requested visit is held or none is retained.
 
-The duration remains booking-level. The current persistence model, matching API, quote calculation, and Android contract all use one duration for every visit. Keeping that invariant avoids an unnecessary breaking migration while still allowing each visit to have its own date and start time.
+Duration is a per-visit value. Every selected date carries its own whole-hour duration through availability, matching, pricing, persistence, responses, and Android navigation. Older clients can omit visit durations and continue using the top-level `durationHours` value for every visit.
 
 ## Final behaviour
 
-- The preferred request is `visits: [{date, startTime}]`; legacy `startsAt` remains supported, and exactly one representation may be supplied.
-- The default window is local day 0 through day 9 in `Asia/Kolkata`. Multi-day dates are distinct but need not be consecutive; duration stays booking-level at 1–4 whole hours.
+- The preferred request is `visits: [{date, startTime, durationHours}]`; legacy `startsAt` plus top-level `durationHours` remains supported, and exactly one visit-time representation may be supplied.
+- The default window is local day 0 through day 9 in `Asia/Kolkata`. Multi-day dates are distinct but need not be consecutive; every visit has its own 1–4 whole-hour duration.
 - Availability and match-and-hold validate every visit. A `409` atomic-hold problem contains `visitFailures`, and each failure contains its index, requested instant, reason, and at most three valid nearby alternatives.
 - Each visit is matched independently. Responses use `PREFERRED`, `FALLBACK_SAME_TIER`, `FALLBACK_PLUS_UPGRADE`, or `UNASSIGNED`; an unassigned/refunded visit returns a null worker while retaining its audit history internally.
 - Booking, holds, offers, and outbox records are one local transaction. Cross-service pass release uses the existing durable saga/outbox compensation rather than pretending to provide a distributed database transaction.
@@ -42,7 +42,7 @@ The duration remains booking-level. The current persistence model, matching API,
 ## Implemented design
 
 1. Add booking configuration with safe defaults: 10 advance calendar days including today, minimum 2 visits, maximum equal to the advance window, configurable lead time, payment extension, maximum total hold lifetime, and Plus Veteran upgrade enabled.
-2. Add a preferred `visits: [{date, startTime}]` request while retaining legacy `startsAt`. Exactly one representation is accepted. Convert local values in the configured booking zone and retain the legacy response fields.
+2. Add a preferred `visits: [{date, startTime, durationHours}]` request while retaining legacy `startsAt` and top-level `durationHours`. Exactly one visit-time representation is accepted. Convert local values in the configured booking zone and retain the legacy response fields.
 3. Centralize plan validation and return RFC 9457 problem details with indexed visit errors. Add a structured atomic-hold conflict carrying every failed visit and at most three valid nearby start times.
 4. Add a Flyway migration; do not edit prior migrations. Expand the visit-index constraint and add per-visit assignment, pricing, snapshot, cancellation, and refund columns. Add payment-attempt timing to the booking where needed.
 5. Remove common-worker selection. Extend matching filters for favourite and Veteran preferences and preserve the rule that the final per-visit price cannot exceed the original quote. When Plus Veteran upgrade is enabled, Veteran selection does not add its surcharge.
@@ -60,7 +60,8 @@ The duration remains booking-level. The current persistence model, matching API,
 
 ## Backward compatibility
 
-- Existing callers may continue sending `startsAt`; its instants remain authoritative and are validated in Asia/Kolkata.
+- Existing callers may continue sending `startsAt` with top-level `durationHours`; those instants and the shared fallback duration remain authoritative and are validated in Asia/Kolkata.
+- Existing callers using `visits` may omit each visit's `durationHours` when a top-level fallback is present.
 - Existing single-visit and internal create endpoints remain available.
 - Existing booking totals and whole-booking cancellation fields remain in responses. New per-visit fields are additive.
 - Existing booking payment behaviour remains one payment. Per-visit allocation is additive accounting metadata.

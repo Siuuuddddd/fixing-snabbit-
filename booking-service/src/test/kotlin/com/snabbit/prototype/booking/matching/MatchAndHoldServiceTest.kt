@@ -351,6 +351,47 @@ class MatchAndHoldServiceTest {
         io.mockk.verify(exactly = 0) { lifecycle.create(any()) }
     }
 
+    @Test
+    fun `multi-day availability matches and prices each visit with its own duration`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
+        val customerId = UUID.randomUUID()
+        val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
+        val starts = listOf(
+            Instant.parse("2026-10-03T04:30:00Z"),
+            Instant.parse("2026-10-04T04:30:00Z"),
+        )
+        val requests = mutableListOf<WorkerMatchRequest>()
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.household(customerId) } returns household(false, emptyList()).copy(userId = customerId)
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
+        coEvery { clients.matches(capture(requests)) } answers {
+            val request = firstArg<WorkerMatchRequest>()
+            listOf(match(UUID.randomUUID(), request.basePricePerHourMinor * request.durationMinutes / 60))
+        }
+
+        val result = service.availability(
+            MatchAndHoldCommand(
+                customerId = customerId,
+                serviceId = serviceId,
+                bookingType = BookingType.MULTI_DAY,
+                duration = Duration.ofHours(2),
+                addressId = addressId,
+                startsAt = starts,
+                visitDurations = listOf(Duration.ofHours(2), Duration.ofHours(1)),
+            ),
+        )
+
+        assertEquals(listOf(120, 60), requests.map { it.durationMinutes })
+        assertEquals(listOf(120, 60), result.visits.map { it.durationMinutes })
+        assertEquals(listOf(36_000L, 18_000L), result.visits.map { it.lowestPriceMinor })
+    }
+
     private fun household(plusActive: Boolean, favourites: List<UUID>) = HouseholdSnapshotResponse(
         userId = UUID.randomUUID(),
         plusActive = plusActive,

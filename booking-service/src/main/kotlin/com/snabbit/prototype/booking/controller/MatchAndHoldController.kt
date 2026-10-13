@@ -6,6 +6,7 @@ import com.snabbit.prototype.booking.dto.request.MatchAndHoldCommand
 import com.snabbit.prototype.booking.dto.request.MatchAndHoldRequest
 import com.snabbit.prototype.booking.dto.response.BookingAvailabilitySnapshot
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import com.snabbit.prototype.booking.matching.MatchAndHoldService
 import jakarta.validation.Valid
 import java.time.Duration
@@ -45,23 +46,39 @@ class MatchAndHoldController(
     }
 }
 
-private fun MatchAndHoldRequest.toCommand(properties: BookingProperties, idempotencyKey: String? = null) = MatchAndHoldCommand(
-    customerId = customerId,
-    serviceId = serviceId,
-    bookingType = bookingType,
-    duration = Duration.ofHours(durationHours),
-    addressId = addressId,
-    startsAt = when {
-        startsAt.isNotEmpty() && visits.isNotEmpty() -> throw com.snabbit.prototype.booking.exception.BookingRuleViolation(
-            "Supply either startsAt or visits, not both",
-        )
-        visits.isNotEmpty() -> visits.map { visit ->
-            visit.date.atTime(visit.startTime).atZone(properties.zoneId).toInstant()
+private fun MatchAndHoldRequest.toCommand(properties: BookingProperties, idempotencyKey: String? = null): MatchAndHoldCommand {
+    if (startsAt.isNotEmpty() && visits.isNotEmpty()) {
+        throw BookingRuleViolation("Supply either startsAt or visits, not both")
+    }
+    val resolvedStartsAt = if (visits.isNotEmpty()) {
+        visits.map { visit -> visit.date.atTime(visit.startTime).atZone(properties.zoneId).toInstant() }
+    } else {
+        startsAt
+    }
+    val resolvedDurations = if (visits.isNotEmpty()) {
+        visits.mapIndexed { index, visit ->
+            val hours = visit.durationHours ?: durationHours
+                ?: throw BookingRuleViolation("visits[$index].durationHours is required when durationHours is absent")
+            Duration.ofHours(hours)
         }
-        else -> startsAt
-    },
-    expertPreference = expertPreference,
-    favouriteWorkerId = favouriteWorkerId,
-    fallbackPolicy = fallbackPolicy,
-    idempotencyKey = idempotencyKey,
-)
+    } else {
+        val hours = durationHours ?: throw BookingRuleViolation("durationHours is required for the legacy startsAt request")
+        resolvedStartsAt.map { Duration.ofHours(hours) }
+    }
+    val fallbackDuration = resolvedDurations.firstOrNull()
+        ?: durationHours?.let(Duration::ofHours)
+        ?: throw BookingRuleViolation("At least one visit duration is required")
+    return MatchAndHoldCommand(
+        customerId = customerId,
+        serviceId = serviceId,
+        bookingType = bookingType,
+        duration = fallbackDuration,
+        addressId = addressId,
+        startsAt = resolvedStartsAt,
+        visitDurations = resolvedDurations,
+        expertPreference = expertPreference,
+        favouriteWorkerId = favouriteWorkerId,
+        fallbackPolicy = fallbackPolicy,
+        idempotencyKey = idempotencyKey,
+    )
+}

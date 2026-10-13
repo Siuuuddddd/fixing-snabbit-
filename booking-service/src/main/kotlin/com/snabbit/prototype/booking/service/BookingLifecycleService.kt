@@ -37,6 +37,7 @@ import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import com.snabbit.prototype.booking.repository.WorkerDayCapacityRepository
 import com.snabbit.prototype.booking.repository.WorkerOfferRepository
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -100,10 +101,10 @@ class BookingLifecycleService(
         val capacities = lockCapacities(command)
         validateInternalOverlaps(command)
         command.visits.forEach { visit ->
-            bookingWindowPolicy.validate(command.bookingType, visit.startsAt, command.duration)
+            bookingWindowPolicy.validate(command.bookingType, visit.startsAt, visitDuration(command, visit))
         }
         val unavailableVisits = command.visits.mapIndexedNotNull { index, visit ->
-            runCatching { validateCapacityAndOverlap(visit, command.duration.toMinutes(), capacities, now) }
+            runCatching { validateCapacityAndOverlap(visit, visitDuration(command, visit).toMinutes(), capacities, now) }
                 .exceptionOrNull()
                 ?.let { ConcurrentVisitFailure(index, visit.startsAt, it.message.orEmpty()) }
         }
@@ -140,6 +141,7 @@ class BookingLifecycleService(
         )
 
         val holds = command.visits.mapIndexed { index, visit ->
+            val duration = visitDuration(command, visit)
             SlotHold(
                 id = UUID.randomUUID(),
                 bookingId = booking.id,
@@ -148,7 +150,8 @@ class BookingLifecycleService(
                 workerId = visit.workerId,
                 serviceId = booking.serviceId,
                 startsAt = visit.startsAt,
-                endsAt = visit.startsAt.plus(command.duration),
+                endsAt = visit.startsAt.plus(duration),
+                durationMinutes = duration.toMinutes().toInt(),
                 status = SlotHoldStatus.HELD,
                 expiresAt = now.plus(properties.slotHoldDuration),
                 createdAt = now,
@@ -579,7 +582,7 @@ class BookingLifecycleService(
         }
         return VisitRecoveryContext(
             booking.id, booking.customerId, booking.serviceId, visitIndex, failedWorkerId,
-            hold.startsAt, booking.durationMinutes, hold.quotedPriceMinor, hold.assignedWorkerTier,
+            hold.startsAt, hold.durationMinutes, hold.quotedPriceMinor, hold.assignedWorkerTier,
             booking.serviceLatitude ?: throw InvalidBookingState("Booking has no service latitude"),
             booking.serviceLongitude ?: throw InvalidBookingState("Booking has no service longitude"),
             hold.requirementsSnapshot, booking.expertPreference, booking.favouriteWorkerId, booking.fallbackPolicy,
@@ -737,6 +740,11 @@ class BookingLifecycleService(
                 throw BookingRuleViolation("Multi-day visits must occur on different dates")
             }
         }
+        command.visits.forEach { visit ->
+            if (visitDuration(command, visit).toMinutes() !in setOf(60L, 120L, 180L, 240L)) {
+                throw BookingRuleViolation("Visit duration must be a whole hour between 1 and 4 hours")
+            }
+        }
     }
 
     private fun lockCapacities(command: CreateBookingCommand): Map<Pair<UUID, LocalDate>, WorkerDayCapacity> =
@@ -754,7 +762,10 @@ class BookingLifecycleService(
         visits.forEachIndexed { index, current ->
             visits.drop(index + 1)
                 .filter { it.workerId == current.workerId }
-                .firstOrNull { it.startsAt < current.startsAt.plus(command.duration) }
+                .firstOrNull { candidate ->
+                    candidate.startsAt < current.startsAt.plus(visitDuration(command, current)) &&
+                        current.startsAt < candidate.startsAt.plus(visitDuration(command, candidate))
+                }
                 ?.let { throw BookingRuleViolation("Requested visits overlap for the same worker") }
         }
     }
@@ -898,7 +909,7 @@ class BookingLifecycleService(
                     completedAt = hold.completedAt,
                     date = hold.startsAt.atZone(properties.zoneId).toLocalDate(),
                     startTime = hold.startsAt.atZone(properties.zoneId).toLocalTime(),
-                    durationMinutes = booking.durationMinutes,
+                    durationMinutes = hold.durationMinutes,
                     quotedPriceMinor = hold.quotedPriceMinor,
                     assignmentType = hold.assignmentType.name,
                     refundStatus = hold.refundStatus.name,
@@ -914,4 +925,7 @@ class BookingLifecycleService(
             cancelledAt = booking.cancelledAt,
         )
     }
+
+    private fun visitDuration(command: CreateBookingCommand, visit: VisitCommand): Duration =
+        visit.duration ?: command.duration
 }

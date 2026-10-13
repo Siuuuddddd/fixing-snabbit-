@@ -4,6 +4,7 @@ import java.time.Instant
 
 data class VisitAvailabilitySnapshot(
     val startsAt: Instant,
+    val durationMinutes: Int,
     val available: Boolean,
     val compatibleWorkerCount: Int,
     val lowestPriceMinor: Long?,

@@ -18,4 +18,5 @@ data class MatchAndHoldCommand(
     val expertPreference: ExpertPreference = ExpertPreference.ANY,
     val favouriteWorkerId: UUID? = null,
     val fallbackPolicy: FallbackPolicy = FallbackPolicy.AUTO_ASSIGN,
+    val visitDurations: List<Duration> = emptyList(),
 )

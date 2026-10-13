@@ -55,7 +55,9 @@ class InternalBookingController(
                 serviceId = request.serviceId,
                 bookingType = request.bookingType,
                 duration = Duration.ofHours(request.durationHours),
-                visits = request.visits.map { VisitCommand(it.workerId, it.startsAt) },
+                visits = request.visits.map {
+                    VisitCommand(it.workerId, it.startsAt, it.durationHours?.let(Duration::ofHours))
+                },
                 requirements = request.requirements,
             ),
         )

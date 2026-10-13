@@ -90,6 +90,9 @@ class BookingLifecycleServiceTest {
         assertEquals(command.quotedTotalMinor, result.quotedTotalMinor)
         assertEquals(command.requirements, result.requirements)
         assertEquals(result.visits[0].holdExpiresAt, result.visits[1].holdExpiresAt)
+        assertEquals(listOf(120, 60), result.visits.map { it.durationMinutes })
+        assertEquals(Duration.ofHours(2), Duration.between(result.visits[0].startsAt, result.visits[0].endsAt))
+        assertEquals(Duration.ofHours(1), Duration.between(result.visits[1].startsAt, result.visits[1].endsAt))
         verify(exactly = 1) { bookingRepository.saveAndFlush(any()) }
     }
 
@@ -499,8 +502,8 @@ class BookingLifecycleServiceTest {
         bookingType = BookingType.MULTI_DAY,
         duration = Duration.ofHours(2),
         visits = listOf(
-            VisitCommand(workerId, Instant.parse("2026-10-03T04:30:00Z")),
-            VisitCommand(workerId, Instant.parse("2026-10-04T04:30:00Z")),
+            VisitCommand(workerId, Instant.parse("2026-10-03T04:30:00Z"), Duration.ofHours(2)),
+            VisitCommand(workerId, Instant.parse("2026-10-04T04:30:00Z"), Duration.ofHours(1)),
         ),
         requirements = BookingRequirements(
             hasPets = true,

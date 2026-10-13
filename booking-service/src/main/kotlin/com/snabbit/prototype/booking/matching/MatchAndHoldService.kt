@@ -49,6 +49,7 @@ class MatchAndHoldService(
 ) {
     suspend fun availability(command: MatchAndHoldCommand): BookingAvailabilitySnapshot {
         validateRequest(command)
+        val durations = resolvedDurations(command)
         val offering = catalog.requireActive(command.serviceId)
         val (household, address) = loadCustomerContext(command)
         validateFavourite(command, household)
@@ -63,9 +64,11 @@ class MatchAndHoldService(
             durationMinutes = command.duration.toMinutes().toInt(),
             allVisitsAvailable = candidateLists.all(List<WorkerMatchResponse>::isNotEmpty),
             sameWorkerAvailableForAllVisits = commonWorkers.isNotEmpty(),
-            visits = command.startsAt.zip(candidateLists) { startsAt, candidates ->
+            visits = command.startsAt.mapIndexed { index, startsAt ->
+                val candidates = candidateLists[index]
                 VisitAvailabilitySnapshot(
                     startsAt,
+                    durations[index].toMinutes().toInt(),
                     candidates.isNotEmpty(),
                     candidates.size,
                     candidates.minOfOrNull(WorkerMatchResponse::priceMinor),
@@ -76,6 +79,7 @@ class MatchAndHoldService(
 
     suspend fun matchAndHold(command: MatchAndHoldCommand): BookingSnapshot {
         validateRequest(command)
+        val durations = resolvedDurations(command)
         val idempotencyKey = validateIdempotencyKey(command.idempotencyKey)
         val requestFingerprint = fingerprint(command)
         lifecycleService.findIdempotent(command.customerId, idempotencyKey, requestFingerprint)?.let { return it }
@@ -97,7 +101,9 @@ class MatchAndHoldService(
         }
 
         val selected = eligibleLists.map { it.first() }
-        val visitPrices = selected.map { match -> cappedPrice(command, household, match, offering.basePricePerHourMinor) }
+        val visitPrices = selected.mapIndexed { index, match ->
+            cappedPrice(command, household, match, offering.basePricePerHourMinor, durations[index])
+        }
         val quotedTotalMinor = visitPrices.sum()
         val bookingId = UUID.nameUUIDFromBytes(
             "${command.customerId}:$idempotencyKey".toByteArray(StandardCharsets.UTF_8),
@@ -124,6 +130,7 @@ class MatchAndHoldService(
                     VisitCommand(
                         workerId = match.workerId,
                         startsAt = start,
+                        duration = durations[index],
                         quotedPriceMinor = netVisitPrices[index],
                         assignmentType = AssignmentType.valueOf(match.assignmentType),
                         preferredWorkerId = command.favouriteWorkerId,
@@ -213,9 +220,10 @@ class MatchAndHoldService(
         household: HouseholdSnapshotResponse,
         match: WorkerMatchResponse,
         basePricePerHourMinor: Long,
+        duration: Duration = command.duration,
     ): Long {
         val original = match.priceMinor
-        val basePrice = basePricePerHourMinor * command.duration.toHours()
+        val basePrice = basePricePerHourMinor * duration.toHours()
         val freeVeteran = household.plusActive && properties.plusVeteranUpgradeFree && match.tier == "VETERAN"
         return if (freeVeteran) minOf(basePrice, original) else original
     }
@@ -244,12 +252,19 @@ class MatchAndHoldService(
         household: HouseholdSnapshotResponse,
     ): List<Instant> {
         val requested = command.startsAt[failedIndex]
+        val duration = resolvedDurations(command)[failedIndex]
         val offsets = listOf(-45L, -30L, -15L, 15L, 30L, 45L, 60L)
         val alternatives = mutableListOf<Instant>()
         for (minutes in offsets) {
             val start = requested.plusSeconds(minutes * 60)
-            if (runCatching { windowPolicy.validate(command.bookingType, start, command.duration) }.isFailure) continue
-            val candidates = findCandidates(command.copy(startsAt = listOf(start)), address, serviceCode, basePricePerHourMinor, household)
+            if (runCatching { windowPolicy.validate(command.bookingType, start, duration) }.isFailure) continue
+            val candidates = findCandidates(
+                command.copy(startsAt = listOf(start), visitDurations = listOf(duration)),
+                address,
+                serviceCode,
+                basePricePerHourMinor,
+                household,
+            )
                 .single()
             if (eligibleCandidates(command, candidates).isNotEmpty()) alternatives += start
             if (alternatives.size == 3) break
@@ -264,14 +279,15 @@ class MatchAndHoldService(
         basePricePerHourMinor: Long,
         household: HouseholdSnapshotResponse,
     ): List<List<WorkerMatchResponse>> = coroutineScope {
-        command.startsAt.map { start ->
+        val durations = resolvedDurations(command)
+        command.startsAt.mapIndexed { index, start ->
             async {
                 clients.matches(
                     WorkerMatchRequest(
                         serviceCode = serviceCode,
                         basePricePerHourMinor = basePricePerHourMinor,
                         startsAt = start,
-                        durationMinutes = command.duration.toMinutes().toInt(),
+                        durationMinutes = durations[index].toMinutes().toInt(),
                         latitude = address.latitude.toDouble(),
                         longitude = address.longitude.toDouble(),
                         maxDistanceKm = 15.0,
@@ -312,6 +328,9 @@ class MatchAndHoldService(
         if (command.expertPreference == ExpertPreference.FAVOURITE && command.favouriteWorkerId == null) {
             throw BookingRuleViolation("favouriteWorkerId is required when expertPreference is FAVOURITE")
         }
+        if (command.visitDurations.isNotEmpty() && command.visitDurations.size != command.startsAt.size) {
+            throw BookingRuleViolation("Every visit must have exactly one duration")
+        }
         when (command.bookingType) {
             BookingType.MULTI_DAY -> {
                 if (command.startsAt.size !in properties.minMultiDayVisits..properties.maxMultiDayVisits) {
@@ -326,13 +345,18 @@ class MatchAndHoldService(
         }
         val duplicateDates = command.startsAt.groupBy { it.atZone(properties.zoneId).toLocalDate() }
             .filterValues { it.size > 1 }.keys
+        val durations = resolvedDurations(command)
         val errors = command.startsAt.mapIndexedNotNull { index, start ->
-            if (start.atZone(properties.zoneId).toLocalDate() in duplicateDates) {
-                VisitValidationError(index, start, "Multi-day visits must occur on different dates")
-            } else {
-                runCatching { windowPolicy.validate(command.bookingType, start, command.duration) }
-                    .exceptionOrNull()?.let { VisitValidationError(index, start, it.message.orEmpty()) }
+            val duration = durations[index]
+            val error = when {
+                start.atZone(properties.zoneId).toLocalDate() in duplicateDates ->
+                    "Multi-day visits must occur on different dates"
+                duration.toMinutes() !in setOf(60L, 120L, 180L, 240L) ->
+                    "Visit duration must be a whole hour between 1 and 4 hours"
+                else -> runCatching { windowPolicy.validate(command.bookingType, start, duration) }
+                    .exceptionOrNull()?.message
             }
+            error?.let { VisitValidationError(index, start, it) }
         }
         if (errors.isNotEmpty()) throw PlanValidationException(errors)
     }
@@ -352,7 +376,9 @@ class MatchAndHoldService(
             command.bookingType.name,
             command.duration.toMinutes(),
             command.addressId,
-            command.startsAt.joinToString(",") { it.toString() },
+            command.startsAt.zip(resolvedDurations(command)).joinToString(",") { (start, duration) ->
+                "$start/${duration.toMinutes()}"
+            },
             command.expertPreference.name,
             command.favouriteWorkerId,
             command.fallbackPolicy.name,
@@ -361,4 +387,8 @@ class MatchAndHoldService(
             .digest(canonical.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
     }
+
+    private fun resolvedDurations(command: MatchAndHoldCommand): List<Duration> =
+        command.visitDurations.takeIf(List<Duration>::isNotEmpty)
+            ?: List(command.startsAt.size) { command.duration }
 }

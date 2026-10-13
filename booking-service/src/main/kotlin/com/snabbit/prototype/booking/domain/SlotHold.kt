@@ -82,6 +82,8 @@ class SlotHold(
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "requirements_snapshot", nullable = false, columnDefinition = "jsonb")
     val requirementsSnapshot: BookingRequirements = BookingRequirements(),
+    @Column(name = "duration_minutes", nullable = false)
+    val durationMinutes: Int = 60,
     @Version
     var version: Long = 0,
 ) {
