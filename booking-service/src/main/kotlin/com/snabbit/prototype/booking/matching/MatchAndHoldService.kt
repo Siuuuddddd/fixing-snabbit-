@@ -23,6 +23,7 @@ import com.snabbit.prototype.booking.exception.VisitHoldFailure
 import com.snabbit.prototype.booking.exception.PlanValidationException
 import com.snabbit.prototype.booking.exception.VisitValidationError
 import com.snabbit.prototype.booking.exception.AtomicSlotReservationFailed
+import com.snabbit.prototype.booking.exception.PlusRequired
 import com.snabbit.prototype.booking.domain.enums.AssignmentType
 import com.snabbit.prototype.booking.domain.enums.ExpertPreference
 import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
@@ -243,6 +244,9 @@ class MatchAndHoldService(
     }
 
     private fun validateFavourite(command: MatchAndHoldCommand, household: HouseholdSnapshotResponse) {
+        if (command.expertPreference == ExpertPreference.FAVOURITE && !household.plusActive) {
+            throw PlusRequired()
+        }
         if (command.expertPreference == ExpertPreference.FAVOURITE &&
             command.favouriteWorkerId !in household.favouriteWorkerIds
         ) {

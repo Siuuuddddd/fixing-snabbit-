@@ -42,7 +42,21 @@ class UserExceptionHandler {
 
     @ExceptionHandler(FavouriteLimitReached::class)
     fun favouriteLimit(error: FavouriteLimitReached): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "FAVOURITE_LIMIT_REACHED")
+        }
+
+    @ExceptionHandler(PlusRequired::class)
+    fun plusRequired(error: PlusRequired): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty()).also {
+            it.setProperty("code", "PLUS_REQUIRED")
+        }
+
+    @ExceptionHandler(NotEligibleFavourite::class)
+    fun notEligibleFavourite(error: NotEligibleFavourite): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "NOT_ELIGIBLE_FAVOURITE")
+        }
 
     @ExceptionHandler(InvalidOtp::class)
     fun invalidOtp(error: InvalidOtp): ProblemDetail =

@@ -50,6 +50,12 @@ class ApiExceptionHandler {
     fun bookingRuleViolation(error: BookingRuleViolation): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
 
+    @ExceptionHandler(PlusRequired::class)
+    fun plusRequired(error: PlusRequired): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty()).also {
+            it.setProperty("code", "PLUS_REQUIRED")
+        }
+
     @ExceptionHandler(SlotUnavailable::class)
     fun slotUnavailable(error: SlotUnavailable): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())

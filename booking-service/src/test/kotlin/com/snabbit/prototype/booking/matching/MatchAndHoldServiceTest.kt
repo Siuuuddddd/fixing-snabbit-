@@ -19,6 +19,7 @@ import com.snabbit.prototype.booking.exception.SlotUnavailable
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import com.snabbit.prototype.booking.exception.PlanValidationException
 import com.snabbit.prototype.booking.exception.AtomicHoldUnavailable
+import com.snabbit.prototype.booking.exception.PlusRequired
 import com.snabbit.prototype.booking.service.BookingLifecycleService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -62,6 +63,35 @@ class MatchAndHoldServiceTest {
         service.validateRequest(command(starts.take(properties.maxMultiDayVisits)))
         assertThrows<BookingRuleViolation> {
             service.validateRequest(command(starts.take(properties.maxMultiDayVisits + 1)))
+        }
+    }
+
+    @Test
+    fun `booking with a favourite requires active Plus`() = runBlocking {
+        val clients = mockk<MatchingClients>()
+        val lifecycle = mockk<BookingLifecycleService>()
+        val catalog = mockk<ServiceCatalogService>()
+        val service = MatchAndHoldService(clients, lifecycle, catalog, properties, clock, windowPolicy)
+        val customerId = UUID.randomUUID()
+        val serviceId = UUID.randomUUID()
+        val addressId = UUID.randomUUID()
+        val favouriteId = UUID.randomUUID()
+        every { catalog.requireActive(serviceId) } returns ServiceOfferingSnapshot(
+            serviceId, "HOUSE_CLEANING", "House Cleaning", 18_000,
+        )
+        coEvery { clients.household(customerId) } returns household(false, listOf(favouriteId)).copy(userId = customerId)
+        coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
+
+        assertThrows<PlusRequired> {
+            service.availability(
+                command(listOf(Instant.parse("2026-10-03T04:30:00Z"))).copy(
+                    customerId = customerId,
+                    serviceId = serviceId,
+                    addressId = addressId,
+                    expertPreference = com.snabbit.prototype.booking.domain.enums.ExpertPreference.FAVOURITE,
+                    favouriteWorkerId = favouriteId,
+                ),
+            )
         }
     }
 

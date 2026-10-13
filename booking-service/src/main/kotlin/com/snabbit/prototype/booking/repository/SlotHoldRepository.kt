@@ -15,6 +15,20 @@ import org.springframework.data.repository.query.Param
 interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
     fun findAllByBookingIdOrderByVisitIndex(bookingId: UUID): List<SlotHold>
     fun findByRefundIdempotencyKey(refundIdempotencyKey: UUID): SlotHold?
+    fun countByWorkerIdAndJobStatus(workerId: UUID, jobStatus: JobStatus): Long
+
+    @Query(
+        value = """
+            SELECT DISTINCT hold.worker_id
+            FROM slot_hold hold
+            JOIN booking booking ON booking.id = hold.booking_id
+            WHERE booking.customer_id = :customerId
+              AND hold.job_status = 'COMPLETED'
+            ORDER BY hold.worker_id
+        """,
+        nativeQuery = true,
+    )
+    fun findCompletedWorkerIds(@Param("customerId") customerId: UUID): List<UUID>
 
     fun findByWorkerIdAndStatusAndJobStatusInAndStartsAtAfterOrderByStartsAtAsc(
         workerId: UUID,

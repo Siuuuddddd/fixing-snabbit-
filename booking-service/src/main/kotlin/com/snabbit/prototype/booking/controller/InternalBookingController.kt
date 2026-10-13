@@ -14,6 +14,8 @@ import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
 import com.snabbit.prototype.booking.dto.response.RatingContextSnapshot
 import com.snabbit.prototype.booking.service.BookingLifecycleService
 import com.snabbit.prototype.booking.service.AssignmentRecoveryService
+import com.snabbit.prototype.booking.service.BookingCompletionQueryService
+import com.snabbit.prototype.booking.dto.response.WorkerCompletionCountSnapshot
 import jakarta.validation.Valid
 import java.time.Duration
 import java.util.UUID
@@ -31,7 +33,15 @@ import org.springframework.web.bind.annotation.RestController
 class InternalBookingController(
     private val service: BookingLifecycleService,
     private val recovery: AssignmentRecoveryService,
+    private val completions: BookingCompletionQueryService,
 ) {
+    @GetMapping("/customers/{customerId}/completed-workers")
+    fun completedWorkers(@PathVariable customerId: UUID): List<UUID> = completions.completedWorkerIds(customerId)
+
+    @GetMapping("/workers/{workerId}/completed-count")
+    fun completedCount(@PathVariable workerId: UUID): WorkerCompletionCountSnapshot =
+        completions.completedCount(workerId)
+
     @GetMapping("/{bookingId}/plus-pass-context")
     fun plusPassContext(@PathVariable bookingId: UUID): PlusPassBookingContext = service.plusPassContext(bookingId)
 

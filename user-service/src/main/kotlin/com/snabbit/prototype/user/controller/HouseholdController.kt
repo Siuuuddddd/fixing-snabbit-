@@ -4,6 +4,7 @@ import com.snabbit.prototype.user.dto.request.HouseholdCommand
 import com.snabbit.prototype.user.dto.request.HouseholdRequest
 import com.snabbit.prototype.user.dto.response.HouseholdSnapshot
 import com.snabbit.prototype.user.service.HouseholdService
+import com.snabbit.prototype.user.favourite.FavouriteWorkerService
 import jakarta.validation.Valid
 import java.util.UUID
 import org.springframework.http.HttpStatus
@@ -20,7 +21,10 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1/users/{userId}/household")
-class HouseholdController(private val service: HouseholdService) {
+class HouseholdController(
+    private val service: HouseholdService,
+    private val favourites: FavouriteWorkerService,
+) {
     @GetMapping
     fun snapshot(
         @PathVariable userId: UUID,
@@ -56,12 +60,20 @@ class HouseholdController(private val service: HouseholdService) {
         @PathVariable userId: UUID,
         @PathVariable workerId: UUID,
         @RequestHeader("X-Authenticated-User-Id") authenticatedUserId: UUID,
-    ): HouseholdSnapshot = service.addFavourite(userId.also { requireOwner(authenticatedUserId, it) }, workerId)
+    ): HouseholdSnapshot {
+        requireOwner(authenticatedUserId, userId)
+        favourites.add(userId, workerId)
+        return service.snapshot(userId)
+    }
 
     @DeleteMapping("/favourites/{workerId}")
     fun removeFavourite(
         @PathVariable userId: UUID,
         @PathVariable workerId: UUID,
         @RequestHeader("X-Authenticated-User-Id") authenticatedUserId: UUID,
-    ): HouseholdSnapshot = service.removeFavourite(userId.also { requireOwner(authenticatedUserId, it) }, workerId)
+    ): HouseholdSnapshot {
+        requireOwner(authenticatedUserId, userId)
+        favourites.remove(userId, workerId)
+        return service.snapshot(userId)
+    }
 }

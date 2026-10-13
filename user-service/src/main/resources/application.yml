@@ -53,6 +53,11 @@ otp:
 integrations:
   booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
   wallet-service-url: ${WALLET_SERVICE_URL:http://localhost:8084}
+  worker-service-url: ${WORKER_SERVICE_URL:http://localhost:8083}
+
+favourites:
+  max-count: ${FAVOURITES_MAX_COUNT:3}
+  require-completed-visit: ${FAVOURITES_REQUIRE_COMPLETED_VISIT:true}
 
 service-auth:
   token: ${SERVICE_AUTH_TOKEN:local-only-service-token-change-me-1234567890}
@@ -83,6 +88,7 @@ deployment.production.required-properties:
   - otp.verify-service-sid
   - integrations.booking-service-url
   - integrations.wallet-service-url
+  - integrations.worker-service-url
   - service-auth.token
   - geocoding.provider
   - geocoding.api-key

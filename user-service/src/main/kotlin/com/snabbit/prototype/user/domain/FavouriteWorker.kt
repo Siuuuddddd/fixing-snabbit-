@@ -15,4 +15,6 @@ class FavouriteWorker(
     val priority: Int,
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant,
+    @Column(name = "eligibility_exempt", nullable = false)
+    val eligibilityExempt: Boolean = false,
 )

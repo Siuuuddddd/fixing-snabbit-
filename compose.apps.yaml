@@ -46,6 +46,8 @@ services:
       TWILIO_API_KEY_SID: ${TWILIO_API_KEY_SID:-}
       TWILIO_API_KEY_SECRET: ${TWILIO_API_KEY_SECRET:-}
       TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+      FAVOURITES_MAX_COUNT: ${FAVOURITES_MAX_COUNT:-3}
+      FAVOURITES_REQUIRE_COMPLETED_VISIT: ${FAVOURITES_REQUIRE_COMPLETED_VISIT:-true}
     depends_on:
       user-db: { condition: service_healthy }
       redis: { condition: service_started }
