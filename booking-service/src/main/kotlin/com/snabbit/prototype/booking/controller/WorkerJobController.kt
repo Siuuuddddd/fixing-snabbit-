@@ -3,10 +3,12 @@ package com.snabbit.prototype.booking.controller
 import com.snabbit.prototype.booking.dto.request.WorkerArrivalRequest
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+import com.snabbit.prototype.booking.dto.response.ArrivalOtpStatusSnapshot
 import com.snabbit.prototype.booking.dto.response.WorkerJobFeedItem
 import com.snabbit.prototype.booking.dto.response.WorkerOfferFeedItem
 import com.snabbit.prototype.booking.service.BookingLifecycleService
 import com.snabbit.prototype.booking.service.WorkerFeedService
+import com.snabbit.prototype.booking.service.ArrivalOtpCommandService
 import jakarta.validation.Valid
 import java.util.UUID
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 class WorkerJobController(
     private val bookings: BookingLifecycleService,
     private val feed: WorkerFeedService,
+    private val arrivalOtp: ArrivalOtpCommandService,
 ) {
     @GetMapping("/offers")
     fun offers(
@@ -59,6 +62,13 @@ class WorkerJobController(
         workerId,
         WorkerLocationCommand(request.latitude, request.longitude, request.accuracyMeters),
     )
+
+    @PostMapping("/{bookingId}/visits/{visitIndex}/resend-arrival-otp")
+    fun resendArrivalOtp(
+        @PathVariable bookingId: UUID,
+        @PathVariable visitIndex: Int,
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+    ): ArrivalOtpStatusSnapshot = arrivalOtp.resend(bookingId, visitIndex, workerId)
 
     @PostMapping("/{bookingId}/visits/{visitIndex}/start")
     fun start(

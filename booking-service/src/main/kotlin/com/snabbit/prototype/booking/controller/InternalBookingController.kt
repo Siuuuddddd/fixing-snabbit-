@@ -7,6 +7,7 @@ import com.snabbit.prototype.booking.dto.request.CreateBookingRequest
 import com.snabbit.prototype.booking.dto.request.PlatformCancellationRequest
 import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.dto.response.BookingOwnershipSnapshot
+import com.snabbit.prototype.booking.dto.response.ArrivalNotificationContext
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
 import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
@@ -36,6 +37,10 @@ class InternalBookingController(
 
     @GetMapping("/{bookingId}/ownership")
     fun ownership(@PathVariable bookingId: UUID): BookingOwnershipSnapshot = service.ownership(bookingId)
+
+    @GetMapping("/{bookingId}/arrival-notification-context")
+    fun arrivalNotificationContext(@PathVariable bookingId: UUID): ArrivalNotificationContext =
+        service.arrivalNotificationContext(bookingId)
 
     @GetMapping("/{bookingId}/rating-context")
     fun ratingContext(@PathVariable bookingId: UUID): RatingContextSnapshot = service.ratingContext(bookingId)

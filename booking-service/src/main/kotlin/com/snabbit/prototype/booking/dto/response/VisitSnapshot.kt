@@ -27,4 +27,6 @@ data class VisitSnapshot(
     val refundAmountMinor: Long? = null,
     val refundIdempotencyKey: UUID? = null,
     val cancelledAt: Instant? = null,
+    val otpStatus: String? = null,
+    val otpStatusDisplayText: String? = null,
 )

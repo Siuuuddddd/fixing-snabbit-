@@ -3,6 +3,7 @@ package com.snabbit.prototype.notification.events
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.notification.domain.enums.RecipientType
 import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+import com.snabbit.prototype.notification.dto.response.ArrivalNotificationContext
 import com.snabbit.prototype.notification.service.NotificationProperties
 import com.snabbit.prototype.notification.service.NotificationTransaction
 import io.mockk.every
@@ -14,6 +15,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -57,6 +59,18 @@ class NotificationEventHandlerTest {
         assertTrue(templates.forEvent(event("PlusSubscriptionPurchased"))!!.critical)
         assertTrue(templates.forEvent(event("WorkerOffersCreated"))!!.critical)
         assertEquals(null, templates.forEvent(event("UnknownEvent")))
+    }
+
+    @Test
+    fun `arrival template masks alternate contact and never exposes full phone`() {
+        val context = ArrivalNotificationContext(
+            UUID.randomUUID(), UUID.randomUUID(), false, "••••••3210",
+        )
+
+        val template = NotificationTemplates().arrivalOtpSent(context)
+
+        assertTrue(template.body.contains("••••••3210"))
+        assertFalse(template.body.contains("9876543210"))
     }
 
     @Test

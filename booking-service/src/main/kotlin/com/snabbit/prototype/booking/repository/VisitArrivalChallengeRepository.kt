@@ -14,4 +14,12 @@ interface VisitArrivalChallengeRepository : JpaRepository<VisitArrivalChallenge,
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select challenge from VisitArrivalChallenge challenge where challenge.slotHoldId = :slotHoldId")
     fun findBySlotHoldIdForUpdate(@Param("slotHoldId") slotHoldId: UUID): VisitArrivalChallenge?
+
+    fun findTop100ByStatusInOrderByUpdatedAtAsc(
+        statuses: Collection<com.snabbit.prototype.booking.domain.enums.ArrivalChallengeStatus>,
+    ): List<VisitArrivalChallenge>
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select challenge from VisitArrivalChallenge challenge where challenge.id = :id")
+    fun findByIdForUpdate(@Param("id") id: UUID): VisitArrivalChallenge?
 }

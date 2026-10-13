@@ -51,6 +51,46 @@ class VisitArrivalChallenge(
     @Version
     var version: Long = 0,
 ) {
+    fun beginSend(now: Instant, maxSends: Int) {
+        check(status == ArrivalChallengeStatus.PENDING || status == ArrivalChallengeStatus.DELIVERY_FAILED) {
+            "Arrival OTP is not awaiting delivery"
+        }
+        check(sendCount < maxSends) { "Arrival OTP send limit reached" }
+        sendCount += 1
+        updatedAt = now
+    }
+
+    fun sent(providerReference: String, now: Instant, expiresAt: Instant) {
+        require(providerReference.isNotBlank())
+        providerVerificationRef = providerReference
+        status = ArrivalChallengeStatus.SENT
+        lastSentAt = now
+        this.expiresAt = expiresAt
+        updatedAt = now
+    }
+
+    fun deliveryFailed(now: Instant) {
+        status = ArrivalChallengeStatus.DELIVERY_FAILED
+        updatedAt = now
+    }
+
+    fun blockDelivery(now: Instant, maxSends: Int) {
+        sendCount = maxSends
+        deliveryFailed(now)
+    }
+
+    fun requestResend(now: Instant, cooldown: java.time.Duration, maxSends: Int) {
+        check(status == ArrivalChallengeStatus.SENT || status == ArrivalChallengeStatus.DELIVERY_FAILED) {
+            "Arrival OTP cannot be resent in its current state"
+        }
+        check(sendCount < maxSends) { "Arrival OTP send limit reached" }
+        val allowedAt = lastSentAt?.plus(cooldown)
+        check(allowedAt == null || !now.isBefore(allowedAt)) { "Arrival OTP resend cooldown is active" }
+        status = ArrivalChallengeStatus.PENDING
+        providerVerificationRef = null
+        updatedAt = now
+    }
+
     fun cancel(now: Instant) {
         if (status != ArrivalChallengeStatus.CANCELLED) {
             status = ArrivalChallengeStatus.CANCELLED

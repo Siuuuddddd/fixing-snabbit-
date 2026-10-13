@@ -1,0 +1,55 @@
+package com.snabbit.prototype.booking.service
+
+import com.snabbit.prototype.booking.config.BookingProperties
+import com.snabbit.prototype.booking.domain.enums.ArrivalOtpStatus
+import com.snabbit.prototype.booking.domain.enums.JobStatus
+import com.snabbit.prototype.booking.dto.response.ArrivalOtpStatusSnapshot
+import com.snabbit.prototype.booking.exception.ArrivalOtpAccessDenied
+import com.snabbit.prototype.booking.exception.ArrivalOtpConflict
+import com.snabbit.prototype.booking.exception.BookingNotFound
+import com.snabbit.prototype.booking.repository.SlotHoldRepository
+import com.snabbit.prototype.booking.repository.VisitArrivalChallengeRepository
+import java.time.Clock
+import java.util.UUID
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+
+@Service
+class ArrivalOtpCommandService(
+    private val holds: SlotHoldRepository,
+    private val challenges: VisitArrivalChallengeRepository,
+    private val properties: BookingProperties,
+    private val events: ApplicationEventPublisher,
+    private val clock: Clock,
+) {
+    @Transactional
+    fun resend(bookingId: UUID, visitIndex: Int, workerId: UUID): ArrivalOtpStatusSnapshot {
+        val hold = holds.findVisitForUpdate(bookingId, visitIndex) ?: throw BookingNotFound(bookingId)
+        if (hold.workerId != workerId) throw ArrivalOtpAccessDenied()
+        if (hold.jobStatus != JobStatus.ARRIVED) {
+            throw ArrivalOtpConflict("ARRIVAL_OTP_NOT_AVAILABLE", "Arrival OTP is available only after a validated arrival")
+        }
+        val challenge = challenges.findBySlotHoldIdForUpdate(hold.id)
+            ?: throw ArrivalOtpConflict("ARRIVAL_OTP_NOT_AVAILABLE", "Arrival OTP challenge is not available")
+        val now = clock.instant()
+        if (challenge.sendCount >= properties.arrivalOtp.maxSends) {
+            throw ArrivalOtpConflict("ARRIVAL_OTP_SEND_LIMIT", "Arrival OTP send limit reached")
+        }
+        val allowedAt = challenge.lastSentAt?.plus(properties.arrivalOtp.resendCooldown)
+        if (allowedAt != null && now.isBefore(allowedAt)) {
+            throw ArrivalOtpConflict(
+                "ARRIVAL_OTP_RESEND_COOLDOWN",
+                "Please wait before requesting another arrival OTP",
+                java.time.Duration.between(now, allowedAt).seconds.coerceAtLeast(1),
+            )
+        }
+        try {
+            challenge.requestResend(now, properties.arrivalOtp.resendCooldown, properties.arrivalOtp.maxSends)
+        } catch (_: IllegalStateException) {
+            throw ArrivalOtpConflict("ARRIVAL_OTP_NOT_AVAILABLE", "Arrival OTP cannot be resent in its current state")
+        }
+        events.publishEvent(ArrivalChallengeCreatedEvent(challenge.id))
+        return ArrivalOtpStatusSnapshot(ArrivalOtpStatus.OTP_SENT.name, "Arrival OTP resend requested")
+    }
+}

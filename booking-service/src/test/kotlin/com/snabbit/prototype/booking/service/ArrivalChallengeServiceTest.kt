@@ -24,6 +24,7 @@ import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 class ArrivalChallengeServiceTest {
     private val repository = mockk<VisitArrivalChallengeRepository>()
@@ -38,7 +39,8 @@ class ArrivalChallengeServiceTest {
         100,
         arrivalOtp = ArrivalOtpProperties(required = true),
     )
-    private val service = ArrivalChallengeService(repository, homeContacts, properties)
+    private val events = mockk<ApplicationEventPublisher>(relaxed = true)
+    private val service = ArrivalChallengeService(repository, homeContacts, properties, events)
     private val now = Instant.parse("2026-10-13T12:00:00Z")
 
     @Test

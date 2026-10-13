@@ -35,6 +35,7 @@ class NotificationEventListener(
     fun consume(rawEvent: String) {
         val event = mapper.readValue(rawEvent, EventEnvelope::class.java)
         when (event.eventType) {
+            "ArrivalOtpSent", "ArrivalOtpDeliveryFailed" -> handleArrivalOtp(event)
             "WorkerOffersCreated" -> templates.forWorkerEvent(event)?.let {
                 fanOutWorkerOffers(event, it)
             }
@@ -54,6 +55,21 @@ class NotificationEventListener(
                 }
             }
             else -> handleCustomer(event)
+        }
+    }
+
+    private fun handleArrivalOtp(event: EventEnvelope) {
+        val context = resolver.arrivalNotificationContext(event)
+        val customerTemplate = if (event.eventType == "ArrivalOtpSent") {
+            templates.arrivalOtpSent(context)
+        } else {
+            templates.arrivalOtpDeliveryFailed()
+        }
+        handler.handle(event, RecipientType.CUSTOMER, context.customerId, customerTemplate)
+        val workerId = event.payload.path("workerId").asText().takeIf(String::isNotBlank)?.let(UUID::fromString)
+            ?: return
+        templates.forWorkerEvent(event)?.let { template ->
+            handleWorker(event, workerId, template, "visits", listOf(event.payload))
         }
     }
 

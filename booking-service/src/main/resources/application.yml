@@ -52,6 +52,15 @@ booking:
     resend-cooldown: ${ARRIVAL_OTP_RESEND_COOLDOWN:PT30S}
     max-sends: ${ARRIVAL_OTP_MAX_SENDS:3}
 
+arrival-otp-provider:
+  provider: ${ARRIVAL_OTP_PROVIDER:stub}
+  base-url: ${ARRIVAL_OTP_BASE_URL:https://verify.twilio.com}
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  api-key-sid: ${TWILIO_API_KEY_SID:}
+  api-key-secret: ${TWILIO_API_KEY_SECRET:}
+  verify-service-sid: ${ARRIVAL_TWILIO_VERIFY_SERVICE_SID:}
+
 cancellation:
   late-window: PT2H
   early-fee-minor: 5000

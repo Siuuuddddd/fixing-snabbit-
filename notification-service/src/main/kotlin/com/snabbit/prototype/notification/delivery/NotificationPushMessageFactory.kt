@@ -13,10 +13,13 @@ class NotificationPushMessageFactory(private val objectMapper: ObjectMapper) {
         val data = linkedMapOf("type" to delivery.eventType)
         copyText(payload, "bookingId", data)
         copyText(payload, "walletId", data)
-        val job = payload.path("jobs").firstOrNull() ?: payload.path("offers").firstOrNull()
+        val job = payload.path("jobs").firstOrNull()
+            ?: payload.path("offers").firstOrNull()
+            ?: payload.path("visits").firstOrNull()
         if (job != null) {
             copyText(job, "jobId", data)
             copyText(job, "visitIndex", data)
+            copyText(job, "otpStatus", data)
             if (delivery.recipientType == RecipientType.WORKER && "jobId" !in data) {
                 copyText(job, "slotHoldId", data, "jobId")
             }

@@ -54,6 +54,20 @@ class NotificationPushMessageFactoryTest {
     }
 
     @Test
+    fun `worker arrival notification contains only identifiers and otp status`() {
+        val result = factory.create(
+            delivery(
+                RecipientType.WORKER,
+                "ArrivalOtpSent",
+                """{"bookingId":"booking-1","visits":[{"visitIndex":2,"otpStatus":"OTP_SENT"}]}""",
+            ),
+        )
+
+        assertEquals("OTP_SENT", result.data["otpStatus"])
+        assertEquals(null, result.data["phone"])
+    }
+
+    @Test
     fun `wallet notification uses the payments channel`() {
         val result = factory.create(
             delivery(

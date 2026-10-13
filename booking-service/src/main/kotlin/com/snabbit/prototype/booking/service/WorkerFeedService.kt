@@ -23,6 +23,7 @@ class WorkerFeedService(
     private val holds: SlotHoldRepository,
     private val bookings: BookingRepository,
     private val services: ServiceOfferingRepository,
+    private val arrivalChallenges: ArrivalChallengeService,
     private val clock: Clock,
 ) {
     @Transactional(readOnly = true)
@@ -77,6 +78,7 @@ class WorkerFeedService(
             val booking = bookingsById[hold.bookingId] ?: return@mapNotNull null
             val service = servicesById[hold.serviceId] ?: return@mapNotNull null
             val revealLocation = !now.isBefore(hold.startsAt.minus(LOCATION_REVEAL_WINDOW))
+            val otpStatus = arrivalChallenges.statusFor(hold.id)
             WorkerJobFeedItem(
                 hold.bookingId,
                 hold.visitIndex,
@@ -93,6 +95,8 @@ class WorkerFeedService(
                 booking.serviceAddressLabel.takeIf { revealLocation },
                 booking.serviceAddressLine.takeIf { revealLocation },
                 booking.serviceAddressPincode.takeIf { revealLocation },
+                otpStatus?.name,
+                otpStatus?.displayText,
             )
         }
     }

@@ -7,6 +7,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(ArrivalOtpConflict::class)
+    fun arrivalOtpConflict(error: ArrivalOtpConflict): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", error.code)
+            error.retryAfterSeconds?.let { seconds -> it.setProperty("retryAfterSeconds", seconds) }
+        }
+
+    @ExceptionHandler(ArrivalOtpAccessDenied::class)
+    fun arrivalOtpAccessDenied(error: ArrivalOtpAccessDenied): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty()).also {
+            it.setProperty("code", "ARRIVAL_OTP_ACCESS_DENIED")
+        }
+
     @ExceptionHandler(ArrivalOtpRequired::class)
     fun arrivalOtpRequired(error: ArrivalOtpRequired): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {

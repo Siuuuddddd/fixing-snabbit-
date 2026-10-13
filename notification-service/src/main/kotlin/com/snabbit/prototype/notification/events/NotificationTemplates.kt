@@ -1,10 +1,27 @@
 package com.snabbit.prototype.notification.events
 
 import com.snabbit.prototype.notification.dto.response.NotificationTemplate
+import com.snabbit.prototype.notification.dto.response.ArrivalNotificationContext
 import org.springframework.stereotype.Component
 
 @Component
 class NotificationTemplates {
+    fun arrivalOtpSent(context: ArrivalNotificationContext): NotificationTemplate = NotificationTemplate(
+        "Worker arrived",
+        if (context.homeContactIsBooker) {
+            "Your worker has arrived. A code was sent to your phone."
+        } else {
+            "Your worker has arrived. A code was sent to ${context.maskedHomeContactPhone}."
+        },
+        true,
+    )
+
+    fun arrivalOtpDeliveryFailed(): NotificationTemplate = NotificationTemplate(
+        "Arrival code delayed",
+        "Your worker has arrived, but the arrival code could not be delivered. Please try again.",
+        true,
+    )
+
     fun forEvent(event: EventEnvelope): NotificationTemplate? = forCustomerEvent(event)
 
     fun forCustomerEvent(event: EventEnvelope): NotificationTemplate? = when (event.eventType) {
@@ -37,6 +54,10 @@ class NotificationTemplates {
     }
 
     fun forWorkerEvent(event: EventEnvelope): NotificationTemplate? = when (event.eventType) {
+        "ArrivalOtpSent" ->
+            NotificationTemplate("Arrival code sent", "Ask the person at home for the arrival code.", true)
+        "ArrivalOtpDeliveryFailed" ->
+            NotificationTemplate("Arrival code not delivered", "Retry sending the arrival code before starting this visit.", true)
         "WorkerOffersCreated" ->
             NotificationTemplate("New job offer", "A new home-service job is waiting for your response.", true)
         "WorkerOfferExpired" ->

@@ -35,7 +35,15 @@ class WorkerFeedServiceTest {
     private val now = Instant.parse("2026-10-02T04:00:00Z")
     private val workerId = UUID.randomUUID()
     private val serviceOffering = ServiceOffering(UUID.randomUUID(), "HOME_CLEANING", "Home cleaning", 20_000, true)
-    private val feed = WorkerFeedService(offers, holds, bookings, services, Clock.fixed(now, ZoneOffset.UTC))
+    private val arrivalChallenges = mockk<ArrivalChallengeService>(relaxed = true)
+    private val feed = WorkerFeedService(
+        offers,
+        holds,
+        bookings,
+        services,
+        arrivalChallenges,
+        Clock.fixed(now, ZoneOffset.UTC),
+    )
 
     @Test
     fun `pending offer contains decision context without customer or location fields`() {

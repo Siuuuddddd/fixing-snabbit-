@@ -1,6 +1,7 @@
 package com.snabbit.prototype.notification.events
 
 import com.snabbit.prototype.notification.dto.response.BookingOwner
+import com.snabbit.prototype.notification.dto.response.ArrivalNotificationContext
 import com.snabbit.prototype.notification.dto.response.WalletOwner
 import com.snabbit.prototype.notification.security.InternalServiceClientFactory
 import java.util.UUID
@@ -32,5 +33,15 @@ class EventRecipientResolver(factory: InternalServiceClientFactory, properties: 
             .body(WalletOwner::class.java)
             ?.customerId
             ?: error("Wallet Service returned an empty owner")
+    }
+
+    fun arrivalNotificationContext(event: EventEnvelope): ArrivalNotificationContext {
+        val bookingId = event.payload.path("bookingId").asText().takeIf(String::isNotBlank)?.let(UUID::fromString)
+            ?: throw IllegalArgumentException("Arrival OTP event has no bookingId")
+        return bookingClient.get()
+            .uri("/internal/v1/bookings/{bookingId}/arrival-notification-context", bookingId)
+            .retrieve()
+            .body(ArrivalNotificationContext::class.java)
+            ?: error("Booking Service returned an empty arrival notification context")
     }
 }

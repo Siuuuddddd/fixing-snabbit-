@@ -22,4 +22,6 @@ data class WorkerJobFeedItem(
     val serviceAddressLabel: String?,
     val serviceAddressLine: String?,
     val serviceAddressPincode: String?,
+    val otpStatus: String? = null,
+    val otpStatusDisplayText: String? = null,
 )

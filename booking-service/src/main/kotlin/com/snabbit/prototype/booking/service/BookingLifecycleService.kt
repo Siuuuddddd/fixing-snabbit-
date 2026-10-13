@@ -16,6 +16,7 @@ import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
 import com.snabbit.prototype.booking.dto.response.BookingOwnershipSnapshot
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
+import com.snabbit.prototype.booking.dto.response.ArrivalNotificationContext
 import com.snabbit.prototype.booking.dto.response.CancellationContext
 import com.snabbit.prototype.booking.dto.response.PaymentQuoteSnapshot
 import com.snabbit.prototype.booking.dto.response.PlusPassBookingContext
@@ -261,6 +262,19 @@ class BookingLifecycleService(
     fun ownership(bookingId: UUID): BookingOwnershipSnapshot {
         val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
         return BookingOwnershipSnapshot(booking.id, booking.customerId)
+    }
+
+    @Transactional(readOnly = true)
+    fun arrivalNotificationContext(bookingId: UUID): ArrivalNotificationContext {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        val phone = booking.homeContactPhoneE164
+            ?: throw InvalidBookingState("Booking home contact is not resolved")
+        return ArrivalNotificationContext(
+            booking.id,
+            booking.customerId,
+            booking.homeContactIsBooker == true,
+            "••••••${phone.takeLast(4)}",
+        )
     }
 
     @Transactional(readOnly = true)
@@ -912,6 +926,7 @@ class BookingLifecycleService(
             requirements = booking.requirements,
             visits = holds.map { hold ->
                 val offer = offersByHold.getValue(hold.id)
+                val otpStatus = arrivalChallenges.statusFor(hold.id)
                 VisitSnapshot(
                     visitIndex = hold.visitIndex,
                     workerId = hold.workerId.takeUnless { hold.assignmentType == AssignmentType.UNASSIGNED },
@@ -934,6 +949,8 @@ class BookingLifecycleService(
                     refundAmountMinor = hold.refundAmountMinor,
                     refundIdempotencyKey = hold.refundIdempotencyKey,
                     cancelledAt = hold.cancelledAt,
+                    otpStatus = otpStatus?.name,
+                    otpStatusDisplayText = otpStatus?.displayText,
                 )
             },
             cancellationType = booking.cancellationType,
