@@ -1,37 +1,48 @@
 package com.snabbit.prototype.booking.config
 
+import com.snabbit.prototype.platform.DevSeedWorkerIds
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Profile
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
-/** Adds only missing rolling capacity for stable prototype workers in local environments. */
+/** Opt-in rolling capacity for the ten stable development workers. */
 @Component
-@Profile("local")
+@Profile("local", "dev")
+@ConditionalOnProperty(prefix = "dev-seed", name = ["enabled"], havingValue = "true")
 class LocalBookingSeedInitializer(
     private val jdbc: JdbcTemplate,
     private val clock: Clock,
-    private val properties: BookingProperties? = null,
+    private val properties: BookingDevSeedProperties,
 ) : ApplicationRunner {
-    override fun run(args: ApplicationArguments) {
-        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Kolkata")))
-        jdbc.update(
-            """
-            INSERT INTO worker_day_capacity (id, worker_id, service_date, available_from, available_until)
-            SELECT gen_random_uuid(), worker_id, ?::date + day_offset, '08:00', '19:00'
-            FROM (VALUES
-                ('10000000-0000-0000-0000-000000000001'::uuid),
-                ('10000000-0000-0000-0000-000000000002'::uuid)
-            ) AS workers(worker_id)
-            CROSS JOIN generate_series(0, ?) AS day_offset
-            ON CONFLICT (worker_id, service_date) DO NOTHING
-            """.trimIndent(),
-            today,
-            (properties?.advanceWindowDays ?: 10) - 1,
-        )
+    private val zone = ZoneId.of("Asia/Kolkata")
+
+    override fun run(args: ApplicationArguments) = refresh()
+
+    @Scheduled(cron = "${'$'}{dev-seed.refresh-cron:0 10 0 * * *}", zone = "Asia/Kolkata")
+    fun dailyRefresh() = refresh()
+
+    fun refresh() {
+        val today = LocalDate.now(clock.withZone(zone))
+        DevSeedWorkerIds.all.forEach { workerId ->
+            repeat(properties.bookingWindowDays + properties.marginDays) { offset ->
+                jdbc.update(
+                    """
+                    INSERT INTO worker_day_capacity (id, worker_id, service_date, available_from, available_until)
+                    VALUES (?, ?, ?, '08:00', '19:00')
+                    ON CONFLICT (worker_id, service_date) DO UPDATE SET
+                        available_from = '08:00', available_until = '19:00'
+                    """.trimIndent(),
+                    UUID.randomUUID(), workerId, today.plusDays(offset.toLong()),
+                )
+            }
+        }
     }
 }

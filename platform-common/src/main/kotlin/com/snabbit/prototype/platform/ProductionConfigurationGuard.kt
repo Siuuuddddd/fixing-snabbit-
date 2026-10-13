@@ -17,6 +17,9 @@ class ProductionConfigurationGuard(
     properties: ProductionGuardProperties,
 ) {
     init {
+        require(!environment.getProperty("dev-seed.enabled", Boolean::class.java, false)) {
+            "Unsafe production configuration: dev-seed.enabled must be false"
+        }
         require(properties.requiredProperties.isNotEmpty()) {
             "deployment.production.required-properties must list this service's production settings"
         }

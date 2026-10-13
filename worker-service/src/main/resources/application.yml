@@ -41,6 +41,15 @@ worker:
     prior-mean: ${WORKER_RANK_PRIOR_MEAN:4.5}
     prior-weight: ${WORKER_RANK_PRIOR_WEIGHT:20}
 
+dev-seed:
+  enabled: ${DEV_SEED_ENABLED:false}
+  booking-window-days: ${DEV_SEED_BOOKING_WINDOW_DAYS:10}
+  margin-days: ${DEV_SEED_MARGIN_DAYS:2}
+  latitude: ${DEV_SEED_LATITUDE:19.076090}
+  longitude: ${DEV_SEED_LONGITUDE:72.877426}
+  service-radius-km: ${DEV_SEED_SERVICE_RADIUS_KM:50.00}
+  worker-login-phone: ${DEV_SEED_WORKER_LOGIN_PHONE:}
+
 auth:
   issuer: https://auth.snabbit.local
   jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}

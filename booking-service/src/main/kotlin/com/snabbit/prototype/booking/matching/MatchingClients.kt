@@ -1,6 +1,7 @@
 package com.snabbit.prototype.booking.matching
 
 import com.snabbit.prototype.booking.config.IntegrationProperties
+import com.snabbit.prototype.booking.config.BookingDevSeedProperties
 import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
 import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
 import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
@@ -15,11 +16,26 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
 
 @Component
-class MatchingClients(factory: InternalServiceClientFactory, properties: IntegrationProperties) {
+class MatchingClients(
+    factory: InternalServiceClientFactory,
+    properties: IntegrationProperties,
+    private val devSeed: BookingDevSeedProperties,
+) {
     private val userClient = factory.create(properties.userServiceUrl)
     private val workerClient = factory.create(properties.workerServiceUrl)
 
+    suspend fun ensureDevSeed(userId: UUID) {
+        if (!devSeed.enabled) return
+        withContext(Dispatchers.IO) {
+            userClient.post()
+                .uri("/internal/v1/users/{userId}/dev-seed/apply", userId)
+                .retrieve()
+                .toBodilessEntity()
+        }
+    }
+
     suspend fun household(userId: UUID): HouseholdSnapshotResponse = withContext(Dispatchers.IO) {
+        ensureDevSeed(userId)
         userClient.get()
             .uri("/internal/v1/users/{userId}/household", userId)
             .retrieve()

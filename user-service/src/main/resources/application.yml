@@ -31,6 +31,13 @@ management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
 
+dev-seed:
+  enabled: ${DEV_SEED_ENABLED:false}
+  demo-customer-phone: ${DEV_SEED_DEMO_CUSTOMER_PHONE:}
+  demo-customer-name: ${DEV_SEED_DEMO_CUSTOMER_NAME:Demo Customer}
+  plus-validity-days: ${DEV_SEED_PLUS_VALIDITY_DAYS:365}
+  plus-extend-when-days-remain: ${DEV_SEED_PLUS_EXTEND_WHEN_DAYS_REMAIN:30}
+
 auth:
   issuer: https://auth.snabbit.local
   jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}

@@ -1,6 +1,7 @@
 package com.snabbit.prototype.user.favourite
 
 import com.snabbit.prototype.user.domain.FavouriteWorker
+import com.snabbit.prototype.user.config.DemoCustomerDevSeed
 import com.snabbit.prototype.user.domain.FavouriteWorkerId
 import com.snabbit.prototype.user.dto.response.FavouriteWorkerSnapshot
 import com.snabbit.prototype.user.dto.response.FavouritesSnapshot
@@ -16,6 +17,7 @@ import java.time.Clock
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.beans.factory.ObjectProvider
 
 @Service
 class FavouriteWorkerService(
@@ -26,15 +28,20 @@ class FavouriteWorkerService(
     private val properties: FavouriteProperties,
     private val clock: Clock,
     private val outbox: UserOutboxWriter,
+    private val devSeed: ObjectProvider<DemoCustomerDevSeed>? = null,
 ) {
     @Transactional(readOnly = true)
     fun list(userId: UUID): FavouritesSnapshot {
+        devSeed?.ifAvailable?.ensureFor(userId)
         requirePlus(userId)
         return snapshot(userId)
     }
 
     @Transactional
-    fun add(userId: UUID, workerId: UUID): FavouritesSnapshot = addInternal(userId, workerId, false)
+    fun add(userId: UUID, workerId: UUID): FavouritesSnapshot {
+        devSeed?.ifAvailable?.ensureFor(userId)
+        return addInternal(userId, workerId, false)
+    }
 
     @Transactional
     fun addSeededDefault(userId: UUID, workerId: UUID): FavouritesSnapshot = addInternal(userId, workerId, true)
@@ -54,6 +61,7 @@ class FavouriteWorkerService(
 
     @Transactional(readOnly = true)
     fun suggestions(userId: UUID): List<PublicWorkerProfileSnapshot> {
+        devSeed?.ifAvailable?.ensureFor(userId)
         requirePlus(userId)
         val existing = favourites.findAllByIdUserIdOrderByPriority(userId).map { it.id.workerId }.toSet()
         val eligible = bookings.completedWorkerIds(userId).filterNot(existing::contains)

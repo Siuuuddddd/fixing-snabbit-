@@ -28,6 +28,11 @@ management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
 
+dev-seed:
+  enabled: ${DEV_SEED_ENABLED:false}
+  booking-window-days: ${DEV_SEED_BOOKING_WINDOW_DAYS:10}
+  margin-days: ${DEV_SEED_MARGIN_DAYS:2}
+
 booking:
   zone-id: Asia/Kolkata
   opening-time: "08:00"

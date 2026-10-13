@@ -9,6 +9,6 @@ class LocalWorkerSeedInitializerTest {
     @Test
     fun `local prototype seed is guarded from production`() {
         val profile = AnnotationUtils.findAnnotation(LocalWorkerSeedInitializer::class.java, Profile::class.java)
-        assertArrayEquals(arrayOf("local"), profile?.value)
+        assertArrayEquals(arrayOf("local", "dev"), profile?.value)
     }
 }

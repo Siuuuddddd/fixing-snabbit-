@@ -7,6 +7,17 @@ import org.springframework.mock.env.MockEnvironment
 
 class ProductionConfigurationGuardTest {
     @Test
+    fun `rejects development seed in production`() {
+        val environment = MockEnvironment()
+            .withProperty("dev-seed.enabled", "true")
+            .withProperty("service-auth.token", "a-secure-secret-injected-by-the-runtime")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(environment, ProductionGuardProperties(listOf("service-auth.token")))
+        }
+    }
+
+    @Test
     fun `accepts explicitly supplied production values`() {
         val environment = MockEnvironment()
             .withProperty("spring.datasource.url", "jdbc:postgresql://database.internal/users")

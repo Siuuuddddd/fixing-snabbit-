@@ -9,6 +9,6 @@ class LocalBookingSeedInitializerTest {
     @Test
     fun `local prototype capacity seed is guarded from production`() {
         val profile = AnnotationUtils.findAnnotation(LocalBookingSeedInitializer::class.java, Profile::class.java)
-        assertArrayEquals(arrayOf("local"), profile?.value)
+        assertArrayEquals(arrayOf("local", "dev"), profile?.value)
     }
 }
