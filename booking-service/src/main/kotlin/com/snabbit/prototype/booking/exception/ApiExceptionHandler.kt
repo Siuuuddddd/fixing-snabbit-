@@ -7,6 +7,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(HomeContactValidationException::class)
+    fun homeContactValidation(error: HomeContactValidationException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {
+            it.setProperty("code", "INVALID_HOME_CONTACT")
+            it.setProperty("fieldErrors", mapOf(error.field to error.message.orEmpty()))
+        }
+
     @ExceptionHandler(PlanValidationException::class)
     fun planValidation(error: PlanValidationException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {
@@ -42,6 +49,12 @@ class ApiExceptionHandler {
     @ExceptionHandler(PaymentServiceUnavailable::class)
     fun paymentUnavailable(error: PaymentServiceUnavailable): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
+
+    @ExceptionHandler(HomeContactResolutionUnavailable::class)
+    fun homeContactUnavailable(error: HomeContactResolutionUnavailable): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty()).also {
+            it.setProperty("code", "HOME_CONTACT_UNAVAILABLE")
+        }
 
     @ExceptionHandler(CustomerAccessDenied::class)
     fun accessDenied(error: CustomerAccessDenied): ProblemDetail =

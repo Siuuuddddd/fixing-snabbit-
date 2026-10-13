@@ -93,6 +93,16 @@ class Booking(
     val fallbackPolicy: FallbackPolicy = FallbackPolicy.AUTO_ASSIGN,
     @Column(name = "maximum_hold_expires_at")
     val maximumHoldExpiresAt: Instant? = null,
+    @Column(name = "home_contact_name", length = 60)
+    var homeContactName: String? = null,
+    @Column(name = "home_contact_phone_e164", length = 13)
+    var homeContactPhoneE164: String? = null,
+    @Column(name = "home_contact_is_booker")
+    var homeContactIsBooker: Boolean? = null,
+    @Column(name = "home_contact_updated_at")
+    var homeContactUpdatedAt: Instant? = null,
+    @Column(name = "home_contact_frozen_at")
+    var homeContactFrozenAt: Instant? = null,
     @Version
     var version: Long = 0,
 ) {
@@ -107,8 +117,24 @@ class Booking(
         paymentReference = reference
         confirmedAt = now
         status = BookingStatus.CONFIRMED
+        if (hasResolvedHomeContact()) homeContactFrozenAt = homeContactFrozenAt ?: now
         updatedAt = now
     }
+
+    fun updateHomeContact(name: String, phoneE164: String, isBooker: Boolean, now: Instant) {
+        check(homeContactFrozenAt == null) { "Home contact is frozen" }
+        check(status == BookingStatus.AWAITING_WORKER || status == BookingStatus.AWAITING_PAYMENT) {
+            "Home contact can only be changed before payment confirmation"
+        }
+        homeContactName = name
+        homeContactPhoneE164 = phoneE164
+        homeContactIsBooker = isBooker
+        homeContactUpdatedAt = now
+        updatedAt = now
+    }
+
+    fun hasResolvedHomeContact(): Boolean =
+        !homeContactName.isNullOrBlank() && homeContactPhoneE164 != null && homeContactIsBooker != null
 
     fun markWorkerUnavailable(now: Instant) {
         if (status == BookingStatus.AWAITING_WORKER) {

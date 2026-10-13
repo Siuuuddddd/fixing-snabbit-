@@ -1,6 +1,7 @@
 package com.snabbit.prototype.user.auth
 
 import com.snabbit.prototype.platform.PhoneVerificationProvider
+import com.snabbit.prototype.platform.IndianPhoneNumber
 import com.snabbit.prototype.platform.VerificationProviderRateLimited
 import com.snabbit.prototype.platform.VerificationStatus
 import com.snabbit.prototype.user.domain.UserProfile
@@ -35,7 +36,7 @@ class OtpAuthenticationService(
     private val clock: Clock,
 ) {
     fun requestOtp(rawPhone: String): OtpRequestResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         val key = phoneKey(phone)
         if (!challenges.acquireRequestCooldown(key, properties.requestCooldown)) throw OtpRateLimited()
         return try {
@@ -50,7 +51,7 @@ class OtpAuthenticationService(
     }
 
     fun verifyOtp(rawPhone: String, code: String): OtpVerificationResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         if (!code.matches(Regex("^[0-9]{6}$"))) throw InvalidOtp()
         val key = phoneKey(phone)
         if (challenges.incrementAttempts(key, properties.otpTtl) > properties.maxAttempts) {
@@ -72,7 +73,7 @@ class OtpAuthenticationService(
 
     @Transactional
     fun register(rawPhone: String, rawName: String, grant: String): OtpVerificationResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         if (registrationGrants.consume(grant) != phone) throw InvalidOtp()
         val name = rawName.trim().also { require(it.length in 2..60) { "Name must contain 2 to 60 characters" } }
         val user = users.findByPhoneE164(phone) ?: users.save(UserProfile(
@@ -96,10 +97,6 @@ class OtpAuthenticationService(
             .claim("roles", listOf("CUSTOMER")).build()
         val header = JwsHeader.with(MacAlgorithm.HS256).build()
         return AccessTokenResult(jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).tokenValue, expiresInSeconds = properties.accessTokenTtl.seconds)
-    }
-
-    private fun normalize(rawPhone: String): String = rawPhone.trim().also {
-        require(it.matches(Regex("^\\+91[6-9][0-9]{9}$"))) { "Enter a valid Indian mobile number" }
     }
 
     private fun phoneKey(phone: String) = HexFormat.of().formatHex(

@@ -12,6 +12,6 @@ class CustomerContactService(private val users: UserProfileRepository) {
     @Transactional(readOnly = true)
     fun contact(userId: UUID): CustomerContactSnapshot {
         val user = users.findById(userId).orElseThrow { UserNotFound(userId) }
-        return CustomerContactSnapshot(user.id, user.phoneE164)
+        return CustomerContactSnapshot(user.id, user.phoneE164, user.displayName)
     }
 }

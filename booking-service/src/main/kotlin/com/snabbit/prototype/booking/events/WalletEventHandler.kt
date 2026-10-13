@@ -1,6 +1,7 @@
 package com.snabbit.prototype.booking.events
 
 import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.service.HomeContactService
 import java.time.Clock
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 class WalletEventHandler(
     private val processedMessages: ProcessedMessageStore,
     private val bookingService: BookingLifecycleService,
+    private val homeContacts: HomeContactService,
     private val properties: EventingProperties,
     private val clock: Clock,
 ) {
@@ -21,6 +23,7 @@ class WalletEventHandler(
             "WalletPaymentSucceeded" -> {
                 val paymentId = event.payload.path("paymentId").asText()
                 require(paymentId.isNotBlank()) { "WalletPaymentSucceeded is missing paymentId" }
+                homeContacts.ensureResolvedForConfirmation(bookingId)
                 bookingService.confirmPayment(bookingId, "wallet:$paymentId")
             }
             "WalletPaymentFailed" -> bookingService.cancel(bookingId)

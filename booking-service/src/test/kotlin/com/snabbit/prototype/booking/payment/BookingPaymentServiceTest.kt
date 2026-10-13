@@ -7,6 +7,7 @@ import com.snabbit.prototype.booking.exception.CustomerAccessDenied
 import com.snabbit.prototype.booking.exception.InvalidBookingState
 import com.snabbit.prototype.booking.exception.PaymentServiceUnavailable
 import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.service.HomeContactService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -21,8 +22,9 @@ import org.junit.jupiter.api.Test
 class BookingPaymentServiceTest {
     private val bookings = mockk<BookingLifecycleService>()
     private val client = mockk<BookingPaymentClient>()
+    private val homeContacts = mockk<HomeContactService>(relaxed = true)
     private val now = Instant.parse("2026-10-02T04:00:00Z")
-    private val service = BookingPaymentService(bookings, client, Clock.fixed(now, ZoneOffset.UTC))
+    private val service = BookingPaymentService(bookings, client, homeContacts, Clock.fixed(now, ZoneOffset.UTC))
 
     @Test
     fun `starts wallet payment only for an active authoritative quote`() {
@@ -36,6 +38,7 @@ class BookingPaymentServiceTest {
         val result = service.start(command)
 
         assertEquals(expected, result)
+        verify(exactly = 1) { homeContacts.ensureResolved(command.bookingId, command.authenticatedCustomerId) }
         verify(exactly = 1) { client.start(command) }
     }
 

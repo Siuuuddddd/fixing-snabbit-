@@ -4,6 +4,7 @@ import com.snabbit.prototype.platform.PhoneVerificationProvider
 import com.snabbit.prototype.platform.VerificationStatus
 import com.snabbit.prototype.user.auth.AuthProperties
 import com.snabbit.prototype.user.auth.OtpChallengeStore
+import com.snabbit.prototype.platform.IndianPhoneNumber
 import com.snabbit.prototype.user.domain.enums.StaffStatus
 import com.snabbit.prototype.user.dto.response.AccessTokenResult
 import com.snabbit.prototype.user.dto.response.OtpRequestResult
@@ -31,7 +32,7 @@ class StaffAuthenticationService(
     private val clock: Clock,
 ) {
     fun requestOtp(rawPhone: String): OtpRequestResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         val key = challengeKey(phone)
         if (!challenges.acquireRequestCooldown(key, properties.requestCooldown)) throw OtpRateLimited()
         return try {
@@ -42,7 +43,7 @@ class StaffAuthenticationService(
     }
 
     fun verifyOtp(rawPhone: String, code: String): AccessTokenResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         if (!code.matches(Regex("^[0-9]{6}$"))) throw InvalidOtp()
         val key = challengeKey(phone)
         if (challenges.incrementAttempts(key, properties.otpTtl) > properties.maxAttempts ||
@@ -55,10 +56,6 @@ class StaffAuthenticationService(
             .claim("roles", listOf(account.role.name)).build()
         val header = JwsHeader.with(MacAlgorithm.HS256).build()
         return AccessTokenResult(jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).tokenValue, expiresInSeconds = properties.accessTokenTtl.seconds)
-    }
-
-    private fun normalize(rawPhone: String): String = rawPhone.trim().also {
-        require(it.matches(Regex("^\\+91[6-9][0-9]{9}$"))) { "Enter a valid Indian mobile number" }
     }
 
     private fun challengeKey(phone: String) = "staff:" + HexFormat.of().formatHex(

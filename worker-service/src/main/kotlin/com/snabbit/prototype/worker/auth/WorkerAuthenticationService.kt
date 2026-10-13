@@ -1,6 +1,7 @@
 package com.snabbit.prototype.worker.auth
 
 import com.snabbit.prototype.platform.PhoneVerificationProvider
+import com.snabbit.prototype.platform.IndianPhoneNumber
 import com.snabbit.prototype.platform.VerificationProviderRateLimited
 import com.snabbit.prototype.platform.VerificationStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
@@ -31,7 +32,7 @@ class WorkerAuthenticationService(
     private val clock: Clock,
 ) {
     fun requestOtp(rawPhone: String): WorkerOtpRequestResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         val key = phoneKey(phone)
         if (!store.acquireCooldown(key, properties.requestCooldown)) throw WorkerOtpRateLimited()
         return try {
@@ -45,7 +46,7 @@ class WorkerAuthenticationService(
     }
 
     fun verifyOtp(rawPhone: String, code: String): WorkerAccessTokenResult {
-        val phone = normalize(rawPhone)
+        val phone = IndianPhoneNumber.normalize(rawPhone)
         if (!code.matches(Regex("^[0-9]{6}$"))) throw InvalidWorkerOtp()
         val key = phoneKey(phone)
         if (store.incrementAttempts(key, properties.otpTtl) > properties.maxAttempts) {
@@ -64,10 +65,6 @@ class WorkerAuthenticationService(
             jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).tokenValue,
             expiresInSeconds = properties.accessTokenTtl.seconds,
         )
-    }
-
-    private fun normalize(rawPhone: String): String = rawPhone.trim().also {
-        require(it.matches(Regex("^\\+91[6-9][0-9]{9}$"))) { "Enter a valid Indian mobile number" }
     }
 
     private fun phoneKey(phone: String) = HexFormat.of().formatHex(
