@@ -51,6 +51,9 @@ booking:
     max-attempts: ${ARRIVAL_OTP_MAX_ATTEMPTS:5}
     resend-cooldown: ${ARRIVAL_OTP_RESEND_COOLDOWN:PT30S}
     max-sends: ${ARRIVAL_OTP_MAX_SENDS:3}
+    verification-rate-window: ${ARRIVAL_OTP_VERIFICATION_RATE_WINDOW:PT1M}
+    max-verification-requests-per-visit: ${ARRIVAL_OTP_MAX_VERIFY_PER_VISIT:10}
+    max-verification-requests-per-worker: ${ARRIVAL_OTP_MAX_VERIFY_PER_WORKER:20}
 
 arrival-otp-provider:
   provider: ${ARRIVAL_OTP_PROVIDER:stub}

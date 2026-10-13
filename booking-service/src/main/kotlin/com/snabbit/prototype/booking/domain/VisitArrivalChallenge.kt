@@ -91,6 +91,31 @@ class VisitArrivalChallenge(
         updatedAt = now
     }
 
+    fun expire(now: Instant) {
+        status = ArrivalChallengeStatus.EXPIRED
+        updatedAt = now
+    }
+
+    fun recordWrongAttempt(now: Instant, maxAttempts: Int): Boolean {
+        check(status == ArrivalChallengeStatus.SENT) { "Arrival OTP is not awaiting verification" }
+        attemptCount += 1
+        status = if (attemptCount >= maxAttempts) ArrivalChallengeStatus.LOCKED else ArrivalChallengeStatus.SENT
+        updatedAt = now
+        return status == ArrivalChallengeStatus.LOCKED
+    }
+
+    fun lock(now: Instant) {
+        status = ArrivalChallengeStatus.LOCKED
+        updatedAt = now
+    }
+
+    fun verify(now: Instant) {
+        check(status == ArrivalChallengeStatus.SENT) { "Arrival OTP is not awaiting verification" }
+        status = ArrivalChallengeStatus.VERIFIED
+        verifiedAt = now
+        updatedAt = now
+    }
+
     fun cancel(now: Instant) {
         if (status != ArrivalChallengeStatus.CANCELLED) {
             status = ArrivalChallengeStatus.CANCELLED

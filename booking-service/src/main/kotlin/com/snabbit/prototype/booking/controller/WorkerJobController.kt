@@ -2,6 +2,7 @@ package com.snabbit.prototype.booking.controller
 
 import com.snabbit.prototype.booking.dto.request.WorkerArrivalRequest
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
+import com.snabbit.prototype.booking.dto.request.VerifyArrivalOtpRequest
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
 import com.snabbit.prototype.booking.dto.response.ArrivalOtpStatusSnapshot
 import com.snabbit.prototype.booking.dto.response.WorkerJobFeedItem
@@ -69,6 +70,14 @@ class WorkerJobController(
         @PathVariable visitIndex: Int,
         @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
     ): ArrivalOtpStatusSnapshot = arrivalOtp.resend(bookingId, visitIndex, workerId)
+
+    @PostMapping("/{bookingId}/visits/{visitIndex}/verify-arrival-otp")
+    fun verifyArrivalOtp(
+        @PathVariable bookingId: UUID,
+        @PathVariable visitIndex: Int,
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+        @Valid @RequestBody request: VerifyArrivalOtpRequest,
+    ): ArrivalOtpStatusSnapshot = arrivalOtp.verifyAndStart(bookingId, visitIndex, workerId, request.code)
 
     @PostMapping("/{bookingId}/visits/{visitIndex}/start")
     fun start(
