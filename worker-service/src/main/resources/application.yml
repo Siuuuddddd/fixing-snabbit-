@@ -36,6 +36,10 @@ worker:
     standard-surcharge-minor: ${WORKER_STANDARD_SURCHARGE_MINOR:0}
     veteran-surcharge-minor: ${WORKER_VETERAN_SURCHARGE_MINOR:3000}
     expert-surcharge-minor: ${WORKER_EXPERT_SURCHARGE_MINOR:5000}
+  ratings:
+    update-window: ${WORKER_RATING_UPDATE_WINDOW:PT24H}
+    prior-mean: ${WORKER_RANK_PRIOR_MEAN:4.5}
+    prior-weight: ${WORKER_RANK_PRIOR_WEIGHT:20}
 
 auth:
   issuer: https://auth.snabbit.local

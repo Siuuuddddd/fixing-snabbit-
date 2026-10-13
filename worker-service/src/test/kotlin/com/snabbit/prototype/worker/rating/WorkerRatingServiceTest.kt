@@ -17,6 +17,7 @@ import io.mockk.verify
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
+import java.time.Duration
 import java.time.ZoneOffset
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -26,9 +27,11 @@ import org.junit.jupiter.api.Test
 class WorkerRatingServiceTest {
     private val workers = mockk<WorkerProfileRepository>()
     private val ratings = mockk<WorkerRatingRepository>()
+    private val outbox = mockk<WorkerOutboxWriter>(relaxed = true)
     private val now = Instant.parse("2026-10-02T04:00:00Z")
     private val transactions = WorkerRatingTransaction(
-        workers, ratings, Clock.fixed(now, ZoneOffset.UTC), mockk<WorkerOutboxWriter>(relaxed = true),
+        workers, ratings, Clock.fixed(now, ZoneOffset.UTC), outbox,
+        WorkerRatingProperties(updateWindow = Duration.ofHours(24)),
     )
 
     @Test
@@ -49,6 +52,45 @@ class WorkerRatingServiceTest {
         assertEquals(52, worker.ratingSum)
         assertEquals(11, worker.ratingCount)
         verify(exactly = 1) { ratings.save(any()) }
+        verify(exactly = 1) {
+            outbox.append(worker.id, "WorkerRated", match { "stars" !in it.keys && "ratingId" in it.keys }, now)
+        }
+    }
+
+    @Test
+    fun `different rating updates aggregate inside update window`() {
+        val worker = worker()
+        val existing = WorkerRating(
+            UUID.randomUUID(), UUID.randomUUID(), 0, worker.id, UUID.randomUUID(), 3, null,
+            now.minusSeconds(3_600), now.minusSeconds(3_600),
+        )
+        every { workers.findForUpdate(worker.id) } returns worker
+        every { ratings.findByBookingIdAndVisitIndex(existing.bookingId, 0) } returns existing
+
+        val updated = transactions.record(existing.bookingId, 0, worker.id, existing.customerId, 5, "better")
+
+        assertEquals(49, worker.ratingSum)
+        assertEquals(10, worker.ratingCount)
+        assertEquals(5, updated.stars)
+        assertEquals("better", updated.comment)
+    }
+
+    @Test
+    fun `different rating is rejected after update window`() {
+        val worker = worker()
+        val existing = WorkerRating(
+            UUID.randomUUID(), UUID.randomUUID(), 0, worker.id, UUID.randomUUID(), 3, null,
+            now.minusSeconds(25 * 3_600), now.minusSeconds(25 * 3_600),
+        )
+        every { workers.findForUpdate(worker.id) } returns worker
+        every { ratings.findByBookingIdAndVisitIndex(existing.bookingId, 0) } returns existing
+
+        val error = assertThrows(WorkerRatingRejected::class.java) {
+            transactions.record(existing.bookingId, 0, worker.id, existing.customerId, 5, null)
+        }
+
+        assertEquals("RATING_UPDATE_WINDOW_EXPIRED", error.errorCode)
+        assertEquals(47, worker.ratingSum)
     }
 
     @Test

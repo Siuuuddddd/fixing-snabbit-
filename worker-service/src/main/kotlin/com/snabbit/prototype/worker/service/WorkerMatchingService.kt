@@ -11,6 +11,7 @@ import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
+import com.snabbit.prototype.worker.rating.WorkerRankingPolicy
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.ZoneId
@@ -28,6 +29,7 @@ class WorkerMatchingService(
     private val availabilityRepository: WorkerAvailabilityRepository,
     private val compatibilityRepository: WorkerCompatibilityRepository,
     private val tierPolicy: WorkerTierPolicy,
+    private val rankingPolicy: WorkerRankingPolicy,
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
 
@@ -70,6 +72,7 @@ class WorkerMatchingService(
                     favourite = workerId in favouriteIds,
                     priceMinor = basePrice + tierPolicy.surchargeMinor(tier),
                     tierSurchargeMinor = tierPolicy.surchargeMinor(tier),
+                    rankScore = rankingPolicy.score(profile),
                 ),
                 score = score(profile, distance, workerId in favouriteIds, command.plusActive),
             )
@@ -92,12 +95,18 @@ class WorkerMatchingService(
                 else {
                     val tier = profiles[favouriteId]?.let(tierPolicy::currentTier)?.name
                     val sameTier = tierEligible.filter { it.tier == tier }
-                        .sortedBy(WorkerMatch::distanceKm)
+                        .sortedWith(
+                            compareBy<WorkerMatch>(WorkerMatch::distanceKm)
+                                .thenByDescending(WorkerMatch::rankScore),
+                        )
                         .map { it.copy(assignmentType = "FALLBACK_SAME_TIER") }
                     if (sameTier.isNotEmpty()) sameTier
                     else if (command.plusActive) {
                         tierEligible.filter { it.tier == "VETERAN" }
-                            .sortedBy(WorkerMatch::distanceKm)
+                            .sortedWith(
+                                compareBy<WorkerMatch>(WorkerMatch::distanceKm)
+                                    .thenByDescending(WorkerMatch::rankScore),
+                            )
                             .map { it.copy(assignmentType = "FALLBACK_PLUS_UPGRADE") }
                     } else emptyList()
                 }
@@ -143,7 +152,7 @@ class WorkerMatchingService(
             favourite -> 10_000L
             else -> 0L
         }
-        val ratingScore = profile.averageRating().multiply(BigDecimal(1_000)).toLong()
+        val ratingScore = rankingPolicy.score(profile).multiply(BigDecimal(1_000)).toLong()
         val distanceScore = ((50.0 - distance.coerceAtMost(50.0)) * 10).toLong()
         return favouriteScore + ratingScore + distanceScore
     }

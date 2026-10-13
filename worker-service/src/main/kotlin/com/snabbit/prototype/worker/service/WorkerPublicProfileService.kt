@@ -4,6 +4,7 @@ import com.snabbit.prototype.worker.domain.enums.WorkerStatus
 import com.snabbit.prototype.worker.dto.response.PublicWorkerProfile
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerRatingRepository
+import com.snabbit.prototype.worker.rating.WorkerRankingPolicy
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,11 +15,14 @@ class WorkerPublicProfileService(
     private val ratings: WorkerRatingRepository,
     private val tiers: WorkerTierPolicy,
     private val bookings: BookingCompletionClient,
+    private val ranking: WorkerRankingPolicy,
 ) {
     @Transactional(readOnly = true)
     fun profile(workerId: UUID, customerId: UUID? = null): PublicWorkerProfile? {
         val worker = workers.findById(workerId).orElse(null)?.takeIf { it.status == WorkerStatus.ACTIVE } ?: return null
-        val customerRating = customerId?.let { ratings.findFirstByCustomerIdAndWorkerId(it, workerId)?.stars }
+        val customerRating = customerId?.let {
+            ratings.findFirstByCustomerIdAndWorkerIdOrderByUpdatedAtDesc(it, workerId)?.stars
+        }
         val average = worker.averageRating()
         return PublicWorkerProfile(
             workerId = worker.id,
@@ -28,7 +32,7 @@ class WorkerPublicProfileService(
             ratingCount = worker.ratingCount,
             completedJobs = bookings.completedCount(worker.id),
             tenureMonths = tiers.completedMonths(worker),
-            rankScore = average,
+            rankScore = ranking.score(worker),
             customerRating = customerRating,
         )
     }

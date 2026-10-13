@@ -13,4 +13,5 @@ data class WorkerMatch(
     val priceMinor: Long,
     val assignmentType: String = "PREFERRED",
     val tierSurchargeMinor: Long = 0,
+    val rankScore: BigDecimal = averageRating,
 )

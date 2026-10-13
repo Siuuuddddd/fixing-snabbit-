@@ -21,8 +21,10 @@ class WorkerRating(
     @Column(name = "customer_id", nullable = false)
     val customerId: UUID,
     @Column(nullable = false)
-    val stars: Int,
-    val comment: String?,
+    var stars: Int,
+    var comment: String?,
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant,
+    @Column(name = "updated_at", nullable = false)
+    var updatedAt: Instant = createdAt,
 )

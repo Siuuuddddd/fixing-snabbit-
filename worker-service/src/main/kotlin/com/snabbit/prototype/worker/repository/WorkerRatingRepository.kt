@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface WorkerRatingRepository : JpaRepository<WorkerRating, UUID> {
     fun findByBookingIdAndVisitIndex(bookingId: UUID, visitIndex: Int): WorkerRating?
-    fun findFirstByCustomerIdAndWorkerId(customerId: UUID, workerId: UUID): WorkerRating?
+    fun findFirstByCustomerIdAndWorkerIdOrderByUpdatedAtDesc(customerId: UUID, workerId: UUID): WorkerRating?
 }

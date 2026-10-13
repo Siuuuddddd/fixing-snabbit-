@@ -13,6 +13,7 @@ import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
+import com.snabbit.prototype.worker.rating.WorkerRankingPolicy
 import io.mockk.every
 import io.mockk.mockk
 import java.math.BigDecimal
@@ -38,7 +39,10 @@ class WorkerMatchingServiceTest {
             }
         }
     }
-    private val service = WorkerMatchingService(profiles, skills, availability, compatibility, tierPolicy)
+    private val ranking = mockk<WorkerRankingPolicy> {
+        every { score(any()) } answers { (invocation.args[0] as WorkerProfile).averageRating() }
+    }
+    private val service = WorkerMatchingService(profiles, skills, availability, compatibility, tierPolicy, ranking)
     private val start = Instant.parse("2026-10-03T04:30:00Z")
 
     @Test

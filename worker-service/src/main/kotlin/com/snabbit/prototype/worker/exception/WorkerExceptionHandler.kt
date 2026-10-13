@@ -47,5 +47,7 @@ class WorkerExceptionHandler {
 
     @ExceptionHandler(WorkerRatingRejected::class)
     fun ratingRejected(error: WorkerRatingRejected): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty())
+        ProblemDetail.forStatusAndDetail(error.status, error.message.orEmpty()).also {
+            it.setProperty("errorCode", error.errorCode)
+        }
 }
