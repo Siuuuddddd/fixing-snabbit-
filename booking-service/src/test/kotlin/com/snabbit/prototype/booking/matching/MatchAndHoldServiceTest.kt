@@ -152,7 +152,9 @@ class MatchAndHoldServiceTest {
         )
         coEvery { clients.household(customerId) } returns household
         coEvery { clients.address(customerId, addressId) } returns address(customerId, addressId)
-        coEvery { clients.matches(capture(matchRequest)) } returns listOf(match(workerId, 39_000))
+        coEvery { clients.matches(capture(matchRequest)) } returns listOf(
+            match(workerId, 39_000).copy(tier = "VETERAN", tierSurchargeMinor = 3_000),
+        )
         coEvery { clients.reservePass(customerId, any()) } answers {
             val request = secondArg<ReservePlusPassRequest>()
             PlusPassReservationResponse(null, request.bookingId, request.grossTotalMinor, 0, request.grossTotalMinor, null)
@@ -185,6 +187,8 @@ class MatchAndHoldServiceTest {
         )
 
         assertEquals(39_000, created.captured.quotedTotalMinor)
+        assertEquals("VETERAN", created.captured.visits.single().assignedWorkerTier)
+        assertEquals(3_000, created.captured.visits.single().tierSurchargeMinor)
         assertEquals("HOUSE_CLEANING", matchRequest.captured.serviceCode)
         assertEquals(18_000, matchRequest.captured.basePricePerHourMinor)
         assertEquals(listOf("DUST"), matchRequest.captured.allergies)

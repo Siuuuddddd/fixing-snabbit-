@@ -160,7 +160,8 @@ class BookingLifecycleService(
                 quotedPriceMinor = visit.quotedPriceMinor,
                 assignmentType = visit.assignmentType,
                 preferredWorkerId = visit.preferredWorkerId,
-                        assignedWorkerTier = visit.assignedWorkerTier,
+                assignedWorkerTier = visit.assignedWorkerTier,
+                tierSurchargeMinor = visit.tierSurchargeMinor,
                 requirementsSnapshot = command.requirements,
             )
         }
@@ -951,6 +952,8 @@ class BookingLifecycleService(
                     cancelledAt = hold.cancelledAt,
                     otpStatus = otpStatus?.name,
                     otpStatusDisplayText = otpStatus?.displayText,
+                    assignedWorkerTier = hold.assignedWorkerTier,
+                    tierSurchargeMinor = hold.tierSurchargeMinor,
                 )
             },
             cancellationType = booking.cancellationType,

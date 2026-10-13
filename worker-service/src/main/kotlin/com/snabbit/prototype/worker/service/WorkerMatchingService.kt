@@ -68,7 +68,8 @@ class WorkerMatchingService(
                     averageRating = profile.averageRating(),
                     distanceKm = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP),
                     favourite = workerId in favouriteIds,
-                    priceMinor = basePrice + tier.surchargeMinor,
+                    priceMinor = basePrice + tierPolicy.surchargeMinor(tier),
+                    tierSurchargeMinor = tierPolicy.surchargeMinor(tier),
                 ),
                 score = score(profile, distance, workerId in favouriteIds, command.plusActive),
             )

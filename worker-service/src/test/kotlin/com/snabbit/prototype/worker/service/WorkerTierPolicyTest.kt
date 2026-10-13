@@ -49,6 +49,13 @@ class WorkerTierPolicyTest {
         )
     }
 
+    @Test
+    fun `configured surcharge is returned for every tier`() {
+        assertEquals(0, policy.surchargeMinor(WorkerTier.STANDARD))
+        assertEquals(3_000, policy.surchargeMinor(WorkerTier.VETERAN))
+        assertEquals(5_000, policy.surchargeMinor(WorkerTier.EXPERT))
+    }
+
     private fun instant(localDate: String): Instant =
         java.time.LocalDate.parse(localDate).atStartOfDay(zone).toInstant()
 }

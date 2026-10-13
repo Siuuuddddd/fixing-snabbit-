@@ -15,6 +15,12 @@ class WorkerTierPolicy(
 ) {
     fun currentTier(worker: WorkerProfile): WorkerTier = tierAt(worker.joinedAt, clock.instant())
 
+    fun surchargeMinor(tier: WorkerTier): Long = when (tier) {
+        WorkerTier.STANDARD -> properties.standardSurchargeMinor
+        WorkerTier.VETERAN -> properties.veteranSurchargeMinor
+        WorkerTier.EXPERT -> properties.expertSurchargeMinor
+    }
+
     fun tierAt(joinedAt: Instant, at: Instant): WorkerTier {
         val joinedDate = joinedAt.atZone(properties.zoneId).toLocalDate()
         val currentDate = at.atZone(properties.zoneId).toLocalDate()

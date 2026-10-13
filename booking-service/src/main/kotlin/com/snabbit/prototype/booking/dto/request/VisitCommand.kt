@@ -13,4 +13,5 @@ data class VisitCommand(
     val assignmentType: AssignmentType = AssignmentType.PREFERRED,
     val preferredWorkerId: UUID? = null,
     val assignedWorkerTier: String = "STANDARD",
+    val tierSurchargeMinor: Long = 0,
 )

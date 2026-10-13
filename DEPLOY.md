@@ -42,6 +42,7 @@ SERVICE_AUTH_TOKEN         # long random value shared only by the services
 USER_SERVICE_URL, BOOKING_SERVICE_URL, WORKER_SERVICE_URL
 WALLET_SERVICE_URL, SUPPORT_SERVICE_URL, NOTIFICATION_SERVICE_URL
 WORKER_VETERAN_MONTHS, WORKER_EXPERT_MONTHS # tenure-tier thresholds; defaults 6 and 9
+WORKER_STANDARD_SURCHARGE_MINOR, WORKER_VETERAN_SURCHARGE_MINOR, WORKER_EXPERT_SURCHARGE_MINOR
 ```
 
 Booking Service uses a separate arrival-verification adapter and state machine even when it shares the same Twilio account or Verify service. Production startup requires `ARRIVAL_OTP_PROVIDER=twilio-verify`, API-key credentials, and a Verify service SID; the development `stub` adapter is rejected by the production guard. Never log OTP codes, provider secrets, full home-contact numbers, or Twilio response bodies.

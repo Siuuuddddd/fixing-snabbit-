@@ -33,6 +33,9 @@ worker:
     veteran-months: ${WORKER_VETERAN_MONTHS:6}
     expert-months: ${WORKER_EXPERT_MONTHS:9}
     zone-id: Asia/Kolkata
+    standard-surcharge-minor: ${WORKER_STANDARD_SURCHARGE_MINOR:0}
+    veteran-surcharge-minor: ${WORKER_VETERAN_SURCHARGE_MINOR:3000}
+    expert-surcharge-minor: ${WORKER_EXPERT_SURCHARGE_MINOR:5000}
 
 auth:
   issuer: https://auth.snabbit.local

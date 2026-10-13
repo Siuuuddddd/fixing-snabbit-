@@ -30,6 +30,13 @@ class WorkerMatchingServiceTest {
     private val compatibility = mockk<WorkerCompatibilityRepository>()
     private val tierPolicy = mockk<WorkerTierPolicy> {
         every { currentTier(any()) } answers { (invocation.args[0] as WorkerProfile).tier }
+        every { surchargeMinor(any()) } answers {
+            when (invocation.args[0] as WorkerTier) {
+                WorkerTier.STANDARD -> 0
+                WorkerTier.VETERAN -> 3_000
+                WorkerTier.EXPERT -> 5_000
+            }
+        }
     }
     private val service = WorkerMatchingService(profiles, skills, availability, compatibility, tierPolicy)
     private val start = Instant.parse("2026-10-03T04:30:00Z")

@@ -135,6 +135,10 @@ class MatchAndHoldService(
                         assignmentType = AssignmentType.valueOf(match.assignmentType),
                         preferredWorkerId = command.favouriteWorkerId,
                         assignedWorkerTier = match.tier,
+                        tierSurchargeMinor = if (
+                            household.plusActive && properties.plusVeteranUpgradeFree &&
+                            match.assignmentType == AssignmentType.FALLBACK_PLUS_UPGRADE.name
+                        ) 0 else match.tierSurchargeMinor,
                     )
                 },
                 requirements = BookingRequirements(
@@ -224,7 +228,8 @@ class MatchAndHoldService(
     ): Long {
         val original = match.priceMinor
         val basePrice = basePricePerHourMinor * duration.toHours()
-        val freeVeteran = household.plusActive && properties.plusVeteranUpgradeFree && match.tier == "VETERAN"
+        val freeVeteran = household.plusActive && properties.plusVeteranUpgradeFree &&
+            match.assignmentType == AssignmentType.FALLBACK_PLUS_UPGRADE.name
         return if (freeVeteran) minOf(basePrice, original) else original
     }
 

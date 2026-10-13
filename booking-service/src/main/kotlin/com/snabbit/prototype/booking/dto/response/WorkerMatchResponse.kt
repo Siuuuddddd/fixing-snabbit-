@@ -12,4 +12,5 @@ data class WorkerMatchResponse(
     val favourite: Boolean,
     val priceMinor: Long,
     val assignmentType: String = "PREFERRED",
+    val tierSurchargeMinor: Long = 0,
 )

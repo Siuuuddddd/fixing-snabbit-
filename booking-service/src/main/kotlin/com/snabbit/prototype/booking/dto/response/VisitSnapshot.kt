@@ -29,4 +29,6 @@ data class VisitSnapshot(
     val cancelledAt: Instant? = null,
     val otpStatus: String? = null,
     val otpStatusDisplayText: String? = null,
+    val assignedWorkerTier: String = "STANDARD",
+    val tierSurchargeMinor: Long = 0,
 )

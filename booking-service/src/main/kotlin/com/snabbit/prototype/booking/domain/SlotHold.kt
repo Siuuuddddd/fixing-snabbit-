@@ -70,6 +70,8 @@ class SlotHold(
     val preferredWorkerId: UUID? = null,
     @Column(name = "assigned_worker_tier", nullable = false)
     var assignedWorkerTier: String = "STANDARD",
+    @Column(name = "tier_surcharge_minor", nullable = false)
+    val tierSurchargeMinor: Long = 0,
     @Enumerated(EnumType.STRING)
     @Column(name = "refund_status", nullable = false)
     var refundStatus: VisitRefundStatus = VisitRefundStatus.NONE,
