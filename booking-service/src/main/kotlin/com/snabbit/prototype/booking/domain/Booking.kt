@@ -136,6 +136,17 @@ class Booking(
     fun hasResolvedHomeContact(): Boolean =
         !homeContactName.isNullOrBlank() && homeContactPhoneE164 != null && homeContactIsBooker != null
 
+    fun backfillFrozenHomeContact(name: String, phoneE164: String, now: Instant) {
+        check(status == BookingStatus.CONFIRMED) { "Only a confirmed legacy booking can be backfilled" }
+        check(!hasResolvedHomeContact()) { "Home contact is already resolved" }
+        homeContactName = name
+        homeContactPhoneE164 = phoneE164
+        homeContactIsBooker = true
+        homeContactUpdatedAt = now
+        homeContactFrozenAt = now
+        updatedAt = now
+    }
+
     fun markWorkerUnavailable(now: Instant) {
         if (status == BookingStatus.AWAITING_WORKER) {
             status = BookingStatus.WORKER_UNAVAILABLE

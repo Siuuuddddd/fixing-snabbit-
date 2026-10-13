@@ -17,6 +17,7 @@ import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
 import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
+import com.snabbit.prototype.booking.exception.ArrivalOtpRequired
 import com.snabbit.prototype.booking.exception.CustomerAccessDenied
 import com.snabbit.prototype.booking.exception.InvalidBookingState
 import com.snabbit.prototype.booking.exception.SlotUnavailable
@@ -48,6 +49,7 @@ class BookingLifecycleServiceTest {
     private val holdRepository = mockk<SlotHoldRepository>()
     private val offerRepository = mockk<WorkerOfferRepository>()
     private val outboxRepository = mockk<OutboxEventRepository>()
+    private val arrivalChallenges = mockk<ArrivalChallengeService>(relaxed = true)
     private val clock = Clock.fixed(Instant.parse("2026-10-02T04:00:00Z"), ZoneOffset.UTC)
     private val properties = BookingProperties(
         ZoneId.of("Asia/Kolkata"),
@@ -65,6 +67,7 @@ class BookingLifecycleServiceTest {
         offerRepository,
         BookingWindowPolicy(properties, clock),
         OutboxWriter(outboxRepository, ObjectMapper().findAndRegisterModules()),
+        arrivalChallenges,
         properties,
         clock,
     )
@@ -394,6 +397,33 @@ class BookingLifecycleServiceTest {
         assertEquals(clock.instant(), hold.startedAt)
         assertEquals(clock.instant(), hold.completedAt)
         verify(exactly = 4) { outboxRepository.save(any()) }
+        verify(exactly = 1) { arrivalChallenges.createForValidatedArrival(booking, hold, clock.instant()) }
+    }
+
+    @Test
+    fun `start endpoint is gated when arrival OTP is required`() {
+        val booking = booking(UUID.randomUUID()).apply {
+            awaitPayment(clock.instant())
+            updateHomeContact("Booker", "+919876543210", true, clock.instant())
+            confirm("pay_arrival_otp", clock.instant())
+        }
+        val workerId = UUID.randomUUID()
+        val hold = hold(booking.id, workerId).apply {
+            confirm()
+            arrive(BigDecimal("19.076090"), BigDecimal("72.877426"), BigDecimal.TEN, clock.instant())
+        }
+        every { bookingRepository.findForUpdate(booking.id) } returns booking
+        every { holdRepository.findVisitForUpdate(booking.id, 0) } returns hold
+        every {
+            arrivalChallenges.requireVerified(booking.id, 0, hold)
+        } throws ArrivalOtpRequired(booking.id, 0)
+
+        assertThrows(ArrivalOtpRequired::class.java) {
+            service.workerStart(booking.id, 0, workerId)
+        }
+
+        assertEquals(JobStatus.ARRIVED, hold.jobStatus)
+        verify(exactly = 0) { outboxRepository.save(any()) }
     }
 
     @Test
@@ -418,6 +448,7 @@ class BookingLifecycleServiceTest {
 
         assertEquals(JobStatus.ASSIGNED, hold.jobStatus)
         verify(exactly = 0) { outboxRepository.save(any()) }
+        verify(exactly = 0) { arrivalChallenges.createForValidatedArrival(any(), any(), any()) }
     }
 
     @Test

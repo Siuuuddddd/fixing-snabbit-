@@ -56,6 +56,7 @@ class BookingLifecycleService(
     private val offerRepository: WorkerOfferRepository,
     private val bookingWindowPolicy: BookingWindowPolicy,
     private val outboxWriter: OutboxWriter,
+    private val arrivalChallenges: ArrivalChallengeService,
     private val properties: BookingProperties,
     private val clock: Clock,
 ) {
@@ -317,7 +318,10 @@ class BookingLifecycleService(
         val reason = rawReason?.trim()?.takeIf(String::isNotBlank)?.also {
             if (it.length > 240) throw BookingRuleViolation("Cancellation reason cannot exceed 240 characters")
         }
-        holds.forEach(SlotHold::cancelAssignment)
+        holds.forEach { hold ->
+            arrivalChallenges.cancelForVisit(hold, now)
+            hold.cancelAssignment()
+        }
         booking.cancelConfirmed(reason, quote.cancellationFeeMinor, quote.refundAmountMinor, now)
         outboxWriter.append(
             booking.id,
@@ -361,7 +365,10 @@ class BookingLifecycleService(
         ) {
             throw InvalidBookingState("Platform cannot cancel after service has started or completed")
         }
-        holds.forEach(SlotHold::cancelByPlatform)
+        holds.forEach { hold ->
+            arrivalChallenges.cancelForVisit(hold, now)
+            hold.cancelByPlatform()
+        }
         booking.cancelByPlatform(reason, staffId, now)
         val eventPayload = mutableMapOf<String, Any>(
             "bookingId" to booking.id,
@@ -430,7 +437,10 @@ class BookingLifecycleService(
         offer.reject(now)
         closeRemainingOffers(bookingId, now)
         booking.markWorkerUnavailable(now)
-        requireHolds(bookingId).forEach(SlotHold::release)
+        requireHolds(bookingId).forEach { hold ->
+            arrivalChallenges.cancelForVisit(hold, now)
+            hold.release()
+        }
         outboxWriter.append(
             bookingId,
             "WorkerOfferRejected",
@@ -534,6 +544,7 @@ class BookingLifecycleService(
         if (hold.jobStatus != JobStatus.ASSIGNED || !hold.startsAt.isAfter(now)) {
             throw InvalidBookingState("Only an unstarted future visit can be cancelled")
         }
+        arrivalChallenges.cancelForVisit(hold, now)
         val refundKey = UUID.randomUUID()
         hold.markRefundPending(hold.quotedPriceMinor, refundKey, now)
         outboxWriter.append(
@@ -613,6 +624,7 @@ class BookingLifecycleService(
         if (localStart.toLocalTime() < capacity.availableFrom || localEnd.toLocalTime() > capacity.availableUntil ||
             slotHoldRepository.hasActiveOverlap(replacementWorkerId, hold.startsAt, hold.endsAt, now)
         ) throw SlotUnavailable("Replacement worker slot is no longer available")
+        arrivalChallenges.cancelForVisit(hold, now)
         hold.workerId = replacementWorkerId
         hold.assignedWorkerTier = replacementWorkerTier
         hold.assignmentType = assignmentType
@@ -641,6 +653,7 @@ class BookingLifecycleService(
         if (booking.status != BookingStatus.CONFIRMED || hold.workerId != failedWorkerId || hold.jobStatus != JobStatus.ASSIGNED) {
             throw InvalidBookingState("Visit can no longer be refunded")
         }
+        arrivalChallenges.cancelForVisit(hold, now)
         val key = UUID.randomUUID()
         hold.markRefundPending(hold.quotedPriceMinor, key, now)
         outboxWriter.append(
@@ -679,6 +692,7 @@ class BookingLifecycleService(
         } catch (error: IllegalStateException) {
             throw InvalidBookingState(error.message.orEmpty())
         }
+        arrivalChallenges.createForValidatedArrival(booking, hold, now)
         outboxWriter.append(
             bookingId,
             "WorkerArrived",
@@ -690,7 +704,10 @@ class BookingLifecycleService(
 
     @Transactional
     fun workerStart(bookingId: UUID, visitIndex: Int, workerId: UUID): BookingSnapshot =
-        transitionWorkerVisit(bookingId, visitIndex, workerId, "ServiceStarted") { hold, now -> hold.start(now) }
+        transitionWorkerVisit(bookingId, visitIndex, workerId, "ServiceStarted") { hold, now ->
+            arrivalChallenges.requireVerified(bookingId, visitIndex, hold)
+            hold.start(now)
+        }
 
     @Transactional
     fun workerComplete(bookingId: UUID, visitIndex: Int, workerId: UUID): BookingSnapshot {
@@ -706,6 +723,7 @@ class BookingLifecycleService(
         } catch (error: IllegalStateException) {
             throw InvalidBookingState(error.message.orEmpty())
         }
+        arrivalChallenges.cancelForVisit(hold, now)
         if (hold.jobStatus != before) {
             outboxWriter.append(
                 bookingId,

@@ -7,6 +7,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(ArrivalOtpRequired::class)
+    fun arrivalOtpRequired(error: ArrivalOtpRequired): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "ARRIVAL_OTP_REQUIRED")
+            it.setProperty("verificationEndpoint", error.verificationEndpoint)
+        }
+
     @ExceptionHandler(HomeContactValidationException::class)
     fun homeContactValidation(error: HomeContactValidationException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {

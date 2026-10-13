@@ -23,6 +23,7 @@ data class BookingProperties(
     val plusVeteranUpgradeFree: Boolean = true,
     val arrivalAccuracyMeters: Double = 100.0,
     val arrivalRadiusMeters: Double = 200.0,
+    val arrivalOtp: ArrivalOtpProperties = ArrivalOtpProperties(),
 ) {
     init {
         require(advanceWindowDays > 0) { "booking.advance-window-days must be positive" }

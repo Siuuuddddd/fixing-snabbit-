@@ -45,6 +45,12 @@ booking:
   plus-veteran-upgrade-free: ${BOOKING_PLUS_VETERAN_UPGRADE_FREE:true}
   arrival-accuracy-meters: 100
   arrival-radius-meters: 200
+  arrival-otp:
+    required: ${ARRIVAL_OTP_REQUIRED:true}
+    expiry: ${ARRIVAL_OTP_EXPIRY:PT5M}
+    max-attempts: ${ARRIVAL_OTP_MAX_ATTEMPTS:5}
+    resend-cooldown: ${ARRIVAL_OTP_RESEND_COOLDOWN:PT30S}
+    max-sends: ${ARRIVAL_OTP_MAX_SENDS:3}
 
 cancellation:
   late-window: PT2H

@@ -58,6 +58,16 @@ class HomeContactService(
         if (!booking.hasResolvedHomeContact()) apply(booking, resolveBooker(booking.customerId))
     }
 
+    fun ensureResolvedForArrival(booking: Booking, now: java.time.Instant) {
+        if (booking.hasResolvedHomeContact()) return
+        val contact = resolveBooker(booking.customerId)
+        try {
+            booking.backfillFrozenHomeContact(contact.name, contact.phone, now)
+        } catch (error: IllegalStateException) {
+            throw InvalidBookingState(error.message.orEmpty())
+        }
+    }
+
     private fun ownedMutableBooking(bookingId: UUID, customerId: UUID): Booking {
         val booking = bookings.findForUpdate(bookingId) ?: throw BookingNotFound(bookingId)
         if (booking.customerId != customerId) throw CustomerAccessDenied()
