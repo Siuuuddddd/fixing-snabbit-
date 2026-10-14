@@ -50,6 +50,7 @@ class WorkerMatchingServiceTest {
         tierPolicy,
         ranking,
         WorkerCompatibilityPolicy(),
+        WorkerLocationPolicy(),
     )
     private val start = Instant.parse("2026-10-03T04:30:00Z")
 

@@ -12,12 +12,7 @@ import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
 import com.snabbit.prototype.worker.rating.WorkerRankingPolicy
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.ZoneId
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -30,6 +25,7 @@ class WorkerMatchingService(
     private val tierPolicy: WorkerTierPolicy,
     private val rankingPolicy: WorkerRankingPolicy,
     private val compatibilityPolicy: WorkerCompatibilityPolicy,
+    private val locationPolicy: WorkerLocationPolicy,
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
 
@@ -53,13 +49,15 @@ class WorkerMatchingService(
             val profile = profiles.getValue(workerId)
             val tier = tierPolicy.currentTier(profile)
             if (!compatibilityPolicy.evaluate(command, compatibility[workerId]).compatible) return@mapNotNull null
-            val distance = distanceKm(
+            val location = locationPolicy.evaluate(
                 command.latitude,
                 command.longitude,
                 profile.currentLatitude.toDouble(),
                 profile.currentLongitude.toDouble(),
+                command.maxDistanceKm,
+                profile.serviceRadiusKm.toDouble(),
             )
-            if (distance > command.maxDistanceKm || distance > profile.serviceRadiusKm.toDouble()) return@mapNotNull null
+            if (!location.inRange) return@mapNotNull null
             val basePrice = command.basePricePerHourMinor * command.durationMinutes / 60
             RankedMatch(
                 value = WorkerMatch(
@@ -67,13 +65,13 @@ class WorkerMatchingService(
                     displayName = profile.displayName,
                     tier = tier.name,
                     averageRating = profile.averageRating(),
-                    distanceKm = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP),
+                    distanceKm = location.displayDistanceKm,
                     favourite = workerId in favouriteIds,
                     priceMinor = basePrice + tierPolicy.surchargeMinor(tier),
                     tierSurchargeMinor = tierPolicy.surchargeMinor(tier),
                     rankScore = rankingPolicy.score(profile),
                 ),
-                score = score(profile, distance, workerId in favouriteIds, command.plusActive),
+                score = score(profile, location.distanceKm, workerId in favouriteIds, command.plusActive),
             )
         }.sortedWith(
             compareByDescending<RankedMatch> { it.score }
@@ -135,16 +133,6 @@ class WorkerMatchingService(
             throw InvalidMatchRequest("Valid coordinates are required")
         }
         if (command.maxDistanceKm <= 0) throw InvalidMatchRequest("Maximum distance must be positive")
-    }
-
-    private fun distanceKm(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Double {
-        val earthRadiusKm = 6_371.0
-        val latitudeDistance = Math.toRadians(toLat - fromLat)
-        val longitudeDistance = Math.toRadians(toLon - fromLon)
-        val a = sin(latitudeDistance / 2) * sin(latitudeDistance / 2) +
-            cos(Math.toRadians(fromLat)) * cos(Math.toRadians(toLat)) *
-            sin(longitudeDistance / 2) * sin(longitudeDistance / 2)
-        return earthRadiusKm * 2 * atan2(sqrt(a), sqrt(1 - a))
     }
 
     private data class RankedMatch(val value: WorkerMatch, val score: Long)
