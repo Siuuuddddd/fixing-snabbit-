@@ -2,7 +2,7 @@
 
 ## Step 0 audit
 
-This document records the backend behaviour that existed before booking-time worker selection was added. It is based on the current implementation, the Android household-preference screen, and the local databases on 2026-10-14. Later sections will be updated as the feature is implemented.
+This document records the audited baseline and the completed booking-time worker-selection contract. It is based on the current implementation, the Android household-preference screen, and the local databases on 2026-10-14.
 
 ### Prerequisite feature set
 
@@ -80,3 +80,54 @@ The current match response rounds distance to two decimal places. Booking-time s
 - Persist and revalidate an optional worker selection, re-snapshot tier/price per visit, and auto-select at payment start when the customer does not choose.
 - Continue using the existing targeted offer and accept path. Real workers remain manual; only stable dev-seed workers may auto-accept under guarded local/dev configuration.
 - Because arrival OTP is implemented, guarded dev auto-progress may move an assigned seeded visit to `ARRIVED` and create the normal challenge, but it must stop there and never bypass OTP verification.
+
+## Implemented API contract
+
+### List options
+
+`GET /api/v1/bookings/{bookingId}/worker-options` is owner-only and valid while active holds are in `AWAITING_WORKER` or `AWAITING_PAYMENT`. It returns:
+
+```json
+{
+  "bookingId": "uuid",
+  "favourites": [{
+    "workerId": "uuid", "firstName": "Savita", "tier": "EXPERT",
+    "averageRating": 4.9, "ratingCount": 140, "completedJobs": 160,
+    "tenureMonths": 12, "distanceKm": 1.2, "tierSurchargeMinor": 5000,
+    "bookingTotalMinor": 82000, "selectable": true, "reasonCodes": [],
+    "visits": [{"visitIndex":0,"date":"2026-10-15","startTime":"10:00:00","durationMinutes":120,"available":true,"reasonCodes":[],"priceMinor":41000}]
+  }],
+  "veterans": []
+}
+```
+
+Favourites retain the customer's Plus-gated order and remain visible with reason codes when ineligible. Veterans contain at most two selectable, distinct Veteran workers ordered by 0.1-km distance, rank, then stable ID. Phone numbers are never returned. Compatibility and location use the same policies as matching; every visit is evaluated independently.
+
+### Select or auto-select
+
+`PUT /api/v1/bookings/{bookingId}/worker-selection` accepts `{"workerId":"uuid"}`. An empty body or null `workerId` selects the first currently selectable favourite, otherwise the best listed Veteran. The service reloads options, locks booking capacity, rejects stale/unlisted/partial candidates, snapshots the server tier and per-visit prices, expires old open offers, and emits new targeted offers through `WorkerOffersCreated`. The booking response adds:
+
+```json
+{"selectedWorkerId":"uuid","selectionSource":"CUSTOMER | AUTO"}
+```
+
+Existing clients remain compatible. If they do not call the selection endpoint, payment initiation records the already accepted assignment as `AUTO`; it does not bypass worker acceptance. Historical offers are retained for audit, while state and responses use the newest offer per visit. Same-tier recovery retains the snapshotted visit price, so fallback never increases the charge.
+
+Typical failures use Problem Details: `403` for a non-owner, `409` for a state/expired-hold conflict, and `422` when the worker is absent from the current eligible list or no longer available.
+
+## Local seeded-worker automation
+
+All switches default to false and the production guard rejects either automation switch:
+
+| Environment variable | Default | Meaning |
+|---|---:|---|
+| `DEV_SEED_AUTO_ACCEPT_OFFERS` | `false` | Accept eligible offers only for the ten stable `DevSeedWorkerIds`. |
+| `DEV_SEED_AUTO_ACCEPT_DELAY_MS` | `1500` | Minimum offer age before the normal accept path is called. |
+| `DEV_SEED_AUTO_PROGRESS` | `false` | Progress confirmed seeded visits through normal lifecycle methods. |
+| `DEV_SEED_AUTO_PROGRESS_EN_ROUTE_DELAY_MS` | `1500` | Delay from confirmation to `EN_ROUTE`. |
+| `DEV_SEED_AUTO_PROGRESS_ARRIVAL_DELAY_MS` | `3000` | Delay from confirmation to validated arrival. |
+| `DEV_SEED_AUTOMATION_SCAN_DELAY_MS` | `500` | Local/dev scan interval. |
+
+Auto-accept calls the same `acceptOffer` method as the Worker API, preserving acceptance events and `AWAITING_PAYMENT`. Auto-progress calls the normal en-route and geofenced arrival transitions. Arrival creates the normal challenge and sends the normal alerts; because arrival OTP is implemented, automation stops at `ARRIVED` and never starts or completes the visit without OTP verification.
+
+The ten-worker rolling seed now includes every documented value, including `JAIN`, `SHOE_COVERS`, and `STEP_FREE_ACCESS`, and refreshes 08:00–19:00 availability/capacity for the 10-day window plus margin. Tiers and default favourites remain unchanged.
