@@ -49,6 +49,8 @@ class SlotHold(
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "job_status", columnDefinition = "job_status")
     var jobStatus: JobStatus? = null,
+    @Column(name = "en_route_at")
+    var enRouteAt: Instant? = null,
     @Column(name = "arrived_at")
     var arrivedAt: Instant? = null,
     @Column(name = "started_at")
@@ -89,6 +91,15 @@ class SlotHold(
     @Version
     var version: Long = 0,
 ) {
+    fun enRoute(now: Instant) {
+        if (jobStatus == JobStatus.EN_ROUTE) return
+        check(status == SlotHoldStatus.CONFIRMED && jobStatus == JobStatus.ASSIGNED) {
+            "Only an assigned confirmed visit can be marked en route"
+        }
+        jobStatus = JobStatus.EN_ROUTE
+        enRouteAt = now
+    }
+
     fun confirm() {
         check(status == SlotHoldStatus.HELD) { "Only held slots can be confirmed" }
         status = SlotHoldStatus.CONFIRMED
@@ -145,8 +156,8 @@ class SlotHold(
 
     fun arrive(latitude: BigDecimal, longitude: BigDecimal, accuracyMeters: BigDecimal, now: Instant) {
         if (jobStatus == JobStatus.ARRIVED) return
-        check(status == SlotHoldStatus.CONFIRMED && jobStatus == JobStatus.ASSIGNED) {
-            "Only an assigned confirmed visit can be marked arrived"
+        check(status == SlotHoldStatus.CONFIRMED && (jobStatus == JobStatus.ASSIGNED || jobStatus == JobStatus.EN_ROUTE)) {
+            "Only an assigned or en-route confirmed visit can be marked arrived"
         }
         jobStatus = JobStatus.ARRIVED
         arrivedAt = now

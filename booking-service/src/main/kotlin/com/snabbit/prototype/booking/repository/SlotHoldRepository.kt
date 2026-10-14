@@ -16,6 +16,11 @@ interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
     fun findAllByBookingIdOrderByVisitIndex(bookingId: UUID): List<SlotHold>
     fun findByRefundIdempotencyKey(refundIdempotencyKey: UUID): SlotHold?
     fun countByWorkerIdAndJobStatus(workerId: UUID, jobStatus: JobStatus): Long
+    fun findByWorkerIdInAndStatusAndJobStatusIn(
+        workerIds: Collection<UUID>,
+        status: SlotHoldStatus,
+        jobStatuses: Collection<JobStatus>,
+    ): List<SlotHold>
 
     @Query(
         value = """

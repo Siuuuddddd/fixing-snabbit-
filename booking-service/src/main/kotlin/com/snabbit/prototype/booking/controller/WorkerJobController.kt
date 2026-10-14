@@ -64,6 +64,13 @@ class WorkerJobController(
         WorkerLocationCommand(request.latitude, request.longitude, request.accuracyMeters),
     )
 
+    @PostMapping("/{bookingId}/visits/{visitIndex}/en-route")
+    fun enRoute(
+        @PathVariable bookingId: UUID,
+        @PathVariable visitIndex: Int,
+        @RequestHeader("X-Authenticated-Worker-Id") workerId: UUID,
+    ): BookingSnapshot = bookings.workerEnRoute(bookingId, visitIndex, workerId)
+
     @PostMapping("/{bookingId}/visits/{visitIndex}/resend-arrival-otp")
     fun resendArrivalOtp(
         @PathVariable bookingId: UUID,

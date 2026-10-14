@@ -32,6 +32,12 @@ dev-seed:
   enabled: ${DEV_SEED_ENABLED:false}
   booking-window-days: ${DEV_SEED_BOOKING_WINDOW_DAYS:10}
   margin-days: ${DEV_SEED_MARGIN_DAYS:2}
+  auto-accept-offers: ${DEV_SEED_AUTO_ACCEPT_OFFERS:false}
+  auto-accept-delay-ms: ${DEV_SEED_AUTO_ACCEPT_DELAY_MS:1500}
+  auto-progress: ${DEV_SEED_AUTO_PROGRESS:false}
+  auto-progress-en-route-delay-ms: ${DEV_SEED_AUTO_PROGRESS_EN_ROUTE_DELAY_MS:1500}
+  auto-progress-arrival-delay-ms: ${DEV_SEED_AUTO_PROGRESS_ARRIVAL_DELAY_MS:3000}
+  automation-scan-delay-ms: ${DEV_SEED_AUTOMATION_SCAN_DELAY_MS:500}
 
 booking:
   zone-id: Asia/Kolkata

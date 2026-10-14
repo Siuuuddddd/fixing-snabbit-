@@ -20,6 +20,12 @@ class ProductionConfigurationGuard(
         require(!environment.getProperty("dev-seed.enabled", Boolean::class.java, false)) {
             "Unsafe production configuration: dev-seed.enabled must be false"
         }
+        require(!environment.getProperty("dev-seed.auto-accept-offers", Boolean::class.java, false)) {
+            "Unsafe production configuration: dev-seed.auto-accept-offers must be false"
+        }
+        require(!environment.getProperty("dev-seed.auto-progress", Boolean::class.java, false)) {
+            "Unsafe production configuration: dev-seed.auto-progress must be false"
+        }
         require(properties.requiredProperties.isNotEmpty()) {
             "deployment.production.required-properties must list this service's production settings"
         }

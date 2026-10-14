@@ -47,7 +47,7 @@ FAVOURITES_MAX_COUNT, FAVOURITES_REQUIRE_COMPLETED_VISIT # defaults 3 and true
 WORKER_RATING_UPDATE_WINDOW, WORKER_RANK_PRIOR_MEAN, WORKER_RANK_PRIOR_WEIGHT
 ```
 
-`DEV_SEED_ENABLED` must remain `false` in production. The production startup guard rejects an enabled development seed even if every other provider setting is valid.
+`DEV_SEED_ENABLED`, `DEV_SEED_AUTO_ACCEPT_OFFERS`, and `DEV_SEED_AUTO_PROGRESS` must remain `false` in production. The production startup guard rejects the development seed or either seeded-worker automation even if every other provider setting is valid.
 
 Booking Service uses a separate arrival-verification adapter and state machine even when it shares the same Twilio account or Verify service. Production startup requires `ARRIVAL_OTP_PROVIDER=twilio-verify`, API-key credentials, and a Verify service SID; the development `stub` adapter is rejected by the production guard. Never log OTP codes, provider secrets, full home-contact numbers, or Twilio response bodies.
 

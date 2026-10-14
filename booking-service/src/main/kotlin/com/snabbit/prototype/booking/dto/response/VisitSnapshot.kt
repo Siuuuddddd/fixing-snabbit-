@@ -18,6 +18,7 @@ data class VisitSnapshot(
     val arrivedAt: Instant?,
     val startedAt: Instant?,
     val completedAt: Instant?,
+    val enRouteAt: Instant? = null,
     val date: LocalDate = LocalDate.ofEpochDay(0),
     val startTime: LocalTime = LocalTime.MIDNIGHT,
     val durationMinutes: Int = 0,

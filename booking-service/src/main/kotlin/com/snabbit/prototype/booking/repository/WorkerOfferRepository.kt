@@ -30,6 +30,12 @@ interface WorkerOfferRepository : JpaRepository<WorkerOffer, UUID> {
         pageable: Pageable,
     ): List<WorkerOffer>
 
+    fun findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(
+        status: WorkerOfferStatus,
+        createdAt: Instant,
+        pageable: Pageable,
+    ): List<WorkerOffer>
+
     @Query(
         value = """
             SELECT id FROM worker_offer

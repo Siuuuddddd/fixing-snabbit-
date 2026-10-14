@@ -823,6 +823,12 @@ class BookingLifecycleService(
     }
 
     @Transactional
+    fun workerEnRoute(bookingId: UUID, visitIndex: Int, workerId: UUID): BookingSnapshot =
+        transitionWorkerVisit(bookingId, visitIndex, workerId, "WorkerEnRoute") { hold, now ->
+            hold.enRoute(now)
+        }
+
+    @Transactional
     fun workerStart(bookingId: UUID, visitIndex: Int, workerId: UUID): BookingSnapshot =
         transitionWorkerVisit(bookingId, visitIndex, workerId, "ServiceStarted") { hold, now ->
             arrivalChallenges.requireVerified(bookingId, visitIndex, hold)
@@ -1070,6 +1076,7 @@ class BookingLifecycleService(
                     offerStatus = offer.status.name,
                     offerExpiresAt = offer.expiresAt,
                     jobStatus = hold.jobStatus?.name,
+                    enRouteAt = hold.enRouteAt,
                     arrivedAt = hold.arrivedAt,
                     startedAt = hold.startedAt,
                     completedAt = hold.completedAt,
