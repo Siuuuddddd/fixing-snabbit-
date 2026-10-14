@@ -2,12 +2,16 @@ package com.snabbit.prototype.worker.controller
 
 import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
 import com.snabbit.prototype.worker.dto.request.MatchWorkersRequest
+import com.snabbit.prototype.worker.dto.request.WorkerOptionsCommand
+import com.snabbit.prototype.worker.dto.request.WorkerOptionsRequest
 import com.snabbit.prototype.worker.dto.response.WorkerContactSnapshot
 import com.snabbit.prototype.worker.dto.response.WorkerLocationSnapshot
 import com.snabbit.prototype.worker.dto.response.WorkerMatch
+import com.snabbit.prototype.worker.dto.response.WorkerOptionEvaluation
 import com.snabbit.prototype.worker.service.WorkerDirectoryService
 import com.snabbit.prototype.worker.service.WorkerLocationService
 import com.snabbit.prototype.worker.service.WorkerMatchingService
+import com.snabbit.prototype.worker.service.WorkerOptionsService
 import jakarta.validation.Valid
 import java.util.UUID
 import org.springframework.web.bind.annotation.GetMapping
@@ -23,6 +27,7 @@ class InternalWorkerController(
     private val matchingService: WorkerMatchingService,
     private val locations: WorkerLocationService,
     private val directory: WorkerDirectoryService,
+    private val optionsService: WorkerOptionsService,
 ) {
     @PostMapping("/matches")
     fun match(@Valid @RequestBody request: MatchWorkersRequest): List<WorkerMatch> = matchingService.match(
@@ -53,6 +58,31 @@ class InternalWorkerController(
             requiredTier = request.requiredTier,
         ),
     )
+
+    @PostMapping("/options")
+    fun options(@Valid @RequestBody request: WorkerOptionsRequest): List<WorkerOptionEvaluation> =
+        optionsService.options(
+            WorkerOptionsCommand(
+                request.serviceCode,
+                request.basePricePerHourMinor,
+                request.visits,
+                request.latitude,
+                request.longitude,
+                request.maxDistanceKm,
+                request.hasPets,
+                request.foodContext,
+                request.utensilPreferences,
+                request.preferredLanguages,
+                request.allergies,
+                request.religiousFoodRestrictions,
+                request.workerConstraints,
+                request.heavyLiftingRequired,
+                request.disallowedChemicals,
+                request.requiredEquipment,
+                request.accessibilityNeeds,
+                request.favouriteWorkerIds,
+            ),
+        )
 
     @GetMapping("/{workerId}/location")
     fun latestLocation(@PathVariable workerId: UUID): org.springframework.http.ResponseEntity<WorkerLocationSnapshot> =

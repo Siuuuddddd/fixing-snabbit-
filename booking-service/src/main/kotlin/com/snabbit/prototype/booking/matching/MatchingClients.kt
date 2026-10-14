@@ -4,10 +4,12 @@ import com.snabbit.prototype.booking.config.IntegrationProperties
 import com.snabbit.prototype.booking.config.BookingDevSeedProperties
 import com.snabbit.prototype.booking.dto.request.ReservePlusPassRequest
 import com.snabbit.prototype.booking.dto.request.WorkerMatchRequest
+import com.snabbit.prototype.booking.dto.request.WorkerOptionsQueryRequest
 import com.snabbit.prototype.booking.dto.response.AddressSnapshotResponse
 import com.snabbit.prototype.booking.dto.response.HouseholdSnapshotResponse
 import com.snabbit.prototype.booking.dto.response.PlusPassReservationResponse
 import com.snabbit.prototype.booking.dto.response.WorkerMatchResponse
+import com.snabbit.prototype.booking.dto.response.WorkerOptionEvaluationResponse
 import com.snabbit.prototype.booking.security.InternalServiceClientFactory
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +61,16 @@ class MatchingClients(
             .body(object : ParameterizedTypeReference<List<WorkerMatchResponse>>() {})
             ?: emptyList()
     }
+
+    suspend fun workerOptions(request: WorkerOptionsQueryRequest): List<WorkerOptionEvaluationResponse> =
+        withContext(Dispatchers.IO) {
+            workerClient.post()
+                .uri("/internal/v1/workers/options")
+                .body(request)
+                .retrieve()
+                .body(object : ParameterizedTypeReference<List<WorkerOptionEvaluationResponse>>() {})
+                ?: emptyList()
+        }
 
     suspend fun reservePass(
         userId: UUID,
