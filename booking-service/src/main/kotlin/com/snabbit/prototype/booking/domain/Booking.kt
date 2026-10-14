@@ -16,6 +16,7 @@ import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import com.snabbit.prototype.booking.domain.enums.ExpertPreference
 import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
+import com.snabbit.prototype.booking.domain.enums.WorkerSelectionSource
 
 @Entity
 @Table(name = "booking")
@@ -37,7 +38,7 @@ class Booking(
     @Column(name = "duration_minutes", nullable = false)
     val durationMinutes: Int,
     @Column(name = "quoted_total_minor", nullable = false)
-    val quotedTotalMinor: Long = 0,
+    var quotedTotalMinor: Long = 0,
     @Column(name = "service_latitude")
     val serviceLatitude: BigDecimal? = null,
     @Column(name = "service_longitude")
@@ -52,7 +53,7 @@ class Booking(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant,
     @Column(name = "gross_total_minor", nullable = false)
-    val grossTotalMinor: Long = quotedTotalMinor,
+    var grossTotalMinor: Long = quotedTotalMinor,
     @Column(name = "plus_discount_minor", nullable = false)
     val plusDiscountMinor: Long = 0,
     @Column(name = "plus_pass_id")
@@ -103,9 +104,31 @@ class Booking(
     var homeContactUpdatedAt: Instant? = null,
     @Column(name = "home_contact_frozen_at")
     var homeContactFrozenAt: Instant? = null,
+    @Column(name = "selected_worker_id")
+    var selectedWorkerId: UUID? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "worker_selection_source")
+    var workerSelectionSource: WorkerSelectionSource? = null,
     @Version
     var version: Long = 0,
 ) {
+    fun applyWorkerSelection(workerId: UUID, source: WorkerSelectionSource, grossTotal: Long, netTotal: Long, now: Instant) {
+        check(status == BookingStatus.AWAITING_WORKER) { "Booking is not awaiting worker selection" }
+        require(grossTotal >= 0 && netTotal >= 0 && netTotal <= grossTotal)
+        selectedWorkerId = workerId
+        workerSelectionSource = source
+        grossTotalMinor = grossTotal
+        quotedTotalMinor = netTotal
+        updatedAt = now
+    }
+
+    fun recordAutomaticSelection(workerId: UUID?, now: Instant) {
+        if (workerSelectionSource == null) {
+            selectedWorkerId = workerId
+            workerSelectionSource = WorkerSelectionSource.AUTO
+            updatedAt = now
+        }
+    }
     fun awaitPayment(now: Instant) {
         check(status == BookingStatus.AWAITING_WORKER) { "Booking is not awaiting worker acceptance" }
         status = BookingStatus.AWAITING_PAYMENT

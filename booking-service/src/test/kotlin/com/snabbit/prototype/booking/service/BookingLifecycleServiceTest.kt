@@ -14,6 +14,7 @@ import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.WorkerDayCapacity
 import com.snabbit.prototype.booking.domain.WorkerOffer
 import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+import com.snabbit.prototype.booking.dto.request.ApplyWorkerSelectionCommand
 import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
@@ -42,6 +43,7 @@ import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import com.snabbit.prototype.booking.domain.enums.WorkerSelectionSource
 
 class BookingLifecycleServiceTest {
     private val bookingRepository = mockk<BookingRepository>()
@@ -162,6 +164,68 @@ class BookingLifecycleServiceTest {
         assertEquals(WorkerOfferStatus.ACCEPTED.name, result.visits.single().offerStatus)
         assertEquals(BookingStatus.AWAITING_PAYMENT.name, retried.status)
         verify(exactly = 2) { outboxRepository.save(any()) }
+    }
+
+    @Test
+    fun `chosen worker retargets every visit and snapshots chosen tier price`() {
+        val bookingId = UUID.randomUUID()
+        val customerId = UUID.randomUUID()
+        val oldWorker = UUID.randomUUID()
+        val chosenWorker = UUID.randomUUID()
+        val booking = booking(bookingId, customerId = customerId)
+        val first = hold(bookingId, oldWorker).also { it.quotedPriceMinor = 18_000 }
+        val second = SlotHold(
+            id = UUID.randomUUID(),
+            bookingId = bookingId,
+            visitIndex = 1,
+            customerId = customerId,
+            workerId = oldWorker,
+            serviceId = booking.serviceId,
+            startsAt = Instant.parse("2026-10-03T04:30:00Z"),
+            endsAt = Instant.parse("2026-10-03T06:30:00Z"),
+            status = SlotHoldStatus.HELD,
+            expiresAt = clock.instant().plusSeconds(300),
+            createdAt = clock.instant(),
+            quotedPriceMinor = 36_000,
+            durationMinutes = 120,
+        )
+        val oldOffers = listOf(offer(bookingId, oldWorker, first.id), offer(bookingId, oldWorker, second.id))
+        every { bookingRepository.findForUpdate(bookingId) } returns booking
+        every { holdRepository.findAllByBookingIdOrderByVisitIndex(bookingId) } returns listOf(first, second)
+        listOf(first, second).forEach { hold ->
+            val date = hold.startsAt.atZone(properties.zoneId).toLocalDate()
+            every { capacityRepository.findForUpdate(chosenWorker, date) } returns capacity(chosenWorker, date)
+            every {
+                holdRepository.hasActiveOverlapExcludingBooking(
+                    chosenWorker, hold.startsAt, hold.endsAt, clock.instant(), bookingId,
+                )
+            } returns false
+        }
+        every { offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId) } returns oldOffers
+        every { offerRepository.saveAll<WorkerOffer>(any()) } answers { firstArg() }
+        every { outboxRepository.save(any()) } answers { firstArg() }
+
+        val result = service.applyWorkerSelection(
+            ApplyWorkerSelectionCommand(
+                bookingId,
+                customerId,
+                chosenWorker,
+                "VETERAN",
+                3_000,
+                mapOf(0 to 21_000L, 1 to 39_000L),
+                WorkerSelectionSource.CUSTOMER,
+            ),
+        )
+
+        assertEquals(chosenWorker, booking.selectedWorkerId)
+        assertEquals("CUSTOMER", result.selectionSource)
+        assertEquals(60_000, result.grossTotalMinor)
+        assertEquals(60_000, result.quotedTotalMinor)
+        assertEquals(listOf(chosenWorker, chosenWorker), result.visits.map { it.workerId })
+        assertEquals(listOf("VETERAN", "VETERAN"), result.visits.map { it.assignedWorkerTier })
+        assertEquals(listOf(21_000L, 39_000L), result.visits.map { it.quotedPriceMinor })
+        verify(exactly = 1) { outboxRepository.save(match { it.eventType == "WorkerSelectionChanged" }) }
+        verify(exactly = 1) { outboxRepository.save(match { it.eventType == "WorkerOffersCreated" }) }
     }
 
     @Test

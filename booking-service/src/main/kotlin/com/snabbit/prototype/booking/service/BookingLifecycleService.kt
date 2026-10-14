@@ -12,6 +12,7 @@ import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.WorkerDayCapacity
 import com.snabbit.prototype.booking.domain.WorkerOffer
 import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
+import com.snabbit.prototype.booking.dto.request.ApplyWorkerSelectionCommand
 import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
 import com.snabbit.prototype.booking.dto.response.BookingOwnershipSnapshot
@@ -246,6 +247,110 @@ class BookingLifecycleService(
         )
     }
 
+    @Transactional
+    fun applyWorkerSelection(command: ApplyWorkerSelectionCommand): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(command.bookingId)
+        if (booking.customerId != command.customerId) throw CustomerAccessDenied()
+        if (booking.status != BookingStatus.AWAITING_WORKER) {
+            throw InvalidBookingState("Worker selection can only change while worker acceptance is pending")
+        }
+        val holds = requireHolds(command.bookingId)
+        if (holds.any { it.status != SlotHoldStatus.HELD || !it.expiresAt.isAfter(now) }) {
+            throw InvalidBookingState("Booking slot holds are no longer active")
+        }
+        if (command.grossVisitPricesMinor.keys != holds.map(SlotHold::visitIndex).toSet()) {
+            throw BookingRuleViolation("A current price is required for every booking visit")
+        }
+        holds.forEach { hold ->
+            val local = hold.startsAt.atZone(properties.zoneId)
+            val capacity = capacityRepository.findForUpdate(command.workerId, local.toLocalDate())
+                ?: throw SlotUnavailable("Selected worker has no availability on ${local.toLocalDate()}")
+            if (local.toLocalTime() < capacity.availableFrom ||
+                hold.endsAt.atZone(properties.zoneId).toLocalTime() > capacity.availableUntil ||
+                slotHoldRepository.hasActiveOverlapExcludingBooking(
+                    command.workerId,
+                    hold.startsAt,
+                    hold.endsAt,
+                    now,
+                    booking.id,
+                )
+            ) {
+                throw SlotUnavailable("Selected worker is no longer available for visit ${hold.visitIndex}")
+            }
+        }
+
+        closeRemainingOffers(booking.id, now)
+        val grossTotal = command.grossVisitPricesMinor.values.sum()
+        val netTotal = (grossTotal - booking.plusDiscountMinor).coerceAtLeast(0)
+        val netPrices = allocateNetVisitPrices(holds, command.grossVisitPricesMinor, netTotal)
+        holds.forEach { hold ->
+            hold.workerId = command.workerId
+            hold.preferredWorkerId = command.workerId
+            hold.assignedWorkerTier = command.tier
+            hold.tierSurchargeMinor = command.tierSurchargeMinor
+            hold.quotedPriceMinor = netPrices.getValue(hold.visitIndex)
+            hold.assignmentType = AssignmentType.PREFERRED
+        }
+        booking.applyWorkerSelection(command.workerId, command.source, grossTotal, netTotal, now)
+        val offers = holds.map { hold ->
+            WorkerOffer(
+                id = UUID.randomUUID(),
+                bookingId = booking.id,
+                slotHoldId = hold.id,
+                workerId = command.workerId,
+                status = WorkerOfferStatus.OFFERED,
+                expiresAt = minOf(now.plus(properties.workerOfferDuration), hold.expiresAt),
+                createdAt = now,
+            )
+        }
+        offerRepository.saveAll(offers)
+        outboxWriter.append(
+            booking.id,
+            "WorkerSelectionChanged",
+            mapOf(
+                "bookingId" to booking.id,
+                "customerId" to booking.customerId,
+                "workerId" to command.workerId,
+                "selectionSource" to command.source.name,
+                "quotedTotalMinor" to netTotal,
+            ),
+            now,
+        )
+        outboxWriter.append(
+            booking.id,
+            "WorkerOffersCreated",
+            mapOf(
+                "bookingId" to booking.id,
+                "offers" to offers.map { offer ->
+                    mapOf(
+                        "offerId" to offer.id,
+                        "workerId" to offer.workerId,
+                        "slotHoldId" to offer.slotHoldId,
+                        "expiresAt" to offer.expiresAt,
+                        "requirements" to booking.requirements,
+                    )
+                },
+            ),
+            now,
+        )
+        return snapshot(booking, holds, offers)
+    }
+
+    @Transactional
+    fun ensureAutomaticSelection(bookingId: UUID, expectedCustomerId: UUID): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(bookingId)
+        if (booking.customerId != expectedCustomerId) throw CustomerAccessDenied()
+        if (booking.status != BookingStatus.AWAITING_PAYMENT) {
+            throw InvalidBookingState("Booking is not awaiting payment")
+        }
+        val holds = requireHolds(bookingId)
+        val workerIds = holds.map(SlotHold::workerId).distinct()
+        booking.recordAutomaticSelection(workerIds.singleOrNull(), now)
+        return currentSnapshot(booking)
+    }
+
     @Transactional(readOnly = true)
     fun ratingContext(bookingId: UUID): RatingContextSnapshot {
         val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
@@ -424,7 +529,7 @@ class BookingLifecycleService(
             now,
         )
 
-        if (offerRepository.countByBookingIdAndStatusNot(bookingId, WorkerOfferStatus.ACCEPTED) == 0L) {
+        if (latestOffers(bookingId).all { it.status == WorkerOfferStatus.ACCEPTED }) {
             booking.awaitPayment(now)
             outboxWriter.append(
                 bookingId,
@@ -904,6 +1009,32 @@ class BookingLifecycleService(
         offerRepository.findAllByBookingIdOrderByCreatedAt(booking.id),
     )
 
+    private fun latestOffers(bookingId: UUID): List<WorkerOffer> =
+        offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId)
+            .groupBy(WorkerOffer::slotHoldId)
+            .values
+            .map { offers -> offers.maxBy(WorkerOffer::createdAt) }
+
+    private fun allocateNetVisitPrices(
+        holds: List<SlotHold>,
+        grossPrices: Map<Int, Long>,
+        netTotal: Long,
+    ): Map<Int, Long> {
+        val ordered = holds.sortedBy(SlotHold::visitIndex)
+        val result = linkedMapOf<Int, Long>()
+        var allocated = 0L
+        ordered.forEachIndexed { index, hold ->
+            val price = if (index == ordered.lastIndex) {
+                netTotal - allocated
+            } else {
+                val grossTotal = grossPrices.values.sum().coerceAtLeast(1)
+                (grossPrices.getValue(hold.visitIndex) * netTotal / grossTotal).also { allocated += it }
+            }
+            result[hold.visitIndex] = price
+        }
+        return result
+    }
+
     private fun closeRemainingOffers(bookingId: UUID, now: Instant) {
         offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId)
             .filter { it.status == WorkerOfferStatus.OFFERED }
@@ -915,7 +1046,8 @@ class BookingLifecycleService(
         holds: List<SlotHold>,
         offers: List<WorkerOffer>,
     ): BookingSnapshot {
-        val offersByHold = offers.associateBy(WorkerOffer::slotHoldId)
+        val offersByHold = offers.groupBy(WorkerOffer::slotHoldId)
+            .mapValues { (_, candidates) -> candidates.maxBy(WorkerOffer::createdAt) }
         return BookingSnapshot(
             bookingId = booking.id,
             customerId = booking.customerId,
@@ -961,6 +1093,8 @@ class BookingLifecycleService(
             cancellationFeeMinor = booking.cancellationFeeMinor,
             refundAmountMinor = booking.refundAmountMinor,
             cancelledAt = booking.cancelledAt,
+            selectedWorkerId = booking.selectedWorkerId,
+            selectionSource = booking.workerSelectionSource?.name,
         )
     }
 

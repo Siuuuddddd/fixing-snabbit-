@@ -71,6 +71,28 @@ interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
 
     @Query(
         value = """
+            SELECT EXISTS (
+                SELECT 1 FROM slot_hold
+                WHERE worker_id = :workerId
+                  AND booking_id <> :bookingId
+                  AND status IN ('HELD', 'CONFIRMED')
+                  AND (status = 'CONFIRMED' OR expires_at > :now)
+                  AND starts_at < :endsAt
+                  AND ends_at > :startsAt
+            )
+        """,
+        nativeQuery = true,
+    )
+    fun hasActiveOverlapExcludingBooking(
+        @Param("workerId") workerId: UUID,
+        @Param("startsAt") startsAt: Instant,
+        @Param("endsAt") endsAt: Instant,
+        @Param("now") now: Instant,
+        @Param("bookingId") bookingId: UUID,
+    ): Boolean
+
+    @Query(
+        value = """
             SELECT id FROM slot_hold
             WHERE status = 'HELD' AND expires_at <= :now
             ORDER BY expires_at

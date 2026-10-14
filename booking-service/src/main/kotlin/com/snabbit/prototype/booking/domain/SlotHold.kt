@@ -62,16 +62,16 @@ class SlotHold(
     @Column(name = "arrival_accuracy_meters")
     var arrivalAccuracyMeters: BigDecimal? = null,
     @Column(name = "quoted_price_minor", nullable = false)
-    val quotedPriceMinor: Long = 0,
+    var quotedPriceMinor: Long = 0,
     @Enumerated(EnumType.STRING)
     @Column(name = "assignment_type", nullable = false)
     var assignmentType: AssignmentType = AssignmentType.PREFERRED,
     @Column(name = "preferred_worker_id")
-    val preferredWorkerId: UUID? = null,
+    var preferredWorkerId: UUID? = null,
     @Column(name = "assigned_worker_tier", nullable = false)
     var assignedWorkerTier: String = "STANDARD",
     @Column(name = "tier_surcharge_minor", nullable = false)
-    val tierSurchargeMinor: Long = 0,
+    var tierSurchargeMinor: Long = 0,
     @Enumerated(EnumType.STRING)
     @Column(name = "refund_status", nullable = false)
     var refundStatus: VisitRefundStatus = VisitRefundStatus.NONE,
