@@ -100,22 +100,26 @@ class WorkerCompatibilityIntegrationTest {
         val expectedByTier = mapOf("EXPERT" to 3, "VETERAN" to 2, "STANDARD" to 5)
 
         expectedByTier.forEach { (tier, expected) ->
-            listOf(60, 120, 180, 240).forEach { duration ->
+            listOf("VEGETARIAN", "NON_VEGETARIAN", "JAIN").forEach { foodContext ->
+                listOf("Hindi", "Marathi", "English").forEach { language ->
+                    listOf(60, 120, 180, 240).forEach { duration ->
                 val matches = matching.match(
                     MatchWorkersCommand(
                         "HOUSE_CLEANING", 18_000, startsAt, duration,
-                        19.076090, 72.877426, 50.0, true, "NON_VEGETARIAN",
-                        listOf("SEPARATE_UTENSILS"), listOf("English"),
+                        19.076090, 72.877426, 50.0, true, foodContext,
+                        listOf("SEPARATE_UTENSILS"), listOf(language),
                         listOf("DUST", "FRAGRANCE", "PET_DANDER"),
                         listOf("VEGETARIAN_ONLY", "HALAL_ONLY", "NO_BEEF", "NO_PORK"),
-                        listOf("FEMALE_WORKER", "MASK_REQUIRED"), true,
+                        listOf("FEMALE_WORKER", "MASK_REQUIRED", "SHOE_COVERS"), true,
                         listOf("BLEACH", "AMMONIA", "FRAGRANCE"),
                         listOf("VACUUM", "MOP", "STEAM_CLEANER", "LADDER"),
-                        listOf("ELDER_SUPPORT", "HEARING_SUPPORT", "MOBILITY_SUPPORT"),
+                        listOf("STEP_FREE_ACCESS", "HEARING_SUPPORT", "ELDER_SUPPORT", "MOBILITY_SUPPORT"),
                         emptyList(), false, requiredTier = tier,
                     ),
                 )
                 assertEquals(expected, matches.count { it.workerId in DevSeedWorkerIds.all })
+                    }
+                }
             }
         }
     }

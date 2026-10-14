@@ -96,14 +96,14 @@ class LocalWorkerSeedInitializer(
             """.trimIndent(),
             worker.id,
             "[\"Hindi\",\"Marathi\",\"English\"]",
-            "[\"VEGETARIAN\",\"NON_VEGETARIAN\"]",
+            "[\"VEGETARIAN\",\"NON_VEGETARIAN\",\"JAIN\"]",
             "[\"SEPARATE_UTENSILS\",\"SHARED_UTENSILS\"]",
-            "[\"FEMALE_WORKER\",\"MASK_REQUIRED\"]",
+            "[\"FEMALE_WORKER\",\"MASK_REQUIRED\",\"SHOE_COVERS\"]",
             "[\"DUST\",\"FRAGRANCE\",\"PET_DANDER\"]",
             "[\"VEGETARIAN_ONLY\",\"HALAL_ONLY\",\"NO_BEEF\",\"NO_PORK\"]",
             "[\"VACUUM\",\"MOP\",\"STEAM_CLEANER\",\"LADDER\"]",
             "[\"BLEACH\",\"AMMONIA\",\"FRAGRANCE\"]",
-            "[\"ELDER_SUPPORT\",\"HEARING_SUPPORT\",\"MOBILITY_SUPPORT\"]",
+            "[\"STEP_FREE_ACCESS\",\"HEARING_SUPPORT\",\"ELDER_SUPPORT\",\"MOBILITY_SUPPORT\"]",
         )
     }
 
