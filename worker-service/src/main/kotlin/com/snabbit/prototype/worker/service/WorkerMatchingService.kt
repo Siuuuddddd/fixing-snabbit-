@@ -2,7 +2,6 @@ package com.snabbit.prototype.worker.service
 
 import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
-import com.snabbit.prototype.worker.domain.WorkerCompatibility
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
 import com.snabbit.prototype.worker.dto.response.WorkerMatch
@@ -30,6 +29,7 @@ class WorkerMatchingService(
     private val compatibilityRepository: WorkerCompatibilityRepository,
     private val tierPolicy: WorkerTierPolicy,
     private val rankingPolicy: WorkerRankingPolicy,
+    private val compatibilityPolicy: WorkerCompatibilityPolicy,
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
 
@@ -52,8 +52,7 @@ class WorkerMatchingService(
         val ranked = candidateIds.mapNotNull { workerId ->
             val profile = profiles.getValue(workerId)
             val tier = tierPolicy.currentTier(profile)
-            val workerCompatibility = compatibility[workerId] ?: return@mapNotNull null
-            if (!compatible(command, workerCompatibility)) return@mapNotNull null
+            if (!compatibilityPolicy.evaluate(command, compatibility[workerId]).compatible) return@mapNotNull null
             val distance = distanceKm(
                 command.latitude,
                 command.longitude,
@@ -113,37 +112,6 @@ class WorkerMatchingService(
             }
             else -> throw InvalidMatchRequest("Unsupported expert preference")
         }.take(10)
-    }
-
-    private fun compatible(command: MatchWorkersCommand, worker: WorkerCompatibility): Boolean {
-        val languages = worker.languages.map(String::uppercase).toSet()
-        val equipment = worker.availableEquipment.map(String::uppercase).toSet()
-        val accessibility = worker.accessibilityCapabilities.map(String::uppercase).toSet()
-        val utensilPreferences = worker.supportedUtensilPreferences.map(String::uppercase).toSet()
-        val workerConstraints = worker.supportedWorkerConstraints.map(String::uppercase).toSet()
-        val avoidedChemicals = worker.avoidedChemicals.map(String::uppercase).toSet()
-        val requestedLanguages = command.preferredLanguages.map(String::uppercase).toSet()
-        val requestedAllergyConstraints = command.allergies.map(String::uppercase).toSet()
-        val requestedReligiousFoodRestrictions = command.religiousFoodRestrictions.map(String::uppercase).toSet()
-        val requestedEquipment = command.requiredEquipment.map(String::uppercase).toSet()
-        val requestedAccessibility = command.accessibilityNeeds.map(String::uppercase).toSet()
-        val requestedUtensilPreferences = command.utensilPreferences.map(String::uppercase).toSet()
-        val requestedWorkerConstraints = command.workerConstraints.map(String::uppercase).toSet()
-        val disallowedChemicals = command.disallowedChemicals.map(String::uppercase).toSet()
-        val supportedAllergyConstraints = worker.supportedAllergyConstraints.map(String::uppercase).toSet()
-        val acceptedReligiousFoodRestrictions = worker.acceptedReligiousFoodRestrictions.map(String::uppercase).toSet()
-        val foodContext = command.foodContext?.uppercase()
-        return (!command.hasPets || worker.acceptsPets) &&
-            (!command.heavyLiftingRequired || worker.canHeavyLift) &&
-            (requestedLanguages.isEmpty() || requestedLanguages.any(languages::contains)) &&
-            supportedAllergyConstraints.containsAll(requestedAllergyConstraints) &&
-            acceptedReligiousFoodRestrictions.containsAll(requestedReligiousFoodRestrictions) &&
-            utensilPreferences.containsAll(requestedUtensilPreferences) &&
-            workerConstraints.containsAll(requestedWorkerConstraints) &&
-            avoidedChemicals.containsAll(disallowedChemicals) &&
-            equipment.containsAll(requestedEquipment) &&
-            accessibility.containsAll(requestedAccessibility) &&
-            (foodContext.isNullOrBlank() || worker.acceptedFoodContexts.any { it.equals(foodContext, true) })
     }
 
     private fun score(profile: WorkerProfile, distance: Double, favourite: Boolean, plusActive: Boolean): Long {

@@ -42,7 +42,15 @@ class WorkerMatchingServiceTest {
     private val ranking = mockk<WorkerRankingPolicy> {
         every { score(any()) } answers { (invocation.args[0] as WorkerProfile).averageRating() }
     }
-    private val service = WorkerMatchingService(profiles, skills, availability, compatibility, tierPolicy, ranking)
+    private val service = WorkerMatchingService(
+        profiles,
+        skills,
+        availability,
+        compatibility,
+        tierPolicy,
+        ranking,
+        WorkerCompatibilityPolicy(),
+    )
     private val start = Instant.parse("2026-10-03T04:30:00Z")
 
     @Test
