@@ -17,6 +17,8 @@ interface AuthRemoteDataSource {
     suspend fun switchWorkerProfile(workerId: String): SessionResponseDto = error("Worker switching is not implemented")
     suspend fun refresh(role: AppRole, refreshToken: String): SessionResponseDto = error("Session refresh is not implemented")
     suspend fun logout(role: AppRole, allDevices: Boolean) = Unit
+    suspend fun saveCustomerPhone(userId: String, phoneNumber: String): CustomerContactDto =
+        error("Phone update is not implemented")
     suspend fun requestOtp(role: AppRole, phoneNumber: String): OtpChallengeDto
     suspend fun verifyOtp(role: AppRole, phoneNumber: String, otp: String): AccessTokenDto
     suspend fun registerCustomer(phoneNumber: String, displayName: String, registrationToken: String): AccessTokenDto
@@ -52,6 +54,9 @@ class RetrofitAuthRemoteDataSource(
             AppRole.WORKER -> if (allDevices) api.logoutAllWorkers() else api.logoutWorker()
         }
     }
+
+    override suspend fun saveCustomerPhone(userId: String, phoneNumber: String) =
+        api.saveCustomerPhone(userId, SaveCustomerPhoneRequestDto(phoneNumber))
 
     override suspend fun requestOtp(role: AppRole, phoneNumber: String): OtpChallengeDto {
         val request = OtpRequestDto(phoneNumber)

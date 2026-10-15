@@ -18,6 +18,7 @@ import com.snabbit.prototype.mobile.domain.auth.OtpChallenge
 import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.domain.auth.SessionUser
 import com.snabbit.prototype.mobile.domain.auth.WorkerPickerOption
+import com.snabbit.prototype.mobile.domain.session.SessionManager
 import com.snabbit.prototype.mobile.navigation.AppRole
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -30,6 +31,7 @@ class DefaultAuthRepository(
     private val role: AppRole,
     private val json: Json,
     private val sessionStore: SessionStore? = null,
+    private val sessionManager: SessionManager? = null,
 ) : AuthRepository {
     override suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult = mapFailures {
         val request = GoogleSignInRequestDto(
@@ -82,9 +84,17 @@ class DefaultAuthRepository(
         try {
             mapFailures { remoteDataSource.logout(role, allDevices) }
         } finally {
-            sessionStore?.clear()
+            if (sessionManager != null) sessionManager.signOut() else sessionStore?.clear()
             tokenStore.clear()
         }
+    }
+
+    override suspend fun saveCustomerPhone(phoneNumber: String): String = mapFailures {
+        val current = requireNotNull(sessionStore?.current()) { "An authenticated session is required" }
+        val saved = remoteDataSource.saveCustomerPhone(current.user.id, phoneNumber)
+        val normalized = requireNotNull(saved.phoneNumber)
+        sessionStore.save(current.copy(user = current.user.copy(phoneNumber = normalized)))
+        normalized
     }
 
     override suspend fun requestOtp(phoneNumber: String): OtpChallenge = mapFailures {
@@ -160,6 +170,7 @@ class DefaultAuthRepository(
                 response.user.pictureUrl,
                 response.user.isNewUser,
                 response.user.role,
+                sessionStore?.current()?.user?.takeIf { it.id == response.user.id }?.phoneNumber,
             ),
         )
         requireNotNull(sessionStore) { "SessionStore is required for Google authentication" }.save(session)

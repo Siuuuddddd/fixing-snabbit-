@@ -12,6 +12,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,12 +28,15 @@ import com.snabbit.prototype.mobile.domain.launch.LaunchDestination
 import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
 import com.snabbit.prototype.mobile.domain.notification.NotificationRepository
 import com.snabbit.prototype.mobile.domain.session.SessionManager
+import com.snabbit.prototype.mobile.domain.profile.PhoneRequiredEvents
+import com.snabbit.prototype.mobile.domain.profile.ProfileRepository
 import com.snabbit.prototype.mobile.ui.components.SnabbitBottomBar
 import com.snabbit.prototype.mobile.ui.login.LoginScreen
 import com.snabbit.prototype.mobile.ui.login.LoginUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerScreen
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerViewModel
+import com.snabbit.prototype.mobile.ui.profile.PhoneRequiredDialog
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingScreen
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
 import com.snabbit.prototype.mobile.ui.splash.SplashScreen
@@ -41,6 +46,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.navigation3.koinEntryProvider
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.parameter.parametersOf
+import kotlinx.coroutines.launch
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
@@ -48,15 +54,36 @@ fun SnabbitApp(
     role: AppRole = AppRole.fromBuild(),
     googleIdTokenProvider: GoogleIdTokenProvider,
 ) {
+    CompositionLocalProvider(LocalGoogleIdTokenProvider provides googleIdTokenProvider) {
+        SnabbitAppContent(role, googleIdTokenProvider)
+    }
+}
+
+val LocalGoogleIdTokenProvider = staticCompositionLocalOf<GoogleIdTokenProvider> {
+    error("GoogleIdTokenProvider is not available")
+}
+
+@Composable
+private fun SnabbitAppContent(role: AppRole, googleIdTokenProvider: GoogleIdTokenProvider) {
     var authenticated by rememberSaveable { mutableStateOf(false) }
     val sessionManager = koinInject<SessionManager>()
     val notifications = koinInject<NotificationRepository>()
     val pushNavigation = koinInject<PushNavigationCoordinator>()
+    val phoneRequiredEvents = koinInject<PhoneRequiredEvents>()
+    val profileRepository = koinInject<ProfileRepository>()
+    val scope = rememberCoroutineScope()
+    var showPhoneRequired by rememberSaveable { mutableStateOf(false) }
+    var phoneDigits by rememberSaveable { mutableStateOf("") }
+    var phoneInvalid by rememberSaveable { mutableStateOf(false) }
+    var phoneSaving by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(sessionManager) {
         sessionManager.signedOut.collect { authenticated = false }
     }
     LaunchedEffect(authenticated) {
         if (authenticated) runCatching { notifications.registerCurrentDevice() }
+    }
+    LaunchedEffect(phoneRequiredEvents) {
+        phoneRequiredEvents.events.collect { showPhoneRequired = true }
     }
     if (authenticated) {
         when (role) {
@@ -65,6 +92,30 @@ fun SnabbitApp(
         }
     } else {
         AuthenticationFlow(googleIdTokenProvider, onAuthenticated = { authenticated = true })
+    }
+    if (showPhoneRequired && role == AppRole.CUSTOMER) {
+        PhoneRequiredDialog(
+            phoneDigits = phoneDigits,
+            isSaving = phoneSaving,
+            isInvalid = phoneInvalid,
+            onPhoneChanged = { value ->
+                phoneDigits = value.filter(Char::isDigit).take(10)
+                phoneInvalid = false
+            },
+            onSave = {
+                if (!Regex("[6-9][0-9]{9}").matches(phoneDigits)) {
+                    phoneInvalid = true
+                } else {
+                    phoneSaving = true
+                    scope.launch {
+                        runCatching { profileRepository.savePhone("+91$phoneDigits") }
+                            .onSuccess { showPhoneRequired = false }
+                        phoneSaving = false
+                    }
+                }
+            },
+            onDismiss = { showPhoneRequired = false },
+        )
     }
 }
 

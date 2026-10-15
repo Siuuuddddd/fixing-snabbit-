@@ -56,6 +56,8 @@ data class WorkerSelectProfileRequestDto(
 
 @Serializable data class WorkerSwitchProfileRequestDto(val workerId: String)
 @Serializable data class RefreshSessionRequestDto(val refreshToken: String)
+@Serializable data class SaveCustomerPhoneRequestDto(val phoneNumber: String)
+@Serializable data class CustomerContactDto(val userId: String, val phoneNumber: String?, val displayName: String)
 
 @Serializable
 data class SessionUserDto(

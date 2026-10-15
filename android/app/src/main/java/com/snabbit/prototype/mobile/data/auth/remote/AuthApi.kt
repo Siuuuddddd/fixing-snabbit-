@@ -2,6 +2,8 @@ package com.snabbit.prototype.mobile.data.auth.remote
 
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 import kotlinx.serialization.json.JsonObject
 
 interface AuthApi {
@@ -34,6 +36,12 @@ interface AuthApi {
 
     @POST("api/v1/worker-auth/logout-all")
     suspend fun logoutAllWorkers()
+
+    @PUT("api/v1/users/{userId}/phone")
+    suspend fun saveCustomerPhone(
+        @Path("userId") userId: String,
+        @Body request: SaveCustomerPhoneRequestDto,
+    ): CustomerContactDto
 
     @POST("api/v1/auth/otp/request")
     suspend fun requestCustomerOtp(@Body request: OtpRequestDto): OtpChallengeDto

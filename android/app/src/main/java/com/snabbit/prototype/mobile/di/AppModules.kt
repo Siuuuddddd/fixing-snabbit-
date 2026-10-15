@@ -11,6 +11,7 @@ import com.snabbit.prototype.mobile.data.auth.CredentialManagerGoogleIdTokenProv
 import com.snabbit.prototype.mobile.data.auth.EncryptedTokenStore
 import com.snabbit.prototype.mobile.data.auth.EncryptedSessionStore
 import com.snabbit.prototype.mobile.data.auth.InMemoryPendingWorkerSelectionStore
+import com.snabbit.prototype.mobile.data.auth.SessionRefreshCoordinator
 import com.snabbit.prototype.mobile.data.auth.TokenStore
 import com.snabbit.prototype.mobile.data.auth.remote.AuthApi
 import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
@@ -38,6 +39,7 @@ import com.snabbit.prototype.mobile.data.notification.DefaultNotificationRefresh
 import com.snabbit.prototype.mobile.data.notification.FirebasePushTokenDataSource
 import com.snabbit.prototype.mobile.data.notification.NotificationApi
 import com.snabbit.prototype.mobile.data.profile.DefaultProfileRepository
+import com.snabbit.prototype.mobile.data.profile.DefaultPhoneRequiredEvents
 import com.snabbit.prototype.mobile.data.household.DefaultHouseholdRepository
 import com.snabbit.prototype.mobile.data.household.HouseholdApi
 import com.snabbit.prototype.mobile.data.wallet.DefaultWalletRepository
@@ -66,7 +68,7 @@ import com.snabbit.prototype.mobile.data.launch.OnboardingLocalDataSource
 import com.snabbit.prototype.mobile.data.network.AuthInterceptor
 import com.snabbit.prototype.mobile.data.network.RefreshingAuthenticator
 import com.snabbit.prototype.mobile.data.network.TokenRefresher
-import com.snabbit.prototype.mobile.data.network.UnsupportedTokenRefresher
+import com.snabbit.prototype.mobile.data.network.SessionTokenRefresher
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
 import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
 import com.snabbit.prototype.mobile.domain.auth.ObserveSessionUseCase
@@ -116,6 +118,7 @@ import com.snabbit.prototype.mobile.domain.notification.NotificationRepository
 import com.snabbit.prototype.mobile.domain.notification.NotificationRefreshEvents
 import com.snabbit.prototype.mobile.domain.notification.PushTokenDataSource
 import com.snabbit.prototype.mobile.domain.profile.ProfileRepository
+import com.snabbit.prototype.mobile.domain.profile.PhoneRequiredEvents
 import com.snabbit.prototype.mobile.navigation.AddMoneyRoute
 import com.snabbit.prototype.mobile.navigation.AppRole
 import com.snabbit.prototype.mobile.navigation.AddressServiceabilityRoute
@@ -141,6 +144,7 @@ import com.snabbit.prototype.mobile.navigation.WorkerJobFeedRoute
 import com.snabbit.prototype.mobile.navigation.WorkerLandingRoute
 import com.snabbit.prototype.mobile.navigation.titleRes
 import com.snabbit.prototype.mobile.navigation.LocalCustomerNavigation
+import com.snabbit.prototype.mobile.navigation.LocalGoogleIdTokenProvider
 import com.snabbit.prototype.mobile.navigation.LocalWorkerNavigation
 import com.snabbit.prototype.mobile.navigation.PushNavigationCoordinator
 import com.snabbit.prototype.mobile.ui.address.AddressScreen
@@ -231,8 +235,10 @@ private val storageModule = module {
 
 private val networkModule = module {
     single { Json { ignoreUnknownKeys = true; explicitNulls = false } }
-    single { AuthInterceptor(get()) }
-    single<TokenRefresher> { UnsupportedTokenRefresher(get()) }
+    single { AuthInterceptor(get(), get(), get()) }
+    single<TokenRefresher> {
+        SessionTokenRefresher(get(), get(), get(), get(), BuildConfig.API_BASE_URL)
+    }
     single { RefreshingAuthenticator(get()) }
     single {
         HttpLoggingInterceptor().apply {
@@ -274,6 +280,7 @@ private val networkModule = module {
 
 private val repositoryModule = module {
     single { AppRole.fromBuild() }
+    single<PhoneRequiredEvents> { DefaultPhoneRequiredEvents() }
     factory<GoogleIdTokenProvider> { (activity: Activity) ->
         CredentialManagerGoogleIdTokenProvider(activity, BuildConfig.GOOGLE_WEB_CLIENT_ID)
     }
@@ -285,10 +292,11 @@ private val repositoryModule = module {
     factory { (provider: GoogleIdTokenProvider) -> SignOutAllUseCase(get(), provider) }
     factory { ObserveSessionUseCase(get()) }
     single { PushNavigationCoordinator() }
-    single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get(), get()) }
-    single<LaunchRepository> { DefaultLaunchRepository(get(), get()) }
-    single<SessionIdentityProvider> { JwtSessionIdentityProvider(get(), get()) }
+    single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get(), get(), get()) }
+    single<LaunchRepository> { DefaultLaunchRepository(get(), get(), get()) }
+    single<SessionIdentityProvider> { JwtSessionIdentityProvider(get<SessionStore>(), get()) }
     single<SessionManager> { DefaultSessionManager(get()) }
+    single { SessionRefreshCoordinator(get(), get(), get(named("applicationScope"))) }
     single<CatalogRepository> { DefaultCatalogRepository(get(), get()) }
     single<HomeFavoritesRepository> { FakeHomeFavoritesRepository() }
     single<HabitPackPromoRepository> { FakeHabitPackPromoRepository() }
@@ -319,7 +327,7 @@ private val repositoryModule = module {
     single<DeviceRegistrationStore> { DataStoreDeviceRegistrationStore(get()) }
     single<NotificationRepository> { DefaultNotificationRepository(get(), get(), get(), get(), get()) }
     single<NotificationRefreshEvents> { DefaultNotificationRefreshEvents() }
-    single<ProfileRepository> { DefaultProfileRepository(get(), get(), get(), get(), get(), get(), get()) }
+    single<ProfileRepository> { DefaultProfileRepository(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<WorkerJobsRepository> { DefaultWorkerJobsRepository(get(), get()) }
     single<WorkerAvailabilityRepository> { DefaultWorkerAvailabilityRepository(get(), get()) }
     single<WorkerLocationRepository> { DefaultWorkerLocationRepository(get(), get()) }
@@ -360,7 +368,7 @@ private val viewModelModule = module {
     viewModel { PlusViewModel(get(), get()) }
     viewModel { MyBookingsViewModel(get()) }
     viewModel { NotificationsViewModel(get(), get()) }
-    viewModel { ProfileViewModel(get()) }
+    viewModel { (provider: GoogleIdTokenProvider) -> ProfileViewModel(get(), provider) }
     viewModel { WorkerJobFeedViewModel(get()) }
     viewModel { WorkerScheduleViewModel(get()) }
     viewModel { (bookingId: String, visitIndex: Int) -> WorkerJobDetailsViewModel(bookingId, visitIndex, get(), get(), get()) }
@@ -582,9 +590,18 @@ private val navigationModule = module {
         NotificationsScreen(state, viewModel::refresh, viewModel::retry, viewModel::selectFilter, viewModel::markRead, viewModel::retryPushRegistration, navigation.back)
     }
     navigation<ProfileRoute> {
-        val viewModel = koinViewModel<ProfileViewModel>()
+        val provider = LocalGoogleIdTokenProvider.current
+        val viewModel = koinViewModel<ProfileViewModel> { parametersOf(provider) }
         val state by viewModel.uiState.collectAsStateWithLifecycle()
-        ProfileScreen(state, viewModel::refresh, viewModel::retry, viewModel::signOut)
+        ProfileScreen(
+            state,
+            viewModel::refresh,
+            viewModel::retry,
+            viewModel::updatePhone,
+            viewModel::savePhone,
+            { viewModel.signOut(false) },
+            { viewModel.signOut(true) },
+        )
     }
     navigation<EmptyErrorOfflineRoute> { EmptyErrorOfflineScreen(onRetry = {}) }
     navigation<WorkerLandingRoute> {

@@ -60,13 +60,14 @@ private data class StoredSession(
     val pictureUrl: String?,
     val isNewUser: Boolean,
     val role: String,
+    val phoneNumber: String? = null,
 ) {
     fun toDomain() = AuthSession(
         accessToken,
         tokenType,
         expiresAtEpochSeconds,
         refreshToken,
-        SessionUser(userId, userName, userEmail, pictureUrl, isNewUser, role),
+        SessionUser(userId, userName, userEmail, pictureUrl, isNewUser, role, phoneNumber),
     )
 
     companion object {
@@ -81,6 +82,7 @@ private data class StoredSession(
             session.user.pictureUrl,
             session.user.isNewUser,
             session.user.role,
+            session.user.phoneNumber,
         )
     }
 }

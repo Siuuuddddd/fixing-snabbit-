@@ -45,6 +45,7 @@ interface AuthRepository {
     suspend fun switchWorkerProfile(workerId: String): AuthSession = error("Worker switching is not implemented")
     suspend fun refreshSession(): AuthSession = error("Session refresh is not implemented")
     suspend fun signOut(allDevices: Boolean) = Unit
+    suspend fun saveCustomerPhone(phoneNumber: String): String = error("Phone update is not implemented")
     suspend fun requestOtp(phoneNumber: String): OtpChallenge
     suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult
     suspend fun register(phoneNumber: String, displayName: String, registrationToken: String)
@@ -61,6 +62,7 @@ data class SessionUser(
     val pictureUrl: String?,
     val isNewUser: Boolean,
     val role: String,
+    val phoneNumber: String? = null,
 )
 
 data class AuthSession(

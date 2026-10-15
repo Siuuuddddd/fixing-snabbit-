@@ -85,6 +85,15 @@
     <string name="auth_error_worker_not_registered">This worker email is not registered with Snabbit. Contact support.</string>
     <string name="auth_error_account_disabled">This Snabbit account is disabled. Contact support.</string>
     <string name="auth_error_account_link_conflict">This Google account cannot be linked automatically. Contact support.</string>
+    <string name="profile_picture_description">Google profile picture</string>
+    <string name="profile_phone_title">Phone number</string>
+    <string name="profile_phone_description">Optional. Used for service contact and home-contact checkout, not sign-in.</string>
+    <string name="profile_phone_label">Indian mobile number</string>
+    <string name="profile_phone_invalid">Enter 10 digits starting with 6, 7, 8, or 9.</string>
+    <string name="profile_phone_save">Save phone number</string>
+    <string name="profile_phone_saving">Saving…</string>
+    <string name="profile_sign_out_all">Log out of all devices</string>
+    <string name="phone_required_title">Add a phone number to continue</string>
     <string name="phone_number_label">Mobile number</string>
     <string name="india_country_code">+91 </string>
     <string name="otp_title">Enter verification code</string>
