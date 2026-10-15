@@ -41,8 +41,8 @@ dev-seed:
 
 booking:
   zone-id: Asia/Kolkata
-  opening-time: "08:00"
-  closing-time: "19:00"
+  opening-time: ${BOOKING_OPENING_TIME:08:00}
+  closing-time: ${BOOKING_CLOSING_TIME:19:00}
   slot-hold-duration: PT5M
   worker-offer-duration: PT1M
   expiry-scan-delay: PT30S

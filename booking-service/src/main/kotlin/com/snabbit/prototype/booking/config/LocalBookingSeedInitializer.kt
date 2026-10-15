@@ -36,9 +36,9 @@ class LocalBookingSeedInitializer(
                 jdbc.update(
                     """
                     INSERT INTO worker_day_capacity (id, worker_id, service_date, available_from, available_until)
-                    VALUES (?, ?, ?, '08:00', '19:00')
+                    VALUES (?, ?, ?, '00:00', '23:59:59')
                     ON CONFLICT (worker_id, service_date) DO UPDATE SET
-                        available_from = '08:00', available_until = '19:00'
+                        available_from = '00:00', available_until = '23:59:59'
                     """.trimIndent(),
                     UUID.randomUUID(), workerId, today.plusDays(offset.toLong()),
                 )

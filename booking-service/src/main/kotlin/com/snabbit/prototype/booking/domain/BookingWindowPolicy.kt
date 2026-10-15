@@ -29,7 +29,9 @@ class BookingWindowPolicy(
             localStart.toLocalTime() < properties.openingTime ||
             localEnd.toLocalTime() > properties.closingTime
         ) {
-            throw BookingRuleViolation("Visit must fit within operating hours 08:00-19:00")
+            throw BookingRuleViolation(
+                "Visit must fit within operating hours ${properties.openingTime}-${properties.closingTime}",
+            )
         }
         val lastBookableDate = today.plusDays((properties.advanceWindowDays - 1).toLong())
         if (localStart.toLocalDate().isBefore(today) || localStart.toLocalDate().isAfter(lastBookableDate)) {

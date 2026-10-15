@@ -130,4 +130,4 @@ All switches default to false and the production guard rejects either automation
 
 Auto-accept calls the same `acceptOffer` method as the Worker API, preserving acceptance events and `AWAITING_PAYMENT`. Auto-progress calls the normal en-route and geofenced arrival transitions. Arrival creates the normal challenge and sends the normal alerts; because arrival OTP is implemented, automation stops at `ARRIVED` and never starts or completes the visit without OTP verification.
 
-The ten-worker rolling seed now includes every documented value, including `JAIN`, `SHOE_COVERS`, and `STEP_FREE_ACCESS`, and refreshes 08:00–19:00 availability/capacity for the 10-day window plus margin. Tiers and default favourites remain unchanged.
+The ten-worker rolling seed now includes every documented value, including `JAIN`, `SHOE_COVERS`, and `STEP_FREE_ACCESS`, and refreshes full-day availability/capacity for the 10-day window plus margin. Local development can set `BOOKING_OPENING_TIME=00:00` and `BOOKING_CLOSING_TIME=23:59:59`; production defaults remain 08:00–19:00. Tiers and default favourites remain unchanged.

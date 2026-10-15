@@ -114,9 +114,9 @@ class LocalWorkerSeedInitializer(
                     """
                     INSERT INTO worker_availability (
                         id, worker_id, service_date, available_from, available_until, status
-                    ) VALUES (?, ?, ?, '08:00', '19:00', 'AVAILABLE')
+                    ) VALUES (?, ?, ?, '00:00', '23:59:59', 'AVAILABLE')
                     ON CONFLICT (worker_id, service_date) DO UPDATE SET
-                        available_from = '08:00', available_until = '19:00', status = 'AVAILABLE',
+                        available_from = '00:00', available_until = '23:59:59', status = 'AVAILABLE',
                         version = worker_availability.version + 1
                     """.trimIndent(),
                     UUID.randomUUID(), workerId, today.plusDays(offset.toLong()),
