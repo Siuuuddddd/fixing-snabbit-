@@ -79,6 +79,7 @@ Email authentication must add the HMAC secret and real SMTP properties to User S
 - Step 1 complete: additive migration V14 adds password, verification timestamp, terms acceptance, provider-set, and purpose-separated email challenge storage; corresponding JPA mappings and repositories are in place.
 - Step 2 complete: customer register, verify, resend, email login, forgot/reset, authenticated change-password, and `me` endpoints are implemented. Google linking removes an unverified pre-registered password, Google-only customers can add a password through reset, and the existing rotating session response now reports verification and provider state.
 - Step 3 complete: direct SMTP delivery, Mailpit local infrastructure, production configuration checks, privacy tests, throttling tests, deployment variables, and the full endpoint contract are in place.
+- Verification complete: the full Gradle suite and Docker image builds pass; every local service health endpoint is UP; and the gateway/Mailpit flow successfully covers register, verify, login, refresh rotation, forgot/reset, old-session rejection, and login with the replacement password.
 
 ## Gaps
 
