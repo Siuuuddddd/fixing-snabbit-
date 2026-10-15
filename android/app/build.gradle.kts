@@ -55,6 +55,7 @@ android {
             applicationIdSuffix = ".customer"
             versionNameSuffix = "-customer"
             buildConfigField("String", "APP_ROLE", "\"customer\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localValue("GOOGLE_WEB_CLIENT_ID_CUSTOMER")}\"")
             resValue("string", "app_name", "Snabbit")
         }
         create("worker") {
@@ -62,6 +63,7 @@ android {
             applicationIdSuffix = ".worker"
             versionNameSuffix = "-worker"
             buildConfigField("String", "APP_ROLE", "\"worker\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localValue("GOOGLE_WEB_CLIENT_ID_WORKER")}\"")
             resValue("string", "app_name", "Snabbit Worker")
         }
     }
@@ -115,6 +117,9 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp.logging)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
