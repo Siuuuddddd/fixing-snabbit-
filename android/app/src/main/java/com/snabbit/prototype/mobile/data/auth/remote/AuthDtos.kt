@@ -33,6 +33,9 @@ data class SessionUserDto(
     val pictureUrl: String? = null,
     val isNewUser: Boolean = false,
     val role: String,
+    val emailVerified: Boolean = false,
+    val hasPassword: Boolean = false,
+    val authProviders: List<String> = emptyList(),
 )
 
 @Serializable

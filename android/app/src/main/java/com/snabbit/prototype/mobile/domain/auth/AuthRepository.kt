@@ -17,6 +17,13 @@ enum class AuthFailureReason {
     SHARED_WORKER_SESSION_REQUIRED,
     PHONE_REQUIRED,
     RATE_LIMITED,
+    INVALID_CREDENTIALS,
+    WEAK_PASSWORD,
+    INVALID_OR_EXPIRED_CODE,
+    TOO_MANY_ATTEMPTS,
+    TERMS_NOT_ACCEPTED,
+    PASSWORD_NOT_SET,
+    VALIDATION_ERROR,
     OFFLINE,
     SERVER,
     WORKER_PROFILE_REQUIRED,
@@ -26,6 +33,9 @@ enum class AuthFailureReason {
 class AuthFailure(
     val reason: AuthFailureReason,
     override val message: String? = null,
+    val retryAfterSeconds: Long? = null,
+    val fieldErrors: Map<String, String> = emptyMap(),
+    val passwordReason: String? = null,
 ) : Exception(message)
 
 interface AuthRepository {
@@ -55,6 +65,9 @@ data class SessionUser(
     val isNewUser: Boolean,
     val role: String,
     val phoneNumber: String? = null,
+    val emailVerified: Boolean = false,
+    val hasPassword: Boolean = false,
+    val authProviders: Set<String> = emptySet(),
 )
 
 data class AuthSession(

@@ -63,5 +63,8 @@ private class LegacyTokenSessionStore(private val tokenStore: TokenStore) : Sess
 
 private fun String.isPublicAuthenticationPath(): Boolean =
     this == "/api/v1/auth/google" || this == "/api/v1/auth/refresh" ||
+        this == "/api/v1/auth/register" || this == "/api/v1/auth/verify-email" ||
+        this == "/api/v1/auth/resend-verification" || this == "/api/v1/auth/login" ||
+        this == "/api/v1/auth/forgot-password" || this == "/api/v1/auth/reset-password" ||
         this == "/api/v1/worker-auth/google" || this == "/api/v1/worker-auth/refresh" ||
         this == "/api/v1/worker-auth/select-profile"

@@ -151,6 +151,9 @@ class DefaultAuthRepository(
                 response.user.isNewUser,
                 response.user.role,
                 sessionStore?.current()?.user?.takeIf { it.id == response.user.id }?.phoneNumber,
+                response.user.emailVerified,
+                response.user.hasPassword,
+                response.user.authProviders.toSet(),
             ),
         )
         requireNotNull(sessionStore) { "SessionStore is required for Google authentication" }.save(session)

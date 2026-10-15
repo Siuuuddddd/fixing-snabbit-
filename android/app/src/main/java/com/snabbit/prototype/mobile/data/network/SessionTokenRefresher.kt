@@ -91,6 +91,9 @@ class SessionTokenRefresher(
             user.isNewUser,
             user.role,
             store.current()?.user?.phoneNumber,
+            user.emailVerified,
+            user.hasPassword,
+            user.authProviders.toSet(),
         ),
     )
 

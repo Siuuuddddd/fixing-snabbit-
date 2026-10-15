@@ -11,4 +11,7 @@ data class ApiProblem(
     val instance: String? = null,
     val code: String? = null,
     val errorCode: String? = null,
+    val retryAfterSeconds: Long? = null,
+    val fields: Map<String, String> = emptyMap(),
+    val reason: String? = null,
 )

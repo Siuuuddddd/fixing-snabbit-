@@ -1,12 +1,44 @@
 package com.snabbit.prototype.mobile.data.auth.remote
 
+import com.snabbit.prototype.mobile.data.auth.remote.email.AcceptedAuthRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.email.ChangePasswordRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.email.EmailLoginRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.email.EmailOnlyRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.email.EmailRegisterRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.email.ResetPasswordRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.email.VerifyEmailRequestDto
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import kotlinx.serialization.json.JsonObject
 
 interface AuthApi {
+    @POST("api/v1/auth/register")
+    suspend fun register(@Body request: EmailRegisterRequestDto): AcceptedAuthRequestDto
+
+    @POST("api/v1/auth/verify-email")
+    suspend fun verifyEmail(@Body request: VerifyEmailRequestDto): SessionResponseDto
+
+    @POST("api/v1/auth/resend-verification")
+    suspend fun resendVerification(@Body request: EmailOnlyRequestDto): AcceptedAuthRequestDto
+
+    @POST("api/v1/auth/login")
+    suspend fun loginWithPassword(@Body request: EmailLoginRequestDto): SessionResponseDto
+
+    @POST("api/v1/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: EmailOnlyRequestDto): AcceptedAuthRequestDto
+
+    @POST("api/v1/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequestDto)
+
+    @POST("api/v1/auth/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequestDto): SessionResponseDto
+
+    @GET("api/v1/auth/me")
+    suspend fun currentCustomer(): SessionUserDto
+
     @POST("api/v1/auth/google")
     suspend fun googleCustomer(@Body request: GoogleSignInRequestDto): SessionResponseDto
 
