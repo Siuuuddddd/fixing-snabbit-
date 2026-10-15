@@ -54,6 +54,8 @@ class ProductionConfigurationGuard(
                     "$key must be twilio-verify"
                 key == "auth.google.verifier" && !value.equals("google", ignoreCase = true) ->
                     "$key must be google"
+                key == "email-auth.sender" && !value.equals("smtp", ignoreCase = true) ->
+                    "$key must be smtp"
                 else -> null
             }
         }
@@ -65,6 +67,7 @@ class ProductionConfigurationGuard(
     private fun String.isUnsafeDevelopmentValue(): Boolean {
         val normalized = lowercase()
         return normalized.contains("localhost") ||
+            normalized.contains("mailpit") ||
             normalized.contains("snabbit.local") ||
             normalized.contains("snabbit-local") ||
             normalized.contains("local-only") ||

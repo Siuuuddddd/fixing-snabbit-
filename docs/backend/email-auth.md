@@ -78,11 +78,9 @@ Email authentication must add the HMAC secret and real SMTP properties to User S
 - Step 0 complete: committed Google/JWT foundation verified; customer schema, session lifecycle, rate limiting, staff authentication, email capability, gateway routes, production guard, and development seed audited.
 - Step 1 complete: additive migration V14 adds password, verification timestamp, terms acceptance, provider-set, and purpose-separated email challenge storage; corresponding JPA mappings and repositories are in place.
 - Step 2 complete: customer register, verify, resend, email login, forgot/reset, authenticated change-password, and `me` endpoints are implemented. Google linking removes an unverified pre-registered password, Google-only customers can add a password through reset, and the existing rotating session response now reports verification and provider state.
+- Step 3 complete: direct SMTP delivery, Mailpit local infrastructure, production configuration checks, privacy tests, throttling tests, deployment variables, and the full endpoint contract are in place.
 
 ## Gaps
 
-- Password hashing, the common-password resource, email challenges, SMTP delivery, endpoint throttling, and password endpoints do not yet exist.
-- The single `auth_provider` field cannot represent multiple providers and needs an additive migration plus compatible domain mapping.
-- The current customer session response does not expose `emailVerified`, `hasPassword`, or `authProviders`.
-- The current rate-limit error does not include `retryAfterSeconds`, and the service limiter does not combine account and IP dimensions.
-- Mailpit and SMTP production validation are not configured.
+- Android does not yet expose these backend endpoints; Android is intentionally outside this backend-only goal.
+- Staff authentication still uses shared phone OTP and requires its own future replacement project.

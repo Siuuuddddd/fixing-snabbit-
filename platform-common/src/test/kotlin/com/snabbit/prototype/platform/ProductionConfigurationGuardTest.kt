@@ -134,4 +134,27 @@ class ProductionConfigurationGuardTest {
             )
         }
     }
+
+    @Test
+    fun `rejects local or fake email delivery in production`() {
+        listOf(
+            MockEnvironment().withProperty("spring.mail.host", "mailpit"),
+            MockEnvironment().withProperty("email-auth.sender", "fake"),
+        ).forEach { environment ->
+            val key = if (environment.getProperty("spring.mail.host") != null) "spring.mail.host" else "email-auth.sender"
+            assertThrows(IllegalArgumentException::class.java) {
+                ProductionConfigurationGuard(environment, ProductionGuardProperties(listOf(key)))
+            }
+        }
+    }
+
+    @Test
+    fun `requires an email code HMAC secret in production`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(
+                MockEnvironment(),
+                ProductionGuardProperties(listOf("email-auth.code-hmac-secret")),
+            )
+        }
+    }
 }

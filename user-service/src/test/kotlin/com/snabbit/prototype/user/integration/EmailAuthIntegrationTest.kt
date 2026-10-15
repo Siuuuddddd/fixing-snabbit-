@@ -7,6 +7,12 @@ import com.snabbit.prototype.platform.GoogleIdentityVerifier
 import com.snabbit.prototype.platform.OpaqueToken
 import com.snabbit.prototype.user.auth.AuthEmailSender
 import com.snabbit.prototype.user.repository.UserProfileRepository
+import com.snabbit.prototype.user.domain.UserProfile
+import com.snabbit.prototype.user.domain.enums.UserStatus
+import com.snabbit.prototype.platform.DevSeedWorkerIds
+import java.time.Instant
+import java.time.Duration
+import java.util.UUID
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.spec.SecretKeySpec
@@ -107,8 +113,18 @@ class EmailAuthIntegrationTest {
     fun `codes are replaced expire burn after five attempts and enforce hourly sends`() {
         val email = uniqueEmail("codes")
         val password = credential()
-        post("/api/v1/auth/register", registerBody(email, password, true), 202)
+        val registerResponse = post("/api/v1/auth/register", registerBody(email, password, true), 202)
         val oldCode = mail().verificationCode(email)
+        assertFalse(registerResponse.toString().contains(oldCode))
+        val storedHmac = jdbc.queryForObject(
+            "SELECT code_hmac FROM auth_email_challenge WHERE user_id = (SELECT id FROM user_profile WHERE email = ?)",
+            String::class.java,
+            email,
+        )!!
+        assertTrue(storedHmac.length == 64)
+        assertFalse(storedHmac.contains(oldCode))
+        val outboxPayloads = jdbc.queryForList("SELECT payload::text FROM outbox_event", String::class.java)
+        assertFalse(outboxPayloads.any { it.contains(oldCode) || it.contains(email) })
         post("/api/v1/auth/resend-verification", mapOf("email" to email), 202)
         val currentCode = mail().verificationCode(email)
         assertFalse(oldCode == currentCode)
@@ -160,6 +176,48 @@ class EmailAuthIntegrationTest {
         )
         val session = post("/api/v1/auth/login", loginBody(email, password), 200)
         assertTrue(session.path("user").path("authProviders").map { it.asText() }.toSet() == setOf("GOOGLE", "PASSWORD"))
+    }
+
+    @Test
+    fun `pre-provisioned development customer keeps identity Plus and favourites after password verification`() {
+        val email = uniqueEmail("seed")
+        val now = Instant.now()
+        val customerId = UUID.randomUUID()
+        users.saveAndFlush(
+            UserProfile(
+                id = customerId, phoneE164 = null, displayName = "Seed Customer", status = UserStatus.ACTIVE,
+                plusActive = true, plusExpiresAt = now.plus(Duration.ofDays(90)), createdAt = now, updatedAt = now,
+                email = email,
+            ),
+        )
+        DevSeedWorkerIds.defaultFavourites.forEachIndexed { index, workerId ->
+            jdbc.update(
+                "INSERT INTO favourite_worker (user_id, worker_id, priority, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                customerId, workerId, index + 1,
+            )
+        }
+
+        post("/api/v1/auth/register", registerBody(email, credential(), true), 202)
+        val session = post(
+            "/api/v1/auth/verify-email",
+            mapOf("email" to email, "code" to mail().verificationCode(email)),
+            200,
+        )
+        assertTrue(session.path("user").path("id").asText() == customerId.toString())
+        val persisted = users.findById(customerId).orElseThrow()
+        assertTrue(persisted.plusActive)
+        assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM favourite_worker WHERE user_id = ?", Int::class.java, customerId) == 3)
+    }
+
+    @Test
+    fun `disabled customer is rejected only after a correct password`() {
+        val email = uniqueEmail("disabled")
+        val password = credential()
+        post("/api/v1/auth/register", registerBody(email, password, true), 202)
+        post("/api/v1/auth/verify-email", mapOf("email" to email, "code" to mail().verificationCode(email)), 200)
+        jdbc.update("UPDATE user_profile SET status = 'SUSPENDED' WHERE email = ?", email)
+        post("/api/v1/auth/login", loginBody(email, credential()), 401, "INVALID_CREDENTIALS")
+        post("/api/v1/auth/login", loginBody(email, password), 403, "ACCOUNT_DISABLED")
     }
 
     private fun registerBody(email: String, password: String, terms: Boolean) = mapOf(

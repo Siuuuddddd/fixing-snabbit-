@@ -29,6 +29,15 @@ KAFKA_BOOTSTRAP_SERVERS
 REDIS_HOST, REDIS_PORT
 JWT_SECRET                 # at least 32 random bytes
 AUTH_ISSUER
+AUTH_CODE_HMAC_SECRET       # independent high-entropy secret for email-code HMACs
+AUTH_TERMS_VERSION
+AUTH_CODE_TTL, AUTH_CODE_MAX_ATTEMPTS
+AUTH_CODE_RESEND_COOLDOWN, AUTH_CODE_MAX_SENDS_PER_HOUR
+AUTH_ARGON2_SALT_LENGTH, AUTH_ARGON2_HASH_LENGTH
+AUTH_ARGON2_PARALLELISM, AUTH_ARGON2_MEMORY_KB, AUTH_ARGON2_ITERATIONS
+AUTH_BCRYPT_STRENGTH        # fallback only when Bouncy Castle is unavailable
+AUTH_EMAIL_RATE_LIMIT_WINDOW, AUTH_EMAIL_RATE_LIMIT_PER_IDENTITY
+AUTH_EMAIL_RATE_LIMIT_PER_IP, AUTH_EMAIL_RATE_LIMIT_MAX_DELAY
 OTP_PEPPER
 OTP_PROVIDER=twilio-verify
 TWILIO_ACCOUNT_SID
@@ -72,7 +81,18 @@ RAZORPAY_MODE=live
 RAZORPAY_KEY_ID
 RAZORPAY_KEY_SECRET
 RAZORPAY_WEBHOOK_SECRET
+
+AUTH_EMAIL_SENDER=smtp
+SMTP_HOST
+SMTP_PORT
+SMTP_USERNAME
+SMTP_PASSWORD
+SMTP_FROM
+SMTP_AUTH
+SMTP_TLS_ENABLED
 ```
+
+Customer authentication email is sent directly by User Service over SMTP. Codes are never published to Kafka or an outbox. Use a dedicated random `AUTH_CODE_HMAC_SECRET`; do not reuse the JWT, database, SMTP, or service-auth secret. Production startup rejects a missing HMAC secret, local/Mailpit SMTP hosts, and non-SMTP sender adapters. Staff authentication continues to require Twilio Verify and is not part of the customer email-auth flow.
 
 Register `https://<api-host>/webhooks/razorpay` in Razorpay and subscribe to captured-payment events. Do not expose database, Kafka, Redis or service ports publicly.
 
