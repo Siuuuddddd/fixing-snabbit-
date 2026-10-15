@@ -25,17 +25,18 @@ class SessionTokenRefresher(
     private val store: SessionStore,
     private val sessionManager: SessionManager,
     private val role: AppRole,
-    json: Json,
-    baseUrl: String,
+    private val problemJson: Json,
+    private val refreshCall: suspend (AppRole, String) -> SessionResponseDto,
 ) : TokenRefresher {
+    constructor(
+        store: SessionStore,
+        sessionManager: SessionManager,
+        role: AppRole,
+        json: Json,
+        baseUrl: String,
+    ) : this(store, sessionManager, role, json, createRefreshCall(json, baseUrl))
+
     private val mutex = Mutex()
-    private val api = Retrofit.Builder()
-        .baseUrl(baseUrl)
-        .client(OkHttpClient.Builder().build())
-        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-        .build()
-        .create(AuthApi::class.java)
-    private val problemJson = json
 
     override fun refreshAccessToken(): String? {
         val observed = store.current() ?: return null
@@ -51,10 +52,7 @@ class SessionTokenRefresher(
     private suspend fun refreshWithRetry(original: AuthSession): String? {
         repeat(REFRESH_IN_PROGRESS_ATTEMPTS) { attempt ->
             try {
-                val response = when (role) {
-                    AppRole.CUSTOMER -> api.refreshCustomer(RefreshSessionRequestDto(original.refreshToken))
-                    AppRole.WORKER -> api.refreshWorker(RefreshSessionRequestDto(original.refreshToken))
-                }
+                val response = refreshCall(role, original.refreshToken)
                 val replacement = response.toDomain()
                 store.save(replacement)
                 return replacement.accessToken
@@ -99,5 +97,20 @@ class SessionTokenRefresher(
     private companion object {
         const val REFRESH_IN_PROGRESS_ATTEMPTS = 3
         const val REFRESH_RETRY_DELAY_MILLIS = 300L
+
+        fun createRefreshCall(json: Json, baseUrl: String): suspend (AppRole, String) -> SessionResponseDto {
+            val api = Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .client(OkHttpClient.Builder().build())
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+                .build()
+                .create(AuthApi::class.java)
+            return { selectedRole, refreshToken ->
+                when (selectedRole) {
+                    AppRole.CUSTOMER -> api.refreshCustomer(RefreshSessionRequestDto(refreshToken))
+                    AppRole.WORKER -> api.refreshWorker(RefreshSessionRequestDto(refreshToken))
+                }
+            }
+        }
     }
 }
