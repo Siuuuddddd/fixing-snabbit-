@@ -1,123 +1,136 @@
 package com.snabbit.prototype.mobile.ui.login
 
+import com.snabbit.prototype.mobile.data.auth.InMemoryPendingWorkerSelectionStore
+import com.snabbit.prototype.mobile.domain.auth.AuthDevice
 import com.snabbit.prototype.mobile.domain.auth.AuthFailure
 import com.snabbit.prototype.mobile.domain.auth.AuthFailureReason
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
 import com.snabbit.prototype.mobile.domain.auth.AuthResult
+import com.snabbit.prototype.mobile.domain.auth.AuthSession
+import com.snabbit.prototype.mobile.domain.auth.GoogleIdToken
+import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
+import com.snabbit.prototype.mobile.domain.auth.GoogleSignInResult
 import com.snabbit.prototype.mobile.domain.auth.OtpChallenge
+import com.snabbit.prototype.mobile.domain.auth.SignInWithGoogleUseCase
+import com.snabbit.prototype.mobile.domain.auth.WorkerPickerOption
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
     @Test
-    fun `request normalizes phone and starts resend cooldown`() = runTest {
-        val repository = FakeAuthRepository()
-        val viewModel = LoginViewModel(repository, StandardTestDispatcher(testScheduler))
+    fun `successful sign in emits authenticated`() = runTest {
+        val repository = FakeGoogleAuthRepository(GoogleSignInResult.Authenticated(session()))
+        val viewModel = viewModel(repository)
+        val event = async { viewModel.events.first() }
 
-        viewModel.updatePhone("98765 43210")
-        viewModel.requestOtp()
+        viewModel.continueWithGoogle()
         runCurrent()
 
-        assertEquals("+919876543210", repository.requestedPhone)
-        assertEquals(LoginStep.OTP, viewModel.uiState.value.step)
-        assertEquals(30, viewModel.uiState.value.resendSeconds)
-
-        advanceTimeBy(5_000)
-        runCurrent()
-        assertEquals(25, viewModel.uiState.value.resendSeconds)
-    }
-
-    @Test
-    fun `invalid phone does not call repository`() = runTest {
-        val repository = FakeAuthRepository()
-        val viewModel = LoginViewModel(repository, StandardTestDispatcher(testScheduler))
-
-        viewModel.updatePhone("123")
-        viewModel.requestOtp()
-
-        assertEquals(LoginError.INVALID_PHONE, viewModel.uiState.value.error)
-        assertEquals(null, repository.requestedPhone)
-    }
-
-    @Test
-    fun `successful verification authenticates session`() = runTest {
-        val repository = FakeAuthRepository()
-        val viewModel = LoginViewModel(repository, StandardTestDispatcher(testScheduler))
-        viewModel.updatePhone("9876543210")
-        viewModel.requestOtp()
-        runCurrent()
-        viewModel.updateOtp("123456")
-
-        viewModel.verifyOtp()
-        runCurrent()
-
-        assertEquals("+919876543210", repository.verifiedPhone)
-        assertEquals("123456", repository.verifiedOtp)
-        assertTrue(viewModel.uiState.value.authenticated)
+        assertEquals(LoginUiEvent.Authenticated, event.await())
         assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(1, repository.signInCalls)
     }
 
     @Test
-    fun `offline failure is exposed as recoverable error`() = runTest {
-        val repository = FakeAuthRepository(requestFailure = AuthFailure(AuthFailureReason.OFFLINE))
-        val viewModel = LoginViewModel(repository, StandardTestDispatcher(testScheduler))
-        viewModel.updatePhone("9876543210")
-
-        viewModel.requestOtp()
-        runCurrent()
-
-        assertEquals(LoginError.OFFLINE, viewModel.uiState.value.error)
-        assertFalse(viewModel.uiState.value.isLoading)
-    }
-
-    @Test
-    fun `expired otp remains on verification screen`() = runTest {
-        val repository = FakeAuthRepository(
-            verifyFailure = AuthFailure(AuthFailureReason.INVALID_OR_EXPIRED_OTP),
+    fun `worker picker result is kept only in memory`() = runTest {
+        val pending = InMemoryPendingWorkerSelectionStore()
+        val result = GoogleSignInResult.WorkerSelectionRequired(
+            "selection",
+            1234,
+            listOf(WorkerPickerOption("worker", "Savita", "EXPERT")),
         )
-        val viewModel = LoginViewModel(repository, StandardTestDispatcher(testScheduler))
-        viewModel.updatePhone("9876543210")
-        viewModel.requestOtp()
-        runCurrent()
-        viewModel.updateOtp("123456")
+        val viewModel = viewModel(FakeGoogleAuthRepository(result), pending)
+        val event = async { viewModel.events.first() }
 
-        viewModel.verifyOtp()
+        viewModel.continueWithGoogle()
         runCurrent()
 
-        assertEquals(LoginStep.OTP, viewModel.uiState.value.step)
-        assertEquals(LoginError.INVALID_OTP, viewModel.uiState.value.error)
-        assertFalse(viewModel.uiState.value.authenticated)
+        assertEquals(LoginUiEvent.OpenWorkerPicker, event.await())
+        assertEquals("selection", pending.current()?.selectionToken)
     }
+
+    @Test
+    fun `cancelled sign in returns silently to idle`() = runTest {
+        val repository = FakeGoogleAuthRepository(failure = AuthFailure(AuthFailureReason.CANCELLED))
+        val viewModel = viewModel(repository)
+
+        viewModel.continueWithGoogle()
+        runCurrent()
+
+        assertNull(viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `double tap starts one request`() = runTest {
+        val repository = FakeGoogleAuthRepository(GoogleSignInResult.Authenticated(session()))
+        val viewModel = viewModel(repository)
+
+        viewModel.continueWithGoogle()
+        viewModel.continueWithGoogle()
+        runCurrent()
+
+        assertEquals(1, repository.signInCalls)
+    }
+
+    @Test
+    fun `blank client configuration disables sign in`() = runTest {
+        val repository = FakeGoogleAuthRepository(GoogleSignInResult.Authenticated(session()))
+        val viewModel = viewModel(repository, configured = false)
+
+        viewModel.continueWithGoogle()
+        runCurrent()
+
+        assertEquals(LoginError.NOT_CONFIGURED, viewModel.uiState.value.error)
+        assertEquals(0, repository.signInCalls)
+    }
+
+    private fun TestScope.viewModel(
+        repository: FakeGoogleAuthRepository,
+        pending: InMemoryPendingWorkerSelectionStore = InMemoryPendingWorkerSelectionStore(),
+        configured: Boolean = true,
+    ) = LoginViewModel(
+        SignInWithGoogleUseCase(FakeGoogleIdTokenProvider(), repository),
+        pending,
+        configured,
+        StandardTestDispatcher(testScheduler),
+    )
 }
 
-private class FakeAuthRepository(
-    private val requestFailure: Throwable? = null,
-    private val verifyFailure: Throwable? = null,
+private class FakeGoogleIdTokenProvider : GoogleIdTokenProvider {
+    override suspend fun requestIdToken() = GoogleIdToken("id-token", "nonce")
+    override suspend fun clearCredentialState() = Unit
+}
+
+private class FakeGoogleAuthRepository(
+    private val result: GoogleSignInResult? = null,
+    private val failure: Throwable? = null,
 ) : AuthRepository {
-    var requestedPhone: String? = null
-    var verifiedPhone: String? = null
-    var verifiedOtp: String? = null
-
-    override suspend fun requestOtp(phoneNumber: String): OtpChallenge {
-        requestFailure?.let { throw it }
-        requestedPhone = phoneNumber
-        return OtpChallenge(expiresInSeconds = 120)
+    var signInCalls = 0
+    override suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult {
+        signInCalls++
+        failure?.let { throw it }
+        return requireNotNull(result)
     }
-
-    override suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult {
-        verifyFailure?.let { throw it }
-        verifiedPhone = phoneNumber
-        verifiedOtp = otp
-        return AuthResult.Authenticated
-    }
-
+    override suspend fun requestOtp(phoneNumber: String): OtpChallenge = error("unused")
+    override suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult = error("unused")
     override suspend fun register(phoneNumber: String, displayName: String, registrationToken: String) = Unit
 }
+
+private fun session() = AuthSession(
+    "access",
+    "Bearer",
+    1234,
+    "refresh",
+    com.snabbit.prototype.mobile.domain.auth.SessionUser("id", "Name", "user@example.invalid", null, false, "CUSTOMER"),
+)

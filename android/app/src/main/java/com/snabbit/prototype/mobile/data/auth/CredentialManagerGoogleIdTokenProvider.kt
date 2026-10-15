@@ -42,7 +42,18 @@ class CredentialManagerGoogleIdTokenProvider(
         } catch (failure: GoogleIdTokenParsingException) {
             throw AuthFailure(AuthFailureReason.GOOGLE_CONFIGURATION, failure.message)
         } catch (failure: GetCredentialException) {
-            throw AuthFailure(AuthFailureReason.PLAY_SERVICES_UNAVAILABLE, failure.message)
+            val diagnostic = generateSequence<Throwable>(failure) { it.cause }
+                .mapNotNull(Throwable::message)
+                .joinToString(" ")
+                .lowercase()
+            val reason = when {
+                diagnostic.contains("network") || diagnostic.contains("timeout") ||
+                    diagnostic.contains("unable to resolve host") -> AuthFailureReason.OFFLINE
+                diagnostic.contains("configuration") || diagnostic.contains("client id") ||
+                    diagnostic.contains("sha-1") -> AuthFailureReason.GOOGLE_CONFIGURATION
+                else -> AuthFailureReason.PLAY_SERVICES_UNAVAILABLE
+            }
+            throw AuthFailure(reason, failure.message)
         }
     }
 

@@ -1,5 +1,7 @@
 package com.snabbit.prototype.mobile.navigation
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -11,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
@@ -20,11 +23,15 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.snabbit.prototype.mobile.domain.launch.LaunchDestination
+import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
 import com.snabbit.prototype.mobile.domain.notification.NotificationRepository
 import com.snabbit.prototype.mobile.domain.session.SessionManager
 import com.snabbit.prototype.mobile.ui.components.SnabbitBottomBar
 import com.snabbit.prototype.mobile.ui.login.LoginScreen
+import com.snabbit.prototype.mobile.ui.login.LoginUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
+import com.snabbit.prototype.mobile.ui.login.WorkerPickerScreen
+import com.snabbit.prototype.mobile.ui.login.WorkerPickerViewModel
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingScreen
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
 import com.snabbit.prototype.mobile.ui.splash.SplashScreen
@@ -33,10 +40,14 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.navigation3.koinEntryProvider
 import org.koin.core.annotation.KoinExperimentalAPI
+import org.koin.core.parameter.parametersOf
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
-fun SnabbitApp(role: AppRole = AppRole.fromBuild()) {
+fun SnabbitApp(
+    role: AppRole = AppRole.fromBuild(),
+    googleIdTokenProvider: GoogleIdTokenProvider,
+) {
     var authenticated by rememberSaveable { mutableStateOf(false) }
     val sessionManager = koinInject<SessionManager>()
     val notifications = koinInject<NotificationRepository>()
@@ -53,13 +64,13 @@ fun SnabbitApp(role: AppRole = AppRole.fromBuild()) {
             AppRole.WORKER -> WorkerShell(pushNavigation)
         }
     } else {
-        AuthenticationFlow(role = role, onAuthenticated = { authenticated = true })
+        AuthenticationFlow(googleIdTokenProvider, onAuthenticated = { authenticated = true })
     }
 }
 
 @Composable
 private fun AuthenticationFlow(
-    role: AppRole,
+    googleIdTokenProvider: GoogleIdTokenProvider,
     onAuthenticated: () -> Unit,
 ) {
     val backStack = rememberNavBackStack(SplashRoute)
@@ -77,7 +88,7 @@ private fun AuthenticationFlow(
                 LaunchedEffect(state.destination) {
                     when (state.destination) {
                         LaunchDestination.AUTHENTICATED -> onAuthenticated()
-                        LaunchDestination.LOGIN -> backStack.replaceWith(LoginOtpRoute)
+                        LaunchDestination.LOGIN -> backStack.replaceWith(LoginRoute)
                         LaunchDestination.ONBOARDING -> backStack.replaceWith(OnboardingRoute)
                         null -> Unit
                     }
@@ -88,7 +99,7 @@ private fun AuthenticationFlow(
                 val viewModel = koinViewModel<OnboardingViewModel>()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 LaunchedEffect(state.completed) {
-                    if (state.completed) backStack.replaceWith(LoginOtpRoute)
+                    if (state.completed) backStack.replaceWith(LoginRoute)
                 }
                 OnboardingScreen(
                     state = state,
@@ -97,24 +108,37 @@ private fun AuthenticationFlow(
                     onSkip = viewModel::skip,
                 )
             }
-            entry<LoginOtpRoute> {
-                val viewModel = koinViewModel<LoginViewModel>()
+            entry<LoginRoute> {
+                val context = LocalContext.current
+                val viewModel = koinViewModel<LoginViewModel> { parametersOf(googleIdTokenProvider) }
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(viewModel) {
+                    viewModel.events.collect { event ->
+                        when (event) {
+                            LoginUiEvent.Authenticated -> onAuthenticated()
+                            LoginUiEvent.OpenWorkerPicker -> backStack.replaceWith(WorkerPickerRoute)
+                            LoginUiEvent.AddGoogleAccount -> context.startActivity(
+                                Intent(Settings.ACTION_ADD_ACCOUNT).putExtra(
+                                    Settings.EXTRA_ACCOUNT_TYPES,
+                                    arrayOf("com.google"),
+                                ),
+                            )
+                        }
+                    }
+                }
+                LoginScreen(
+                    state = state,
+                    onContinueWithGoogle = viewModel::continueWithGoogle,
+                    onAddGoogleAccount = viewModel::addGoogleAccount,
+                )
+            }
+            entry<WorkerPickerRoute> {
+                val viewModel = koinViewModel<WorkerPickerViewModel> { parametersOf(googleIdTokenProvider) }
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 LaunchedEffect(state.authenticated) {
                     if (state.authenticated) onAuthenticated()
                 }
-                LoginScreen(
-                    state = state,
-                    role = role,
-                    onPhoneChanged = viewModel::updatePhone,
-                    onOtpChanged = viewModel::updateOtp,
-                    onDisplayNameChanged = viewModel::updateDisplayName,
-                    onRequestOtp = viewModel::requestOtp,
-                    onVerifyOtp = viewModel::verifyOtp,
-                    onResendOtp = viewModel::resendOtp,
-                    onEditPhone = viewModel::editPhone,
-                    onRegister = viewModel::register,
-                )
+                WorkerPickerScreen(state, viewModel::select)
             }
         },
         onBack = {

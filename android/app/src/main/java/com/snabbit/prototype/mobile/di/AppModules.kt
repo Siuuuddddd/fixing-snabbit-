@@ -329,7 +329,9 @@ private val viewModelModule = module {
     viewModel { PlaceholderViewModel() }
     viewModel { SplashViewModel(get()) }
     viewModel { OnboardingViewModel(get()) }
-    viewModel { LoginViewModel(get()) }
+    viewModel { (provider: GoogleIdTokenProvider) ->
+        LoginViewModel(SignInWithGoogleUseCase(provider, get()), get(), BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank())
+    }
     viewModel { (provider: GoogleIdTokenProvider) ->
         WorkerPickerViewModel(provider, SelectWorkerProfileUseCase(provider, get()), get())
     }

@@ -15,6 +15,7 @@ import com.snabbit.prototype.mobile.domain.payment.CheckoutRequest
 import com.snabbit.prototype.mobile.domain.payment.CheckoutResult
 import com.snabbit.prototype.mobile.domain.payment.CheckoutPurpose
 import com.snabbit.prototype.mobile.domain.payment.PaymentCheckoutCoordinator
+import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
 import com.snabbit.prototype.mobile.navigation.SnabbitApp
 import com.snabbit.prototype.mobile.navigation.AppRole
 import com.snabbit.prototype.mobile.navigation.PushNavigationCoordinator
@@ -22,10 +23,12 @@ import com.snabbit.prototype.mobile.ui.theme.SnabbitTheme
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.koin.android.ext.android.inject
+import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     private val checkoutCoordinator: PaymentCheckoutCoordinator by inject()
     private val pushNavigation: PushNavigationCoordinator by inject()
+    private val googleIdTokenProvider: GoogleIdTokenProvider by inject { parametersOf(this) }
     private var activeCheckout: CheckoutRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +44,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         }
         setContent {
             SnabbitTheme {
-                SnabbitApp()
+                SnabbitApp(googleIdTokenProvider = googleIdTokenProvider)
             }
         }
     }
