@@ -165,7 +165,7 @@ class LoginViewModel(
             AuthFailureReason.OFFLINE -> LoginError.OFFLINE
             AuthFailureReason.SERVER -> LoginError.SERVER
             AuthFailureReason.WORKER_PROFILE_REQUIRED -> LoginError.WORKER_PROFILE_REQUIRED
-            AuthFailureReason.UNKNOWN, null -> LoginError.UNKNOWN
+            else -> LoginError.UNKNOWN
         }
         _uiState.update { it.copy(isLoading = false, error = error) }
     }

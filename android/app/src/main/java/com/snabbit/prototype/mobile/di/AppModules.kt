@@ -1,12 +1,16 @@
 package com.snabbit.prototype.mobile.di
 
+import android.app.Activity
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.snabbit.prototype.mobile.BuildConfig
 import com.snabbit.prototype.mobile.data.auth.DefaultAuthRepository
+import com.snabbit.prototype.mobile.data.auth.CredentialManagerGoogleIdTokenProvider
 import com.snabbit.prototype.mobile.data.auth.EncryptedTokenStore
+import com.snabbit.prototype.mobile.data.auth.EncryptedSessionStore
+import com.snabbit.prototype.mobile.data.auth.InMemoryPendingWorkerSelectionStore
 import com.snabbit.prototype.mobile.data.auth.TokenStore
 import com.snabbit.prototype.mobile.data.auth.remote.AuthApi
 import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
@@ -64,6 +68,16 @@ import com.snabbit.prototype.mobile.data.network.RefreshingAuthenticator
 import com.snabbit.prototype.mobile.data.network.TokenRefresher
 import com.snabbit.prototype.mobile.data.network.UnsupportedTokenRefresher
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
+import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
+import com.snabbit.prototype.mobile.domain.auth.ObserveSessionUseCase
+import com.snabbit.prototype.mobile.domain.auth.PendingWorkerSelectionStore
+import com.snabbit.prototype.mobile.domain.auth.RefreshSessionUseCase
+import com.snabbit.prototype.mobile.domain.auth.SelectWorkerProfileUseCase
+import com.snabbit.prototype.mobile.domain.auth.SessionStore
+import com.snabbit.prototype.mobile.domain.auth.SignInWithGoogleUseCase
+import com.snabbit.prototype.mobile.domain.auth.SignOutAllUseCase
+import com.snabbit.prototype.mobile.domain.auth.SignOutUseCase
+import com.snabbit.prototype.mobile.domain.auth.SwitchWorkerProfileUseCase
 import com.snabbit.prototype.mobile.domain.address.AddressRepository
 import com.snabbit.prototype.mobile.domain.address.DeviceLocationDataSource
 import com.snabbit.prototype.mobile.domain.catalog.CatalogRepository
@@ -135,6 +149,7 @@ import com.snabbit.prototype.mobile.ui.home.HomeScreen
 import com.snabbit.prototype.mobile.ui.home.HomeViewModel
 import com.snabbit.prototype.mobile.ui.home.HomeUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
+import com.snabbit.prototype.mobile.ui.login.WorkerPickerViewModel
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
 import com.snabbit.prototype.mobile.ui.placeholder.PlaceholderScreen
 import com.snabbit.prototype.mobile.ui.placeholder.PlaceholderViewModel
@@ -203,6 +218,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 private val storageModule = module {
     single(named("applicationScope")) { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
     single<TokenStore> { EncryptedTokenStore(androidContext()) }
+    single<SessionStore> { EncryptedSessionStore(androidContext(), get()) }
+    single<PendingWorkerSelectionStore> { InMemoryPendingWorkerSelectionStore() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.create(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -238,7 +255,7 @@ private val networkModule = module {
             .build()
     }
     single { get<Retrofit>().create(AuthApi::class.java) }
-    single<AuthRemoteDataSource> { RetrofitAuthRemoteDataSource(get()) }
+    single<AuthRemoteDataSource> { RetrofitAuthRemoteDataSource(get(), get()) }
     single { get<Retrofit>().create(CatalogApi::class.java) }
     single<CatalogRemoteDataSource> { RetrofitCatalogRemoteDataSource(get()) }
     single { get<Retrofit>().create(AddressApi::class.java) }
@@ -257,8 +274,18 @@ private val networkModule = module {
 
 private val repositoryModule = module {
     single { AppRole.fromBuild() }
+    factory<GoogleIdTokenProvider> { (activity: Activity) ->
+        CredentialManagerGoogleIdTokenProvider(activity, BuildConfig.GOOGLE_WEB_CLIENT_ID)
+    }
+    factory { (provider: GoogleIdTokenProvider) -> SignInWithGoogleUseCase(provider, get()) }
+    factory { (provider: GoogleIdTokenProvider) -> SelectWorkerProfileUseCase(provider, get()) }
+    factory { SwitchWorkerProfileUseCase(get()) }
+    factory { RefreshSessionUseCase(get()) }
+    factory { (provider: GoogleIdTokenProvider) -> SignOutUseCase(get(), provider) }
+    factory { (provider: GoogleIdTokenProvider) -> SignOutAllUseCase(get(), provider) }
+    factory { ObserveSessionUseCase(get()) }
     single { PushNavigationCoordinator() }
-    single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get()) }
+    single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get(), get()) }
     single<LaunchRepository> { DefaultLaunchRepository(get(), get()) }
     single<SessionIdentityProvider> { JwtSessionIdentityProvider(get(), get()) }
     single<SessionManager> { DefaultSessionManager(get()) }
@@ -303,6 +330,9 @@ private val viewModelModule = module {
     viewModel { SplashViewModel(get()) }
     viewModel { OnboardingViewModel(get()) }
     viewModel { LoginViewModel(get()) }
+    viewModel { (provider: GoogleIdTokenProvider) ->
+        WorkerPickerViewModel(provider, SelectWorkerProfileUseCase(provider, get()), get())
+    }
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { (serviceId: String) -> ServiceDetailsViewModel(serviceId, get()) }
     viewModel { AddressViewModel(get(), get()) }

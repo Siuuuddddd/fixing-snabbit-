@@ -5,6 +5,21 @@ data class OtpChallenge(
 )
 
 enum class AuthFailureReason {
+    CANCELLED,
+    NOT_CONFIGURED,
+    NO_GOOGLE_ACCOUNT,
+    PLAY_SERVICES_UNAVAILABLE,
+    GOOGLE_CONFIGURATION,
+    INVALID_GOOGLE_TOKEN,
+    EMAIL_NOT_VERIFIED,
+    WORKER_NOT_REGISTERED,
+    INVALID_SELECTION_TOKEN,
+    ACCOUNT_DISABLED,
+    ACCOUNT_LINK_CONFLICT,
+    SESSION_REVOKED,
+    REFRESH_IN_PROGRESS,
+    SHARED_WORKER_SESSION_REQUIRED,
+    PHONE_REQUIRED,
     INVALID_OR_EXPIRED_OTP,
     RATE_LIMITED,
     OFFLINE,
@@ -19,9 +34,52 @@ class AuthFailure(
 ) : Exception(message)
 
 interface AuthRepository {
+    suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult =
+        error("Google sign-in is not implemented")
+    suspend fun selectWorkerProfile(
+        credential: GoogleIdToken,
+        selectionToken: String,
+        workerId: String,
+        device: AuthDevice,
+    ): AuthSession = error("Worker selection is not implemented")
+    suspend fun switchWorkerProfile(workerId: String): AuthSession = error("Worker switching is not implemented")
+    suspend fun refreshSession(): AuthSession = error("Session refresh is not implemented")
+    suspend fun signOut(allDevices: Boolean) = Unit
     suspend fun requestOtp(phoneNumber: String): OtpChallenge
     suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult
     suspend fun register(phoneNumber: String, displayName: String, registrationToken: String)
+}
+
+data class GoogleIdToken(val value: String, val nonce: String)
+
+data class AuthDevice(val id: String? = null, val name: String? = null)
+
+data class SessionUser(
+    val id: String,
+    val name: String,
+    val email: String,
+    val pictureUrl: String?,
+    val isNewUser: Boolean,
+    val role: String,
+)
+
+data class AuthSession(
+    val accessToken: String,
+    val tokenType: String,
+    val expiresAtEpochSeconds: Long,
+    val refreshToken: String,
+    val user: SessionUser,
+)
+
+data class WorkerPickerOption(val workerId: String, val name: String, val tier: String)
+
+sealed interface GoogleSignInResult {
+    data class Authenticated(val session: AuthSession) : GoogleSignInResult
+    data class WorkerSelectionRequired(
+        val selectionToken: String,
+        val expiresAtEpochSeconds: Long,
+        val workers: List<WorkerPickerOption>,
+    ) : GoogleSignInResult
 }
 
 sealed interface AuthResult {
