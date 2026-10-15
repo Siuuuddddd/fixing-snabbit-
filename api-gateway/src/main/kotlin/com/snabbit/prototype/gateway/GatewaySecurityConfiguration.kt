@@ -47,12 +47,9 @@ class GatewaySecurityConfiguration {
                     .pathMatchers(
                         "/api/v1/auth/google",
                         "/api/v1/auth/refresh",
-                        "/api/v1/auth/otp/**",
-                        "/api/v1/auth/register",
                         "/api/v1/worker-auth/google",
                         "/api/v1/worker-auth/select-profile",
                         "/api/v1/worker-auth/refresh",
-                        "/api/v1/worker-auth/otp/**",
                         "/api/v1/staff-auth/**",
                         "/actuator/health/**",
                         "/webhooks/razorpay",

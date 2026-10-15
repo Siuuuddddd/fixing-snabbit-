@@ -38,6 +38,8 @@ Success:
 
 The first valid sign-in creates an ACTIVE customer unless a matching unlinked pre-provisioned email profile exists. Existing phone-only profiles are not linked by phone. A Google-only account has no Snabbit password; a Google password change does not notify Snabbit or invalidate Snabbit sessions.
 
+The former customer `POST /api/v1/auth/otp/request`, `POST /api/v1/auth/otp/verify`, and `POST /api/v1/auth/register` endpoints have been removed. They are not compatibility aliases for Google sign-in.
+
 ## Worker sign-in and picker
 
 `POST /api/v1/worker-auth/google` is public and accepts the same four request fields as customer sign-in. A normal active pre-provisioned worker receives the session response above with role `WORKER`, `isNewUser=false`, and the worker UUID.
@@ -80,6 +82,8 @@ It consumes the token once and returns a worker session. The selection token is 
 ```
 
 The current session is revoked immediately and a new worker session is returned for the selected profile. Normal worker sessions receive `SHARED_WORKER_SESSION_REQUIRED`.
+
+The former worker `POST /api/v1/worker-auth/otp/request` and `POST /api/v1/worker-auth/otp/verify` endpoints have been removed.
 
 ## Refresh and logout
 
@@ -127,6 +131,10 @@ Errors use RFC 9457/Spring `ProblemDetail` JSON with `status`, `detail` and a `c
 | 409 | `PHONE_REQUIRED` | SELF home contact needs a saved customer phone. |
 
 Messages remain generic. Clients must branch on `code`, not parse `detail`.
+
+## Staff authentication retained
+
+Staff authentication is outside this migration and still uses the shared phone-verification provider at `POST /api/v1/staff-auth/otp/request` and `POST /api/v1/staff-auth/otp/verify`. Its provider and environment configuration remain required by User Service. Customer and worker apps must not call these staff-only endpoints.
 
 ## Notifications, WebSocket and deep links
 

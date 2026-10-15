@@ -20,12 +20,7 @@ class RedisWorkerSelectionGrantStoreTest {
     private val properties = WorkerAuthProperties(
         issuer = "https://auth.snabbit.test",
         jwtSecret = "worker-unit-test-secret-that-is-at-least-32-bytes",
-        otpPepper = "pepper",
-        otpTtl = Duration.ofMinutes(5),
-        requestCooldown = Duration.ofMinutes(1),
         accessTokenTtl = Duration.ofMinutes(15),
-        maxAttempts = 5,
-        exposeCode = false,
         sharedSelectionTokenTtl = ttl,
     )
 

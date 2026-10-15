@@ -34,7 +34,7 @@ class GatewayRateLimitConfigurationTest {
 
     @Test
     fun `unauthenticated callers are limited by direct network address`() {
-        val request = MockServerHttpRequest.post("/api/v1/auth/otp/request")
+        val request = MockServerHttpRequest.post("/api/v1/auth/google")
             .remoteAddress(InetSocketAddress("203.0.113.10", 43210))
             .build()
         val exchange = MockServerWebExchange.from(request)

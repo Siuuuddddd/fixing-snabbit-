@@ -36,7 +36,7 @@ class AuthenticatedIdentityHeaderFilterTest {
     @Test
     fun `removes identity header from unauthenticated request`() {
         val exchange = MockServerWebExchange.from(
-            MockServerHttpRequest.get("/api/v1/auth/otp/request")
+            MockServerHttpRequest.get("/api/v1/auth/google")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER, "spoofed")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER, "spoofed-worker")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER, "spoofed-staff")

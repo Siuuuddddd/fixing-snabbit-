@@ -7,12 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class WorkerAuthProperties(
     val issuer: String,
     val jwtSecret: String,
-    val otpPepper: String,
-    val otpTtl: Duration,
-    val requestCooldown: Duration,
     val accessTokenTtl: Duration,
-    val maxAttempts: Int,
-    val exposeCode: Boolean,
     val sharedSelectionTokenTtl: Duration = Duration.ofMinutes(5),
     val refreshIdleTtl: Duration = Duration.ofDays(180),
     val refreshAbsoluteTtl: Duration? = null,

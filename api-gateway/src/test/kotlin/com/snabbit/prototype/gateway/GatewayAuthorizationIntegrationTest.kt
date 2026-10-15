@@ -74,6 +74,28 @@ class GatewayAuthorizationIntegrationTest {
         client.post().uri("/api/v1/worker-auth/switch-profile").exchange().expectStatus().isUnauthorized
     }
 
+    @Test
+    fun `removed customer and worker OTP routes are not public while staff OTP remains public`() {
+        listOf(
+            "/api/v1/auth/otp/request",
+            "/api/v1/auth/otp/verify",
+            "/api/v1/auth/register",
+            "/api/v1/worker-auth/otp/request",
+            "/api/v1/worker-auth/otp/verify",
+        ).forEach { path ->
+            client.post().uri(path).exchange().expectStatus().isUnauthorized
+        }
+
+        listOf(
+            "/api/v1/staff-auth/otp/request",
+            "/api/v1/staff-auth/otp/verify",
+        ).forEach { path ->
+            val status = client.post().uri(path).exchange().returnResult(Void::class.java).status
+            assertNotEquals(HttpStatus.UNAUTHORIZED, status)
+            assertNotEquals(HttpStatus.FORBIDDEN, status)
+        }
+    }
+
     private fun request(path: String, role: String): WebTestClient.ResponseSpec = client
         .mutateWith(mockJwt().authorities(SimpleGrantedAuthority("ROLE_$role")))
         .get()

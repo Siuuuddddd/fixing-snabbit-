@@ -63,17 +63,12 @@ class StaffAuthenticationServiceTest {
     }
 
     private class ChallengeStore : OtpChallengeStore {
-        private var codeHash: String? = null
         private var attempts = 0L
 
         override fun acquireRequestCooldown(key: String, ttl: Duration) = true
-        override fun save(key: String, codeHash: String, ttl: Duration) {
-            this.codeHash = codeHash
-        }
-        override fun codeHash(key: String) = codeHash
         override fun incrementAttempts(key: String, ttl: Duration) = ++attempts
         override fun clear(key: String) {
-            codeHash = null
+            attempts = 0
         }
     }
 }

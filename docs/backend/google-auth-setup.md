@@ -42,3 +42,5 @@ Optional local/development seed names:
 Both development email variables must be empty in production. Values belong only in the untracked local `.env` or the deployment secret/configuration store; never put them in source, documentation, images or logs.
 
 Firebase configuration remains separate: Android `google-services.json` files and the FCM service account configure push notifications, not backend Google sign-in.
+
+User Service still needs the existing `OTP_PROVIDER`, Twilio credential, Verify service SID, OTP TTL/limit and `OTP_PEPPER` configuration for staff phone authentication. Booking Service still needs its independent arrival-OTP provider configuration. Those values are not Google sign-in configuration and were intentionally retained.

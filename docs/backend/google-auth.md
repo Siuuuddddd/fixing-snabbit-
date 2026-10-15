@@ -2,11 +2,11 @@
 
 ## Scope and status
 
-This is the Step 0 audit of the authentication implementation that exists before the Google ID-token and rotating-session work begins. It records current ownership, public routes, persistence, shared dependencies, and migration constraints. It does not describe a completed Google sign-in implementation.
+This document began as the Step 0 audit of the authentication implementation before the Google ID-token and rotating-session work. The audit sections retain that historical context; the Progress and Gaps sections record the completed migration and current state.
 
 The migration is backend-only. Android changes, real identity values, local secrets, and the untracked `docs/android/conversation-handoff.md` are outside this work.
 
-## Current authentication ownership and routes
+## Pre-migration authentication ownership and routes
 
 Customer authentication is owned by User Service:
 
@@ -19,9 +19,9 @@ Worker authentication is owned by Worker Service:
 - `POST /api/v1/worker-auth/otp/request` starts phone verification.
 - `POST /api/v1/worker-auth/otp/verify` verifies the code and requires an existing active worker profile. Workers are not created by login.
 
-Staff authentication is also phone-OTP based and is owned by User Service under `/api/v1/staff-auth/**`. This is an important shared dependency: `StaffAuthenticationService` uses the same platform `PhoneVerificationProvider`, Twilio Verify implementation, Redis challenge store, and `AuthProperties` as customer authentication. Replacing only customer and worker login must not silently remove the still-used staff provider or configuration. Step 6 must either preserve the shared implementation for staff or explicitly migrate staff in a separately agreed scope.
+Staff authentication is also phone-OTP based and is owned by User Service under `/api/v1/staff-auth/**`. This is an important shared dependency: `StaffAuthenticationService` uses the same platform `PhoneVerificationProvider`, Twilio Verify implementation, Redis challenge store, and `AuthProperties`. Step 6 preserved this provider, its User Service configuration, and staff login unchanged. Staff authentication needs its own replacement project later.
 
-API Gateway declares `/api/v1/auth/**`, `/api/v1/worker-auth/**`, `/api/v1/staff-auth/**`, health probes, and the Razorpay webhook public. Worker API paths require `ROLE_WORKER`; ordinary `/api/v1/**` paths require `ROLE_CUSTOMER`; staff paths are role-specific. All other exchanges are denied. Public status is based on the path rules in `GatewaySecurityConfiguration`, not on downstream controllers.
+Before the migration, API Gateway exposed the customer and worker OTP paths listed above. They are no longer public and their downstream controllers no longer exist. Google sign-in, refresh, worker selection, staff OTP, health probes, and the Razorpay webhook remain public as documented in `google-auth-api.md`. Worker API paths require `ROLE_WORKER`; ordinary `/api/v1/**` paths require `ROLE_CUSTOMER`; staff paths are role-specific. All other exchanges are denied.
 
 ## Current JWT issuance and validation
 
@@ -44,7 +44,7 @@ Notification history and Android device registration are authenticated like othe
 
 The WebSocket endpoints are `/api/v1/notifications/live` and `/api/v1/worker/notifications/live`. The gateway authenticates the upgrade request and injects the same trusted identity header. `NotificationWebSocketHandler` accepts the handshake only when that header contains a UUID; otherwise it closes the session. There is no separate WebSocket token format and no SSE implementation. Preserving the access JWT's subject and role therefore preserves notification-stream and device-registration identity behavior.
 
-## Login OTP implementation
+## Pre-migration login OTP implementation
 
 `platform-common` defines `PhoneVerificationProvider` with start, check, and clear operations. `TwilioVerifyProvider` is the production adapter and `LoggingPhoneVerificationProvider` is the development adapter. The Twilio adapter uses Spring's shared `RestClient.Builder`, HTTP Basic authentication, and Twilio Verify verification/start and verification/check calls. Twilio generates and validates the digits. The provider configuration lives under `otp` and includes provider type, base URL, account credentials, API-key credentials, Verify service SID, TTL, and debug-code exposure.
 
@@ -52,10 +52,10 @@ Customer attempt and cooldown state is Redis-backed, not relational:
 
 - request cooldown: `auth:otp:cooldown:<hashed-phone>`;
 - attempt count: `auth:otp:attempts:<hashed-phone>`;
-- legacy code-hash keys exist in `RedisOtpChallengeStore`, although Twilio and the current logging provider keep provider challenge state themselves;
+- legacy code-hash accessors existed in `RedisOtpChallengeStore`, although Twilio and the logging provider kept provider challenge state themselves; Step 6 removed those unused accessors;
 - registration grants are random opaque values stored only by hash under `auth:registration:<grant-hash>` and consumed once.
 
-Worker attempt and cooldown state is also Redis-backed under worker-specific keys. There are no customer-login or worker-login OTP database tables. Gateway rate limiting additionally uses Redis and keys unauthenticated calls by remote address and authenticated calls by JWT subject.
+Worker attempt and cooldown state was also Redis-backed under worker-specific keys. Step 6 removed the worker store and customer registration-grant implementation; their expiring Redis keys require no schema migration and age out naturally. There were no customer-login or worker-login OTP database tables or columns to drop. The shared User Service challenge store remains because staff OTP uses it. Gateway rate limiting additionally uses Redis and keys unauthenticated calls by remote address and authenticated calls by JWT subject.
 
 Both customer and worker services normalize Indian mobile numbers with the shared `IndianPhoneNumber` helper. They enforce request cooldowns, provider verification, and a configured maximum attempt count. Customer verification returns an access token for an active existing profile or a registration grant for an unknown phone. Registration creates an active profile after the grant is consumed. Worker verification never creates an account: it requires exactly the active worker found by normalized phone. Suspended, deleted, paused, or unknown accounts cannot authenticate.
 
@@ -110,7 +110,7 @@ There is no current session storage or revoked-session deny list. The planned re
 
 ## Production configuration guard
 
-`ProductionConfigurationGuard` runs only under the `production` profile. It rejects enabled development seed, offer auto-accept, or auto-progress; requires each service to declare production properties; rejects known local/development values; and enforces specific live providers. User and Worker Service currently require the login `otp.*` Twilio Verify configuration. Booking Service independently requires `arrival-otp-provider.*` with Twilio Verify.
+`ProductionConfigurationGuard` runs only under the `production` profile. It rejects enabled development seed, offer auto-accept, or auto-progress; requires each service to declare production properties; rejects known local/development values; and enforces specific live providers. User Service continues to require `otp.*` Twilio Verify configuration for staff authentication. Worker Service no longer configures a phone-verification provider. Booking Service independently requires `arrival-otp-provider.*` with Twilio Verify.
 
 The Google-auth work must add required Google client-ID configuration and reject any test verifier under production. It must also reject a configured shared worker-login email in production. When customer and worker OTP are removed, only login-specific OTP requirements should leave User and Worker Service. Booking Service arrival-OTP requirements and any staff/SMS requirements must remain.
 
@@ -137,12 +137,12 @@ The Google-auth work must add required Google client-ID configuration and reject
 - **Step 4 complete in the working checkpoint:** the development customer is now pre-provisioned solely by `DEV_SEED_DEMO_CUSTOMER_EMAIL`, with no phone and no Google subject, while retaining Plus and the three default favourites. All ten stable workers are explicitly seeded, carry `DEV_SEED_WORKER_LOGIN_EMAIL`, retain non-routable placeholder phones, full compatibility, tier data and rolling availability. The former customer and worker login-phone seed variables are removed from service configuration, Compose and `.env.example`.
 - Seeded offer auto-accept and auto-progress continue to operate on stable seeded worker IDs. A real shared-login session changes only the authenticated actor and does not conflict with those development automations, so no automation behavior was changed. Production startup rejects either development login email even when the seed switch is false.
 - **Step 5 complete in the working checkpoint:** `google-auth-setup.md` contains the Google Auth Platform consent/test-user and Web/Android OAuth-client checklist plus configuration variable names. `google-auth-api.md` is the implementation contract for sign-in, picker/select, refresh rotation, logout, shared profile switching, optional phone capture, errors, notification authentication and the current deep-link limitation. `.env.example`, Compose and service configuration expose names and safe defaults only; no identity value or secret is checked in.
+- **Step 6 complete in the working checkpoint:** customer and worker phone-OTP login, customer OTP registration, their controllers and exclusive transient stores, Worker Service OTP configuration, and the corresponding public gateway routes are removed. Staff phone OTP, its shared provider/configuration and Redis challenge store remain unchanged. Booking arrival OTP and login-independent notification SMS remain unchanged. There were no login-OTP relational tables or columns to migrate.
 
 ## Gaps
 
-- Step 6 remains: remove only customer and worker phone-OTP login/registration code and public routes while preserving staff phone OTP and arrival OTP.
 - Staff authentication still uses phone OTP through the shared `PhoneVerificationProvider`. It is intentionally unchanged and needs its own replacement project later.
-- Arrival OTP and notification SMS remain independent retained capabilities and require regression coverage at the removal checkpoint.
+- Expired customer registration-grant and worker OTP Redis keys may remain briefly after deployment; they are unreachable and disappear through their existing TTLs.
 - The mixed Android documentation files are intentionally not edited by this goal. After this work is complete, copy the API summary from `docs/backend/google-auth-api.md` into `docs/android/api-map.md` manually.
 - `docs/backend/worker-tiers-favourites-api.md` still names the superseded phone-based seed variables. It is outside this goal's new-file-only documentation rule; use the email variables documented here and in `google-auth-setup.md`.
 - Notification history and WebSocket snapshots do not yet expose a deep-link URI or structured target identifier. Android can route known event types only to top-level destinations until Notification Service adds that contract.

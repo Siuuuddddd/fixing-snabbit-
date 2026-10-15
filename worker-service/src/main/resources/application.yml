@@ -57,9 +57,6 @@ auth:
     verifier: ${GOOGLE_IDENTITY_VERIFIER:google}
     customer-client-ids: ${GOOGLE_CUSTOMER_CLIENT_IDS:}
     worker-client-ids: ${GOOGLE_WORKER_CLIENT_IDS:}
-  otp-pepper: ${OTP_PEPPER:local-only-otp-pepper}
-  otp-ttl: PT5M
-  request-cooldown: PT1M
   access-token-ttl: PT15M
   refresh-idle-ttl: ${AUTH_REFRESH_IDLE_TTL:P180D}
   refresh-absolute-ttl: ${AUTH_REFRESH_ABSOLUTE_TTL:}
@@ -67,18 +64,7 @@ auth:
   max-active-sessions: ${AUTH_MAX_ACTIVE_SESSIONS:10}
   account-rate-limit: ${AUTH_ACCOUNT_RATE_LIMIT:20}
   account-rate-window: ${AUTH_ACCOUNT_RATE_WINDOW:PT1M}
-  max-attempts: 5
-  expose-code: ${OTP_EXPOSE_CODE:false}
   shared-selection-token-ttl: ${AUTH_WORKER_SELECTION_TTL:PT5M}
-
-otp:
-  provider: ${OTP_PROVIDER:twilio-verify}
-  account-sid: ${TWILIO_ACCOUNT_SID:}
-  auth-token: ${TWILIO_AUTH_TOKEN:}
-  api-key-sid: ${TWILIO_API_KEY_SID:}
-  api-key-secret: ${TWILIO_API_KEY_SECRET:}
-  verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID:}
-  expose-code: ${OTP_EXPOSE_CODE:false}
 
 integrations:
   booking-service-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
@@ -101,10 +87,5 @@ deployment.production.required-properties:
   - auth.jwt-secret
   - auth.google.verifier
   - auth.google.worker-client-ids
-  - otp.provider
-  - otp.account-sid
-  - otp.api-key-sid
-  - otp.api-key-secret
-  - otp.verify-service-sid
   - integrations.booking-service-url
   - service-auth.token
