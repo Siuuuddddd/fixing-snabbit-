@@ -1,5 +1,6 @@
 package com.snabbit.prototype.mobile.ui.emailauth
 
+import androidx.lifecycle.ViewModelStore
 import com.snabbit.prototype.mobile.data.auth.InMemoryAuthNoticeStore
 import com.snabbit.prototype.mobile.data.auth.InMemoryPendingPasswordCredentialStore
 import com.snabbit.prototype.mobile.domain.auth.AuthDevice
@@ -172,6 +173,45 @@ class EmailAuthViewModelsTest {
         assertEquals("", viewModel.uiState.value.currentPassword)
         assertEquals("", viewModel.uiState.value.newPassword)
         assertFalse(viewModel.uiState.value.isSubmitting)
+    }
+
+    @Test fun `leaving auth screens clears passwords and verification codes`() = runTest {
+        val repository = FakeEmailRepository()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val auth = authViewModel(repository)
+        val verify = VerifyEmailViewModel(
+            testEmail(), VerifyEmailUseCase(repository), ResendVerificationUseCase(repository),
+            InMemoryPendingPasswordCredentialStore(), RecordingCredentialSaver(), dispatcher,
+        )
+        val forgot = ForgotPasswordViewModel(
+            testEmail(), ForgotPasswordUseCase(repository), ResetPasswordUseCase(repository),
+            PasswordRules(), InMemoryAuthNoticeStore(), dispatcher,
+        )
+        val change = ChangePasswordViewModel(ChangePasswordUseCase(repository), PasswordRules(), dispatcher)
+
+        auth.updateLoginPassword(testPassword())
+        auth.updateSignUpPassword(testReplacementPassword())
+        verify.updateCode("123")
+        forgot.updateCode("123")
+        forgot.updatePassword(testReplacementPassword())
+        change.updateCurrent(testPassword())
+        change.updateNew(testReplacementPassword())
+
+        ViewModelStore().apply {
+            put("auth", auth)
+            put("verify", verify)
+            put("forgot", forgot)
+            put("change", change)
+            clear()
+        }
+
+        assertEquals("", auth.uiState.value.loginPassword)
+        assertEquals("", auth.uiState.value.signUpPassword)
+        assertEquals("", verify.uiState.value.code)
+        assertEquals("", forgot.uiState.value.code)
+        assertEquals("", forgot.uiState.value.newPassword)
+        assertEquals("", change.uiState.value.currentPassword)
+        assertEquals("", change.uiState.value.newPassword)
     }
 
     private fun kotlinx.coroutines.test.TestScope.authViewModel(

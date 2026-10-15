@@ -18,7 +18,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -36,6 +41,7 @@ import com.snabbit.prototype.mobile.R
 import com.snabbit.prototype.mobile.domain.auth.PasswordRule
 import com.snabbit.prototype.mobile.domain.auth.PasswordValidation
 import com.snabbit.prototype.mobile.ui.theme.SnabbitSpacing
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun EmailField(
@@ -135,10 +141,19 @@ private fun PasswordRuleRow(rule: PasswordRule, @StringRes text: Int, validation
 @Composable
 internal fun EmailAuthErrorText(error: EmailAuthError?) {
     if (error == null) return
+    var retrySeconds by remember(error.type, error.retryAfterSeconds) {
+        mutableLongStateOf(error.retryAfterSeconds ?: 0L)
+    }
+    LaunchedEffect(error.type, error.retryAfterSeconds) {
+        while (retrySeconds > 0L) {
+            delay(1_000L)
+            retrySeconds--
+        }
+    }
     Text(
         text = when {
-            error.type == EmailAuthUiError.RATE_LIMITED && error.retryAfterSeconds != null ->
-                stringResource(R.string.email_auth_error_rate_limited_seconds, error.retryAfterSeconds)
+            error.type == EmailAuthUiError.RATE_LIMITED && retrySeconds > 0L ->
+                stringResource(R.string.email_auth_error_rate_limited_seconds, retrySeconds)
             else -> stringResource(error.type.messageRes())
         },
         color = MaterialTheme.colorScheme.error,
