@@ -39,26 +39,24 @@ class LocalWorkerSeedInitializer(
     private fun upsertWorker(worker: SeedWorker, index: Int, today: LocalDate) {
         val joinedAt = today.minusMonths(worker.months.toLong()).atStartOfDay(zone).toInstant()
         val placeholderPhone = "seed-worker-${(index + 1).toString().padStart(2, '0')}"
-        val phone = if (worker.id == DevSeedWorkerIds.SAVITA && properties.workerLoginPhone.isNotBlank()) {
-            properties.workerLoginPhone
-        } else {
-            placeholderPhone
-        }
+        val phone = placeholderPhone
+        val email = properties.workerLoginEmail.trim().lowercase().takeIf(String::isNotBlank)
         jdbc.update(
             """
             INSERT INTO worker_profile (
                 id, phone_e164, display_name, tier, status, current_latitude, current_longitude,
-                service_radius_km, rating_sum, rating_count, created_at, updated_at, joined_at
-            ) VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+                service_radius_km, rating_sum, rating_count, created_at, updated_at, joined_at, email, seeded
+            ) VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, TRUE)
             ON CONFLICT (id) DO UPDATE SET
                 phone_e164 = EXCLUDED.phone_e164, display_name = EXCLUDED.display_name,
                 tier = EXCLUDED.tier, status = 'ACTIVE', current_latitude = EXCLUDED.current_latitude,
                 current_longitude = EXCLUDED.current_longitude,
                 service_radius_km = EXCLUDED.service_radius_km, joined_at = EXCLUDED.joined_at,
+                email = EXCLUDED.email, seeded = TRUE,
                 updated_at = CURRENT_TIMESTAMP, version = worker_profile.version + 1
             """.trimIndent(),
             worker.id, phone, worker.name, worker.tier, properties.latitude, properties.longitude,
-            properties.serviceRadiusKm, worker.ratingSum, worker.ratingCount, Timestamp.from(joinedAt),
+            properties.serviceRadiusKm, worker.ratingSum, worker.ratingCount, Timestamp.from(joinedAt), email,
         )
         servicePrices.forEach { (serviceCode, price) ->
             jdbc.update(

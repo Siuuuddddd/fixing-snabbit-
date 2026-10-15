@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
-/** Creates only the configured customer; OTP authentication remains unchanged. */
+/** Creates only the configured, unlinked Google customer development profile. */
 @Component
 @Profile("local", "dev")
 @ConditionalOnProperty(prefix = "dev-seed", name = ["enabled"], havingValue = "true")
@@ -42,20 +42,21 @@ class DemoCustomerDevSeed(
     }
 
     fun ensureFor(customerId: UUID) {
-        val phone = properties.demoCustomerPhone.trim()
-        if (phone.isBlank()) return
-        val existing = users.findByPhoneE164(phone) ?: return
+        val email = properties.demoCustomerEmail.trim().lowercase()
+        if (email.isBlank()) return
+        val existing = users.findByEmailIgnoreCase(email) ?: return
         if (existing.id == customerId) runCatching { ensure(existing) }
     }
 
     fun ensure(): UserProfile? {
-        val phone = properties.demoCustomerPhone.trim()
-        if (phone.isBlank()) return null
-        val existing = users.findByPhoneE164(phone)
+        val email = properties.demoCustomerEmail.trim().lowercase()
+        if (email.isBlank()) return null
+        val existing = users.findByEmailIgnoreCase(email)
         val customer = existing ?: users.save(
             UserProfile(
-                stableCustomerId(phone), phone, properties.demoCustomerName.trim(), UserStatus.ACTIVE,
-                false, null, clock.instant(), clock.instant(),
+                id = stableCustomerId(email), phoneE164 = null, displayName = properties.demoCustomerName.trim(),
+                status = UserStatus.ACTIVE, plusActive = false, plusExpiresAt = null,
+                createdAt = clock.instant(), updatedAt = clock.instant(), email = email,
             ),
         )
         ensure(customer)
@@ -125,7 +126,7 @@ class DemoCustomerDevSeed(
         )
     }
 
-    private fun stableCustomerId(phone: String): UUID = UUID.nameUUIDFromBytes(
-        "snabbit-dev-customer:$phone".toByteArray(StandardCharsets.UTF_8),
+    private fun stableCustomerId(email: String): UUID = UUID.nameUUIDFromBytes(
+        "snabbit-dev-customer:$email".toByteArray(StandardCharsets.UTF_8),
     )
 }

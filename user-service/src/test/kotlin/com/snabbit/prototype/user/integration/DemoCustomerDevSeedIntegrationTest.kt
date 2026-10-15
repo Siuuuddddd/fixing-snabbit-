@@ -9,6 +9,8 @@ import com.snabbit.prototype.user.exception.FavouriteLimitReached
 import com.snabbit.prototype.user.domain.UserProfile
 import com.snabbit.prototype.user.repository.FavouriteWorkerRepository
 import com.snabbit.prototype.user.repository.UserProfileRepository
+import com.snabbit.prototype.user.auth.CustomerGoogleAccountService
+import com.snabbit.prototype.platform.GoogleIdentity
 import io.mockk.every
 import java.math.BigDecimal
 import java.time.Duration
@@ -44,6 +46,7 @@ class DemoCustomerDevSeedIntegrationTest {
     @Autowired private lateinit var users: UserProfileRepository
     @Autowired private lateinit var favourites: FavouriteWorkerRepository
     @Autowired private lateinit var favouriteService: FavouriteWorkerService
+    @Autowired private lateinit var googleAccounts: CustomerGoogleAccountService
 
     @MockBean
     private lateinit var workerClient: FavouriteWorkerClient
@@ -61,8 +64,14 @@ class DemoCustomerDevSeedIntegrationTest {
 
         val customer = seed.ensure()!!
         assertEquals(UserStatus.ACTIVE, customer.status)
+        assertEquals(null, customer.phoneE164)
+        assertEquals(null, customer.googleSub)
         assertTrue(users.findById(customer.id).orElseThrow().hasActivePlus(Instant.now()))
         assertEquals(3, favourites.findAllByIdUserIdOrderByPriority(customer.id).size)
+
+        val linked = googleAccounts.resolve(GoogleIdentity("demo-subject", demoEmail, "Demo Customer", null))
+        assertEquals(customer.id, linked.profile.id)
+        assertEquals("demo-subject", linked.profile.googleSub)
 
         val existing = users.findById(customer.id).orElseThrow()
         existing.displayName = "Existing Customer"
@@ -116,7 +125,7 @@ class DemoCustomerDevSeedIntegrationTest {
     class KPostgreSQLContainer(imageName: String) : PostgreSQLContainer<KPostgreSQLContainer>(imageName)
 
     companion object {
-        private val demoPhone = "+" + 91 + listOf(7, 0, 0, 0, 0, 0, 0, 0, 0, 1).joinToString("")
+        private val demoEmail = "demo-customer" + "@" + "example.test"
 
         @Container
         @JvmStatic
@@ -128,7 +137,7 @@ class DemoCustomerDevSeedIntegrationTest {
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)
-            registry.add("dev-seed.demo-customer-phone") { demoPhone }
+            registry.add("dev-seed.demo-customer-email") { demoEmail }
         }
     }
 }

@@ -48,7 +48,6 @@ dev-seed:
   latitude: ${DEV_SEED_LATITUDE:19.076090}
   longitude: ${DEV_SEED_LONGITUDE:72.877426}
   service-radius-km: ${DEV_SEED_SERVICE_RADIUS_KM:50.00}
-  worker-login-phone: ${DEV_SEED_WORKER_LOGIN_PHONE:}
   worker-login-email: ${DEV_SEED_WORKER_LOGIN_EMAIL:}
 
 auth:

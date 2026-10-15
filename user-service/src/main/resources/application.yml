@@ -33,7 +33,7 @@ management:
 
 dev-seed:
   enabled: ${DEV_SEED_ENABLED:false}
-  demo-customer-phone: ${DEV_SEED_DEMO_CUSTOMER_PHONE:}
+  demo-customer-email: ${DEV_SEED_DEMO_CUSTOMER_EMAIL:}
   demo-customer-name: ${DEV_SEED_DEMO_CUSTOMER_NAME:Demo Customer}
   plus-validity-days: ${DEV_SEED_PLUS_VALIDITY_DAYS:365}
   plus-extend-when-days-remain: ${DEV_SEED_PLUS_EXTEND_WHEN_DAYS_REMAIN:30}

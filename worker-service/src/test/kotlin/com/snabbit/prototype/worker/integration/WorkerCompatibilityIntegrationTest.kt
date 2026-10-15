@@ -15,10 +15,12 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
@@ -88,6 +90,40 @@ class WorkerCompatibilityIntegrationTest {
             jdbc.queryForObject("SELECT count(*) FROM worker_skill WHERE worker_id::text LIKE '60000000-0000-0000-0000-%' AND enabled", Int::class.java),
         )
         assertEquals(1, jdbc.queryForObject("SELECT rating_sum FROM worker_profile WHERE id = ?", Int::class.java, DevSeedWorkerIds.SAVITA))
+        assertEquals(
+            10,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM worker_profile WHERE seeded = TRUE AND lower(email) = lower(?)",
+                Int::class.java,
+                sharedEmail,
+            ),
+        )
+    }
+
+    @Test
+    fun `shared email is allowed only for stable seeded workers`() {
+        devSeed.refresh()
+        val first = UUID.randomUUID()
+        val second = UUID.randomUUID()
+        insertNonSeededWorker(first, sharedEmail)
+
+        assertThrows(DataIntegrityViolationException::class.java) { insertNonSeededWorker(second, sharedEmail) }
+        assertEquals(10, jdbc.queryForObject("SELECT count(*) FROM worker_profile WHERE seeded AND email = ?", Int::class.java, sharedEmail))
+    }
+
+    private fun insertNonSeededWorker(id: UUID, email: String) {
+        jdbc.update(
+            """
+            INSERT INTO worker_profile (
+                id, phone_e164, display_name, tier, status, current_latitude, current_longitude,
+                service_radius_km, rating_sum, rating_count, created_at, updated_at, joined_at, email, seeded
+            ) VALUES (?, ?, 'Pre-provisioned', 'STANDARD', 'ACTIVE', 0, 0, 10, 0, 0,
+                      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, FALSE)
+            """.trimIndent(),
+            id,
+            "test-worker-${id.toString().takeLast(8)}",
+            email,
+        )
     }
 
     @Test
@@ -165,6 +201,7 @@ class WorkerCompatibilityIntegrationTest {
     class KPostgreSQLContainer(imageName: String) : PostgreSQLContainer<KPostgreSQLContainer>(imageName)
 
     companion object {
+        private val sharedEmail = "shared-workers" + "@" + "example.test"
         @Container
         @JvmStatic
         val postgres = KPostgreSQLContainer("postgres:17-alpine")
@@ -175,6 +212,7 @@ class WorkerCompatibilityIntegrationTest {
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)
+            registry.add("dev-seed.worker-login-email") { sharedEmail }
         }
     }
 }

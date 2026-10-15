@@ -30,6 +30,18 @@ class ProductionConfigurationGuardTest {
     }
 
     @Test
+    fun `rejects development login emails in production even when seed is disabled`() {
+        listOf("dev-seed.worker-login-email", "dev-seed.demo-customer-email").forEach { key ->
+            val environment = MockEnvironment()
+                .withProperty(key, "runtime" + "@" + "example.test")
+                .withProperty("service-auth.token", "a-secure-secret-injected-by-the-runtime")
+            assertThrows(IllegalArgumentException::class.java) {
+                ProductionConfigurationGuard(environment, ProductionGuardProperties(listOf("service-auth.token")))
+            }
+        }
+    }
+
+    @Test
     fun `accepts explicitly supplied production values`() {
         val environment = MockEnvironment()
             .withProperty("spring.datasource.url", "jdbc:postgresql://database.internal/users")
