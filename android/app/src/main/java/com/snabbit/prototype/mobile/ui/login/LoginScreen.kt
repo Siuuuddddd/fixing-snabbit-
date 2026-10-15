@@ -78,11 +78,12 @@ fun LoginScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
-            if (error == LoginError.NO_GOOGLE_ACCOUNT) {
-                TextButton(onClick = onAddGoogleAccount) {
-                    Text(stringResource(R.string.add_google_account))
-                }
-            }
+        }
+        TextButton(
+            onClick = onAddGoogleAccount,
+            enabled = !state.isLoading,
+        ) {
+            Text(stringResource(R.string.add_google_account))
         }
         Spacer(Modifier.height(SnabbitSpacing.large))
         Text(

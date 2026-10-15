@@ -12,6 +12,7 @@ import com.snabbit.prototype.mobile.domain.auth.GoogleSignInResult
 import com.snabbit.prototype.mobile.domain.auth.SignInWithGoogleUseCase
 import com.snabbit.prototype.mobile.domain.auth.WorkerPickerOption
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -91,6 +92,20 @@ class LoginViewModelTest {
 
         assertEquals(LoginError.NOT_CONFIGURED, viewModel.uiState.value.error)
         assertEquals(0, repository.signInCalls)
+    }
+
+    @Test
+    fun `add account remains available when client is not configured`() = runTest {
+        val viewModel = viewModel(
+            FakeGoogleAuthRepository(GoogleSignInResult.Authenticated(session())),
+            configured = false,
+        )
+        val event = async(start = CoroutineStart.UNDISPATCHED) { viewModel.events.first() }
+
+        viewModel.addGoogleAccount()
+        runCurrent()
+
+        assertEquals(LoginUiEvent.AddGoogleAccount, event.await())
     }
 
     private fun TestScope.viewModel(
