@@ -42,7 +42,9 @@ class GoogleWorkerAuthController(
             is WorkerGoogleAccountResult.Linked ->
                 sessions.create(result.profile, request.deviceId, request.deviceName, false)
             is WorkerGoogleAccountResult.Picker -> WorkerPickerResponse(
-                result.selectionToken, auth.sharedSelectionTokenTtl.seconds, result.workers,
+                selectionToken = result.selectionToken,
+                expiresIn = auth.sharedSelectionTokenTtl.seconds,
+                workers = result.workers,
             )
         }
     }

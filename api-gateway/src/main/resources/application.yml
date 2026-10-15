@@ -86,7 +86,7 @@ management:
         enabled: true
 
 auth:
-  issuer: https://auth.snabbit.local
+  issuer: ${AUTH_ISSUER:https://auth.snabbit.local}
   jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}
 
 deployment.production.required-properties:

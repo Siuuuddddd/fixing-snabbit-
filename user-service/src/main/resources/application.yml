@@ -39,7 +39,7 @@ dev-seed:
   plus-extend-when-days-remain: ${DEV_SEED_PLUS_EXTEND_WHEN_DAYS_REMAIN:30}
 
 auth:
-  issuer: https://auth.snabbit.local
+  issuer: ${AUTH_ISSUER:https://auth.snabbit.local}
   jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}
   google:
     verifier: ${GOOGLE_IDENTITY_VERIFIER:google}
@@ -49,12 +49,12 @@ auth:
   otp-ttl: PT5M
   request-cooldown: PT1M
   access-token-ttl: PT15M
-  refresh-idle-ttl: P180D
+  refresh-idle-ttl: ${AUTH_REFRESH_IDLE_TTL:P180D}
   refresh-absolute-ttl: ${AUTH_REFRESH_ABSOLUTE_TTL:}
-  refresh-grace-window: PT10S
+  refresh-grace-window: ${AUTH_REFRESH_GRACE_WINDOW:PT10S}
   max-active-sessions: ${AUTH_MAX_ACTIVE_SESSIONS:10}
   account-rate-limit: ${AUTH_ACCOUNT_RATE_LIMIT:20}
-  account-rate-window: PT1M
+  account-rate-window: ${AUTH_ACCOUNT_RATE_WINDOW:PT1M}
   max-attempts: 5
   expose-code: ${OTP_EXPOSE_CODE:false}
 
