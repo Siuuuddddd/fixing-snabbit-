@@ -4,30 +4,18 @@
 
 This document tracks the Customer-flavor Android integration for backend email/password authentication. The Worker flavor keeps its existing Google sign-in and worker picker. Backend code and existing mixed Android documentation are read-only for this work.
 
-## Audit
+## What was built
 
-### Existing authentication UI and state
-
-- `LoginScreen` is a shared Compose/Material 3 screen that currently contains only the brand header, **Continue with Google**, Google configuration/error text, **Add a Google account**, and terms/privacy copy.
-- `LoginViewModel` owns Google loading/error state and emits `Authenticated`, `OpenWorkerPicker`, and `AddGoogleAccount`. It has no email form state today.
-- `AuthenticationFlow` in `SnabbitApp` uses Navigation 3 with a private stack beginning at `SplashRoute`. `LoginRoute` is shared; authenticated customer/worker shells are outside this stack. Successful authentication clears the auth flow by switching the root to the authenticated shell.
-- `DefaultLaunchRepository` checks the encrypted stored session, performs a silent single-flight refresh through `TokenRefresher`, and opens the authenticated shell when refresh succeeds. A revoked/non-retryable session is cleared by `SessionManager`; offline refresh preserves the stored session under the existing behavior.
-
-### Existing data and domain layers
-
-- `AuthApi` is the Retrofit interface for Google sign-in, refresh, logout/logout-all, worker selection, and customer phone updates.
-- `RetrofitAuthRemoteDataSource` selects customer or worker endpoints by `AppRole` and maps the worker-picker response separately.
-- `DefaultAuthRepository` maps backend `ProblemDetail` responses to `AuthFailureReason`, converts `SessionResponseDto`, and saves successful sessions through `SessionStore`.
-- `EncryptedSessionStore` persists the access token, rotating refresh token, expiry, and non-secret user metadata in encrypted preferences. The secure preference file is already excluded from backup/device transfer.
-- `SessionTokenRefresher` serializes refresh through a `Mutex`, retries `REFRESH_IN_PROGRESS`, saves the rotated session before retrying the failed request, preserves state on network failure, and signs out for `SESSION_REVOKED` or other terminal client failures.
-- `AuthInterceptor` skips authentication for current public Google/refresh routes. The new public email endpoints must be added to that allow-list so stale bearer state is never attached.
-- `AuthUseCases.kt` currently contains Google, worker selection/switching, refresh, logout, and session-observation use cases. Email-auth use cases and pure validators do not yet exist.
-
-### Navigation and dependency injection
-
-- Typed keys currently include `LoginRoute` and `WorkerPickerRoute`. New customer-only keys are required for verification and forgot/reset flows; they may carry an email but never a password or code.
-- `AppModules` provides one `SessionStore`, `AuthRemoteDataSource`, `AuthRepository`, `SessionManager`, refresh stack, flavor `AppRole`, and parameterized Google provider/ViewModels. New repositories/use cases/ViewModels will reuse these bindings.
-- The customer Profile screen is registered through the shared Navigation 3 entry provider. `ProfileViewModel` reads `ProfileSummary` and supports logout/logout-all. It does not call `/auth/me`, and `ProfileSummary` has no `hasPassword` field yet.
+- The Customer auth route now has **Login** and **Sign Up** tabs beside the existing Google action. Email/password remains usable when the Google Web client ID is absent; only the Google action is disabled in that state.
+- Login supports email, password visibility, inline validation, invalid-credential handling, verification routing, forgot-password routing, and best-effort Credential Manager password saving. Credential saving is emitted after navigation and is time-bounded, so Google Password Manager cannot block entry to Home.
+- Sign Up supports full name, normalized email, a live password-policy checklist, terms acceptance, server field errors, and a verification hand-off that carries only the email in navigation.
+- Verification supports a six-digit numeric/pasteable code, automatic submit on digit six, resend cooldown, rate-limit countdown, change email, session persistence, and best-effort password saving.
+- Forgot/reset supports enumeration-safe reset requests, code plus a new password, local policy feedback, session clearing after reset, and the post-reset message **Password updated. Please log in.**
+- Customer Profile calls `/me` and shows **Change password** only when `hasPassword` is true. A successful change stores the returned rotating token pair and keeps the current device signed in; logout and logout-all remain available.
+- `SESSION_REVOKED` clears the session and publishes a one-shot sign-in notice. Existing encrypted session storage, backup exclusion, OkHttp authentication, single-flight refresh, and silent start-destination refresh are reused.
+- The pure Kotlin domain layer contains email/name/password validators plus register, verify, resend, password-login, forgot, reset, and change-password use cases. Retrofit DTOs/mappers and the repository are separated from Compose.
+- `VerifyEmailRoute`, `ForgotPasswordRoute`, and `ChangePasswordRoute` use Navigation 3 and never carry passwords, codes, or tokens. ViewModels clear secret fields after terminal actions and when their screen-owned store is cleared.
+- The Worker flavor remains Google-only and retains its worker picker.
 
 ## Backend contract used
 
@@ -56,6 +44,7 @@ Backend error codes used by the app are `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFI
 - Customer email forms remain enabled when the Google Web client ID is blank. Only the Google action shows its configuration state.
 - Register, resend, and forgot-password keep enumeration-safe generic success copy.
 - Credential Manager password saving is best-effort after a successful password login or completed registration verification; failure never blocks sign-in.
+- General backend rate limits count down from `retryAfterSeconds`; resend also gates the action with its own countdown.
 
 ## Gaps
 
@@ -66,12 +55,40 @@ Backend error codes used by the app are `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFI
 
 ## Progress
 
-- Step 0 complete: Android rules/UI spec, Google-auth implementation, backend endpoint documentation, controllers, DTOs, session lifecycle, refresh behavior, navigation, profile, and Koin bindings audited.
+- Audit and contract checkpoint: `717910a`.
+- Domain/data checkpoint: `9cc8b9b`.
+- Customer presentation, Profile, navigation, session notice, and tests: `d339117`.
+- Credential Manager non-blocking runtime fix: `f4aa274`.
+- Exit-secret test and live rate-limit countdown: `3003dd2`.
 
-## Local Mailpit verification plan
+## Local Mailpit verification
 
-Run the backend and Mailpit, install the Customer debug APK on the Google Play Pixel 9 Pro emulator, and use only generated placeholder credentials. Register, read the six-digit code from `http://localhost:8025`, verify and reach Home; then exercise logout/login, invalid password, forgot/reset, login with the replacement password, and authenticated change-password. The Worker APK must retain the existing Google-only flow.
+1. Start the local backend and confirm the gateway health endpoint is `UP`; Mailpit is available at `http://localhost:8025`.
+2. Install `app-customer-debug.apk` on a Google Play emulator and use generated placeholder credentials only.
+3. Sign up. Open Mailpit on the PC, copy the newest verification code for that generated address, enter it, and verify that Home opens.
+4. Log out. Submit a wrong password and confirm the friendly generic error and cleared password field; then log in with the correct password.
+5. Log out, request a reset, copy the newest reset code from Mailpit, set a replacement password, and confirm the Login screen. Log in with the replacement password.
+6. In Profile, confirm **Change password** is present for this password account, change it, and verify the app remains signed in.
+7. Install `app-worker-debug.apk`; confirm it still shows **Continue with Google** and does not show the email Login/Sign Up tabs.
+
+This sequence was completed on the Pixel 9 Pro Google Play emulator against the local backend. Observed responses were register `202`, verify `200`, wrong login `401`, correct login `200`, forgot `202`, reset `204`, `/me` `200`, logout `204`, and change password `200`. The app reached Home after verification and both successful logins. The password-save provider UI also appeared; cancelling it did not block authentication. No app crash occurred. A Google sign-in itself was not exercised because no Google Web client ID/account was configured, and cross-device session revocation was covered by unit tests rather than a second physical device.
+
+## Verification gates
+
+- `testCustomerDebugUnitTest`: 138 tests, 0 failures, 0 errors, 0 skipped.
+- `testWorkerDebugUnitTest`: 138 tests, 0 failures, 0 errors, 0 skipped.
+- `assembleCustomerDebug` and `assembleWorkerDebug` pass.
+- Tests cover validators, use-case delegation/failures, complete backend error mapping, ViewModel tab/validation/double-submit/resend/auto-submit/secret-clearing behavior, session persistence/reset, start destination, `/me` password capability, session revocation, single-flight refresh, and a source check against direct sensitive auth logging.
+- No backend source was edited for this goal. Protected mixed documentation, local configuration, Firebase files, and unrelated worktree changes were not staged.
 
 ## Uncommitted files intentionally preserved
 
-The worktree already contains unrelated Android booking/per-visit, repository-test, network, Google-auth/Gradle, protected-doc, Wallet, local-environment, and generated-output changes. They remain authoritative user work and are not part of this feature unless an unavoidable shared-file hunk is explicitly isolated.
+The following pre-existing work remains outside these commits:
+
+- Android booking/per-visit and wallet work in `data/booking`, `domain/booking`, `ui/booking`, `data/wallet`, `domain/wallet`, `CustomerNavigation.kt`, `Routes.kt`, `RoutesTest.kt`, and related tests.
+- Unrelated shared-file hunks still present in `AppModules.kt`, `SnabbitApp.kt`, and `strings.xml`; only email-auth hunks from those mixed files were committed.
+- Existing network/repository-test work including `NetworkClientFactory.kt`, `UnsupportedTokenRefresher.kt`, and the untracked repository test directories/files.
+- Protected mixed docs: `PROGRESS.md`, `README.md`, `api-gaps.md`, `api-map.md`, `assets-todo.md`, and `ui-spec.md`.
+- Repository/local/generated work including root and Android Gradle settings, `compose.local-codex.yaml`, `local.properties`, `output/`, `tmp/`, rendered docs, the handoff file, and the existing Wallet Service edits.
+
+These changes were left untouched and unstaged. No `.env`, secret, `google-services.json`, or `local.properties` value was read into source, tests, docs, or commits.
