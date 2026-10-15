@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.snabbit.prototype.platform.GoogleIdentity
 import com.snabbit.prototype.platform.GoogleIdentityVerifier
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import javax.crypto.spec.SecretKeySpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -50,7 +53,7 @@ class GoogleCustomerAuthIntegrationTest {
         assertEquals(first.path("user").path("id").asText(), repeated.path("user").path("id").asText())
         assertNotEquals(first.path("refreshToken").asText(), repeated.path("refreshToken").asText())
 
-        val refreshed = post("/api/v1/auth/refresh", mapOf("refreshToken" to first.path("refreshToken").asText()))
+        val refreshed = parallelRefresh(first.path("refreshToken").asText())
         assertNotEquals(first.path("refreshToken").asText(), refreshed.path("refreshToken").asText())
 
         val jwt = decoder().decode(refreshed.path("accessToken").asText())
@@ -90,6 +93,34 @@ class GoogleCustomerAuthIntegrationTest {
             "/api/v1/auth/google",
             mapOf("idToken" to idToken, "deviceId" to deviceId, "deviceName" to deviceName),
         )
+
+    private fun parallelRefresh(refreshToken: String): JsonNode {
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        return try {
+            val futures = List(2) {
+                pool.submit(
+                    Callable {
+                        ready.countDown()
+                        start.await()
+                        mvc.post("/api/v1/auth/refresh") {
+                            contentType = MediaType.APPLICATION_JSON
+                            content = mapper.writeValueAsBytes(mapOf("refreshToken" to refreshToken))
+                        }.andReturn().response
+                    },
+                )
+            }
+            ready.await()
+            start.countDown()
+            val results = futures.map { it.get() }
+            assertEquals(listOf(200, 409), results.map { it.status }.sorted())
+            assertEquals("REFRESH_IN_PROGRESS", mapper.readTree(results.single { it.status == 409 }.contentAsByteArray).path("code").asText())
+            mapper.readTree(results.single { it.status == 200 }.contentAsByteArray)
+        } finally {
+            pool.shutdownNow()
+        }
+    }
 
     private fun post(path: String, body: Any): JsonNode {
         val response = mvc.post(path) {

@@ -126,14 +126,30 @@ class CustomerSessionServiceTest {
         assertEquals("SESSION_LIMIT", atLimit.first().revokeReason)
     }
 
+    @Test
+    fun `absolute expiry and account cutoff invalidate refresh sessions`() {
+        val absoluteExpired = session(absoluteExpiresAt = start.minusSeconds(1))
+        every { sessions.findByRefreshHashForUpdate(any()) } returns absoluteExpired
+        every { users.findForUpdate(user.id) } returns user
+        assertThrows(SessionRevoked::class.java) { service.refresh("absolute-expired") }
+        assertEquals("SESSION_EXPIRED", absoluteExpired.revokeReason)
+
+        val beforeCutoff = session(createdAt = start.minusSeconds(1))
+        user.sessionsValidAfter = start
+        every { sessions.findByRefreshHashForUpdate(any()) } returns beforeCutoff
+        assertThrows(SessionRevoked::class.java) { service.refresh("before-cutoff") }
+        assertEquals("SESSION_EXPIRED", beforeCutoff.revokeReason)
+    }
+
     private fun session(
         refreshHash: String = OpaqueToken.hash(UUID.randomUUID().toString()),
         createdAt: Instant = start,
+        absoluteExpiresAt: Instant? = null,
     ) = CustomerSession(
         id = UUID.randomUUID(), userId = user.id, role = "CUSTOMER", refreshTokenHash = refreshHash,
         tokenFamilyId = UUID.randomUUID(), deviceId = null, deviceName = null, sharedLogin = false,
         createdAt = createdAt, lastUsedAt = createdAt, idleExpiresAt = createdAt.plus(Duration.ofDays(180)),
-        absoluteExpiresAt = null,
+        absoluteExpiresAt = absoluteExpiresAt,
     )
 
     private fun profile() = UserProfile(
