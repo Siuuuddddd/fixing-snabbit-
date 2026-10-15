@@ -61,6 +61,8 @@ class WorkerProfile(
     var lastLoginAt: Instant? = null,
     @Column(nullable = false)
     var seeded: Boolean = false,
+    @Column(name = "sessions_valid_after", nullable = false)
+    var sessionsValidAfter: Instant = Instant.EPOCH,
     @Version
     var version: Long = 0,
 ) {

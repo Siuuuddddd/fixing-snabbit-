@@ -14,4 +14,10 @@ data class WorkerAuthProperties(
     val maxAttempts: Int,
     val exposeCode: Boolean,
     val sharedSelectionTokenTtl: Duration = Duration.ofMinutes(5),
+    val refreshIdleTtl: Duration = Duration.ofDays(180),
+    val refreshAbsoluteTtl: Duration? = null,
+    val refreshGraceWindow: Duration = Duration.ofSeconds(10),
+    val maxActiveSessions: Int = 10,
+    val accountRateLimit: Long = 20,
+    val accountRateWindow: Duration = Duration.ofMinutes(1),
 )

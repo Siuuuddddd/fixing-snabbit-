@@ -2,6 +2,8 @@ package com.snabbit.prototype.user.exception
 
 import com.snabbit.prototype.platform.UnverifiedTrialRecipient
 import com.snabbit.prototype.platform.VerificationProviderUnavailable
+import com.snabbit.prototype.platform.GoogleIdentityFailure
+import com.snabbit.prototype.platform.GoogleIdentityVerificationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -9,6 +11,34 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class UserExceptionHandler {
+    @ExceptionHandler(GoogleIdentityVerificationException::class)
+    fun invalidGoogleIdentity(error: GoogleIdentityVerificationException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Google sign-in could not be verified").also {
+            it.setProperty(
+                "code",
+                if (error.failure == GoogleIdentityFailure.EMAIL_NOT_VERIFIED) "EMAIL_NOT_VERIFIED" else "INVALID_GOOGLE_TOKEN",
+            )
+        }
+
+    @ExceptionHandler(SessionRevoked::class)
+    fun sessionRevoked(error: SessionRevoked): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, error.message.orEmpty()).also {
+            it.setProperty("code", "SESSION_REVOKED")
+        }
+
+    @ExceptionHandler(RefreshInProgress::class)
+    fun refreshInProgress(error: RefreshInProgress): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "REFRESH_IN_PROGRESS")
+            it.setProperty("retryable", true)
+        }
+
+    @ExceptionHandler(AuthRateLimited::class)
+    fun authRateLimited(error: AuthRateLimited): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, error.message.orEmpty()).also {
+            it.setProperty("code", "RATE_LIMITED")
+        }
+
     @ExceptionHandler(CustomerAccountDisabled::class)
     fun accountDisabled(error: CustomerAccountDisabled): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty()).also {

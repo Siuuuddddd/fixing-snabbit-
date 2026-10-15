@@ -54,6 +54,26 @@ class GatewayAuthorizationIntegrationTest {
         assertAuthorized("/api/v1/bookings/${java.util.UUID.randomUUID()}", "CUSTOMER")
     }
 
+    @Test
+    fun `Google sign-in selection and refresh are public while logout stays role protected`() {
+        listOf(
+            "/api/v1/auth/google",
+            "/api/v1/auth/refresh",
+            "/api/v1/worker-auth/google",
+            "/api/v1/worker-auth/select-profile",
+            "/api/v1/worker-auth/refresh",
+        ).forEach { path ->
+            val status = client.post().uri(path).exchange().returnResult(Void::class.java).status
+            assertNotEquals(HttpStatus.UNAUTHORIZED, status)
+            assertNotEquals(HttpStatus.FORBIDDEN, status)
+        }
+
+        client.post().uri("/api/v1/auth/logout").exchange().expectStatus().isUnauthorized
+        client.mutateWith(mockJwt().authorities(SimpleGrantedAuthority("ROLE_WORKER")))
+            .post().uri("/api/v1/auth/logout").exchange().expectStatus().isForbidden
+        client.post().uri("/api/v1/worker-auth/switch-profile").exchange().expectStatus().isUnauthorized
+    }
+
     private fun request(path: String, role: String): WebTestClient.ResponseSpec = client
         .mutateWith(mockJwt().authorities(SimpleGrantedAuthority("ROLE_$role")))
         .get()

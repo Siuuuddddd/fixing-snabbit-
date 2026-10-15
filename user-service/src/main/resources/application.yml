@@ -49,6 +49,12 @@ auth:
   otp-ttl: PT5M
   request-cooldown: PT1M
   access-token-ttl: PT15M
+  refresh-idle-ttl: P180D
+  refresh-absolute-ttl: ${AUTH_REFRESH_ABSOLUTE_TTL:}
+  refresh-grace-window: PT10S
+  max-active-sessions: ${AUTH_MAX_ACTIVE_SESSIONS:10}
+  account-rate-limit: ${AUTH_ACCOUNT_RATE_LIMIT:20}
+  account-rate-window: PT1M
   max-attempts: 5
   expose-code: ${OTP_EXPOSE_CODE:false}
 

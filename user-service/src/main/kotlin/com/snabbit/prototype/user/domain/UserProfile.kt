@@ -47,6 +47,8 @@ class UserProfile(
     var authProvider: UserAuthProvider = UserAuthProvider.PHONE,
     @Column(name = "last_login_at")
     var lastLoginAt: Instant? = null,
+    @Column(name = "sessions_valid_after", nullable = false)
+    var sessionsValidAfter: Instant = Instant.EPOCH,
     @Column(name = "rating_sum", nullable = false)
     var ratingSum: Int = 0,
     @Column(name = "rating_count", nullable = false)

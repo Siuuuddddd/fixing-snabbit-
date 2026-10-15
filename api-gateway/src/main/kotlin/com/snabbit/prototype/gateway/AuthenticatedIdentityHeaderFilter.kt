@@ -23,6 +23,7 @@ class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
                 headers.remove(AUTHENTICATED_WORKER_HEADER)
                 headers.remove(AUTHENTICATED_STAFF_HEADER)
                 headers.remove(AUTHENTICATED_STAFF_ROLES_HEADER)
+                headers.remove(AUTHENTICATED_SESSION_HEADER)
                 val roles = authentication?.token?.getClaimAsStringList("roles").orEmpty()
                 if ("CUSTOMER" in roles) headers.set(AUTHENTICATED_USER_HEADER, authentication!!.token.subject)
                 if ("WORKER" in roles) headers.set(AUTHENTICATED_WORKER_HEADER, authentication!!.token.subject)
@@ -30,6 +31,7 @@ class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
                     headers.set(AUTHENTICATED_STAFF_HEADER, authentication!!.token.subject)
                     headers.set(AUTHENTICATED_STAFF_ROLES_HEADER, roles.filter(STAFF_ROLES::contains).joinToString(","))
                 }
+                authentication?.token?.getClaimAsString("sid")?.let { headers.set(AUTHENTICATED_SESSION_HEADER, it) }
             }
         }
         .build()
@@ -41,6 +43,7 @@ class AuthenticatedIdentityHeaderFilter : GlobalFilter, Ordered {
         const val AUTHENTICATED_WORKER_HEADER = "X-Authenticated-Worker-Id"
         const val AUTHENTICATED_STAFF_HEADER = "X-Authenticated-Staff-Id"
         const val AUTHENTICATED_STAFF_ROLES_HEADER = "X-Authenticated-Staff-Roles"
+        const val AUTHENTICATED_SESSION_HEADER = "X-Authenticated-Session-Id"
         val STAFF_ROLES = setOf("SUPPORT_AGENT", "OPERATIONS_MANAGER", "ADMIN", "FINANCE_OPERATOR")
     }
 }

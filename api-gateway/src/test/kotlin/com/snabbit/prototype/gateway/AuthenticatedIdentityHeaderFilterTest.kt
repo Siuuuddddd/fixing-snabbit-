@@ -30,6 +30,7 @@ class AuthenticatedIdentityHeaderFilterTest {
         val forwarded = invoke(exchange)
 
         assertEquals(userId, forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_USER_HEADER))
+        assertEquals(SESSION_ID, forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_SESSION_HEADER))
     }
 
     @Test
@@ -40,6 +41,7 @@ class AuthenticatedIdentityHeaderFilterTest {
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER, "spoofed-worker")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER, "spoofed-staff")
                 .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_ROLES_HEADER, "ADMIN")
+                .header(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_SESSION_HEADER, "spoofed-session")
                 .build(),
         )
         val forwarded = invoke(exchange)
@@ -48,6 +50,7 @@ class AuthenticatedIdentityHeaderFilterTest {
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_WORKER_HEADER))
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_HEADER))
         assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_STAFF_ROLES_HEADER))
+        assertNull(forwarded.request.headers.getFirst(AuthenticatedIdentityHeaderFilter.AUTHENTICATED_SESSION_HEADER))
     }
 
     @Test
@@ -98,7 +101,10 @@ class AuthenticatedIdentityHeaderFilterTest {
             .issuedAt(now)
             .expiresAt(now.plusSeconds(900))
             .claim("roles", listOf(role))
+            .apply { if (role == "CUSTOMER" || role == "WORKER") claim("sid", SESSION_ID) }
             .build()
         return JwtAuthenticationToken(jwt)
     }
+
+    companion object { private val SESSION_ID: String = UUID.randomUUID().toString() }
 }

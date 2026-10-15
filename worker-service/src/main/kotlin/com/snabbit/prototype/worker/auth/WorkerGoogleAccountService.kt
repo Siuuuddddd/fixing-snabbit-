@@ -49,7 +49,7 @@ class WorkerGoogleAccountService(
                 it.status == WorkerStatus.ACTIVE && it.seeded && it.email.equals(seed.workerLoginEmail, ignoreCase = true)
             }
                 ?: throw WorkerNotRegistered()
-            WorkerPickerOption(worker.id, worker.displayName, tiers.currentTier(worker))
+            WorkerPickerOption(worker.id, worker.displayName.trim().substringBefore(' '), tiers.currentTier(worker))
         }
         val token = grants.issue(identity.subject, selectable.map(WorkerPickerOption::workerId))
         return WorkerGoogleAccountResult.Picker(token, selectable)
