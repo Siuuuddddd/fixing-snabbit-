@@ -12,6 +12,6 @@ import java.util.UUID
 class WorkerRotatedRefreshToken(
     @Id val id: UUID,
     @Column(name = "session_id", nullable = false) val sessionId: UUID,
-    @Column(name = "token_hash", nullable = false, unique = true) val tokenHash: String,
+    @Column(name = "token_hash", nullable = false, unique = true, length = 64) val tokenHash: String,
     @Column(name = "rotated_at", nullable = false) val rotatedAt: Instant,
 )

@@ -121,7 +121,7 @@ class WorkerCompatibilityIntegrationTest {
                       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, FALSE)
             """.trimIndent(),
             id,
-            "test-worker-${id.toString().takeLast(8)}",
+            "test${id.toString().replace("-", "").takeLast(12)}",
             email,
         )
     }

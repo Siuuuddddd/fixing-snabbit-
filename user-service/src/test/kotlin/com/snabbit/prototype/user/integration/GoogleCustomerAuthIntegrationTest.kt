@@ -36,7 +36,7 @@ import org.testcontainers.utility.DockerImageName
         "auth.google.verifier=stub",
         "auth.google.customer-client-ids=customer-integration-client",
         "spring.kafka.listener.auto-startup=false",
-        "spring.task.scheduling.enabled=false",
+        "user-eventing.poll-delay=PT1H",
     ],
 )
 @AutoConfigureMockMvc

@@ -14,7 +14,7 @@ class WorkerSession(
     @Id val id: UUID,
     @Column(name = "worker_id", nullable = false) val workerId: UUID,
     @Column(nullable = false) val role: String,
-    @Column(name = "refresh_token_hash", nullable = false, unique = true) var refreshTokenHash: String,
+    @Column(name = "refresh_token_hash", nullable = false, unique = true, length = 64) var refreshTokenHash: String,
     @Column(name = "token_family_id", nullable = false) val tokenFamilyId: UUID,
     @Column(name = "device_id") val deviceId: String?,
     @Column(name = "device_name") val deviceName: String?,

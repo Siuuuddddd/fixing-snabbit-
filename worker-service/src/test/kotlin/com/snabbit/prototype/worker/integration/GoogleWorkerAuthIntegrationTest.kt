@@ -35,7 +35,7 @@ import org.testcontainers.utility.DockerImageName
         "auth.google.worker-client-ids=worker-integration-client",
         "dev-seed.enabled=true",
         "spring.kafka.listener.auto-startup=false",
-        "spring.task.scheduling.enabled=false",
+        "worker-eventing.poll-delay=PT1H",
     ],
 )
 @AutoConfigureMockMvc
