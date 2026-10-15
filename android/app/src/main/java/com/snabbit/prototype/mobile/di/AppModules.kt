@@ -8,11 +8,9 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import com.snabbit.prototype.mobile.BuildConfig
 import com.snabbit.prototype.mobile.data.auth.DefaultAuthRepository
 import com.snabbit.prototype.mobile.data.auth.CredentialManagerGoogleIdTokenProvider
-import com.snabbit.prototype.mobile.data.auth.EncryptedTokenStore
 import com.snabbit.prototype.mobile.data.auth.EncryptedSessionStore
 import com.snabbit.prototype.mobile.data.auth.InMemoryPendingWorkerSelectionStore
 import com.snabbit.prototype.mobile.data.auth.SessionRefreshCoordinator
-import com.snabbit.prototype.mobile.data.auth.TokenStore
 import com.snabbit.prototype.mobile.data.auth.remote.AuthApi
 import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.auth.remote.RetrofitAuthRemoteDataSource
@@ -221,7 +219,6 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 private val storageModule = module {
     single(named("applicationScope")) { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
-    single<TokenStore> { EncryptedTokenStore(androidContext()) }
     single<SessionStore> { EncryptedSessionStore(androidContext(), get()) }
     single<PendingWorkerSelectionStore> { InMemoryPendingWorkerSelectionStore() }
     single<DataStore<Preferences>> {
@@ -292,7 +289,7 @@ private val repositoryModule = module {
     factory { (provider: GoogleIdTokenProvider) -> SignOutAllUseCase(get(), provider) }
     factory { ObserveSessionUseCase(get()) }
     single { PushNavigationCoordinator() }
-    single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get(), get(), get()) }
+    single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get(), get()) }
     single<LaunchRepository> { DefaultLaunchRepository(get(), get(), get()) }
     single<SessionIdentityProvider> { JwtSessionIdentityProvider(get<SessionStore>(), get()) }
     single<SessionManager> { DefaultSessionManager(get()) }

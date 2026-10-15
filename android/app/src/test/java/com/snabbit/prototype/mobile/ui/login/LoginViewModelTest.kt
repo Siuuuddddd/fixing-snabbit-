@@ -5,12 +5,10 @@ import com.snabbit.prototype.mobile.domain.auth.AuthDevice
 import com.snabbit.prototype.mobile.domain.auth.AuthFailure
 import com.snabbit.prototype.mobile.domain.auth.AuthFailureReason
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
-import com.snabbit.prototype.mobile.domain.auth.AuthResult
 import com.snabbit.prototype.mobile.domain.auth.AuthSession
 import com.snabbit.prototype.mobile.domain.auth.GoogleIdToken
 import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
 import com.snabbit.prototype.mobile.domain.auth.GoogleSignInResult
-import com.snabbit.prototype.mobile.domain.auth.OtpChallenge
 import com.snabbit.prototype.mobile.domain.auth.SignInWithGoogleUseCase
 import com.snabbit.prototype.mobile.domain.auth.WorkerPickerOption
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -122,9 +120,6 @@ private class FakeGoogleAuthRepository(
         failure?.let { throw it }
         return requireNotNull(result)
     }
-    override suspend fun requestOtp(phoneNumber: String): OtpChallenge = error("unused")
-    override suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult = error("unused")
-    override suspend fun register(phoneNumber: String, displayName: String, registrationToken: String) = Unit
 }
 
 private fun session() = AuthSession(

@@ -12,7 +12,6 @@ sealed interface SnabbitRoute : NavKey
 
 @Serializable data object SplashRoute : SnabbitRoute
 @Serializable data object OnboardingRoute : SnabbitRoute
-@Serializable data object LoginOtpRoute : SnabbitRoute
 @Serializable data object LoginRoute : SnabbitRoute
 @Serializable data object WorkerPickerRoute : SnabbitRoute
 @Serializable data object HomeRoute : SnabbitRoute
@@ -59,7 +58,6 @@ internal fun BookingSummaryRoute.toBookingDraftOrNull(): BookingDraft? {
 fun SnabbitRoute.titleRes(): Int = when (this) {
     SplashRoute -> R.string.screen_splash
     OnboardingRoute -> R.string.screen_onboarding
-    LoginOtpRoute -> R.string.screen_login_otp
     LoginRoute -> R.string.screen_login
     WorkerPickerRoute -> R.string.screen_worker_picker
     HomeRoute -> R.string.screen_home

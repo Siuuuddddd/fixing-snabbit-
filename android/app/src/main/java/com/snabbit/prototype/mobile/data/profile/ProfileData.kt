@@ -46,9 +46,6 @@ class DefaultProfileRepository(
         plus,
         notifications,
         object : AuthRepository {
-            override suspend fun requestOtp(phoneNumber: String) = error("unused")
-            override suspend fun verifyOtp(phoneNumber: String, otp: String) = error("unused")
-            override suspend fun register(phoneNumber: String, displayName: String, registrationToken: String) = Unit
             override suspend fun signOut(allDevices: Boolean) = session.signOut()
         },
         LegacyProfileSessionStore(identity, role),

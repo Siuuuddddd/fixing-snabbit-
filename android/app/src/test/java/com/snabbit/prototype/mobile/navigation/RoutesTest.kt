@@ -12,7 +12,6 @@ class RoutesTest {
         val routes = listOf(
             SplashRoute,
             OnboardingRoute,
-            LoginOtpRoute,
             HomeRoute,
             ServiceDetailsRoute("service-id"),
             AddressServiceabilityRoute(),
@@ -35,7 +34,7 @@ class RoutesTest {
             WorkerEarningsRoute,
         )
 
-        assertEquals(23, routes.distinct().size)
+        assertEquals(22, routes.distinct().size)
     }
 
     @Test

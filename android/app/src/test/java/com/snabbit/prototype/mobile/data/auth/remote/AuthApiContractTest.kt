@@ -7,11 +7,17 @@ import retrofit2.http.POST
 
 class AuthApiContractTest {
     @Test
-    fun `customer and worker paths match backend controllers`() {
-        assertPostPath("requestCustomerOtp", "api/v1/auth/otp/request")
-        assertPostPath("verifyCustomerOtp", "api/v1/auth/otp/verify")
-        assertPostPath("requestWorkerOtp", "api/v1/worker-auth/otp/request")
-        assertPostPath("verifyWorkerOtp", "api/v1/worker-auth/otp/verify")
+    fun `Google session paths match backend controllers`() {
+        assertPostPath("googleCustomer", "api/v1/auth/google")
+        assertPostPath("googleWorker", "api/v1/worker-auth/google")
+        assertPostPath("selectWorkerProfile", "api/v1/worker-auth/select-profile")
+        assertPostPath("switchWorkerProfile", "api/v1/worker-auth/switch-profile")
+        assertPostPath("refreshCustomer", "api/v1/auth/refresh")
+        assertPostPath("refreshWorker", "api/v1/worker-auth/refresh")
+        assertPostPath("logoutCustomer", "api/v1/auth/logout")
+        assertPostPath("logoutAllCustomers", "api/v1/auth/logout-all")
+        assertPostPath("logoutWorker", "api/v1/worker-auth/logout")
+        assertPostPath("logoutAllWorkers", "api/v1/worker-auth/logout-all")
     }
 
     private fun assertPostPath(methodName: String, expected: String) {

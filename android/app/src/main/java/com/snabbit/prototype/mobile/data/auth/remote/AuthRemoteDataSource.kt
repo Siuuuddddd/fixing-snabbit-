@@ -19,9 +19,6 @@ interface AuthRemoteDataSource {
     suspend fun logout(role: AppRole, allDevices: Boolean) = Unit
     suspend fun saveCustomerPhone(userId: String, phoneNumber: String): CustomerContactDto =
         error("Phone update is not implemented")
-    suspend fun requestOtp(role: AppRole, phoneNumber: String): OtpChallengeDto
-    suspend fun verifyOtp(role: AppRole, phoneNumber: String, otp: String): AccessTokenDto
-    suspend fun registerCustomer(phoneNumber: String, displayName: String, registrationToken: String): AccessTokenDto
 }
 
 class RetrofitAuthRemoteDataSource(
@@ -58,22 +55,4 @@ class RetrofitAuthRemoteDataSource(
     override suspend fun saveCustomerPhone(userId: String, phoneNumber: String) =
         api.saveCustomerPhone(userId, SaveCustomerPhoneRequestDto(phoneNumber))
 
-    override suspend fun requestOtp(role: AppRole, phoneNumber: String): OtpChallengeDto {
-        val request = OtpRequestDto(phoneNumber)
-        return when (role) {
-            AppRole.CUSTOMER -> api.requestCustomerOtp(request)
-            AppRole.WORKER -> api.requestWorkerOtp(request)
-        }
-    }
-
-    override suspend fun verifyOtp(role: AppRole, phoneNumber: String, otp: String): AccessTokenDto {
-        val request = OtpVerificationDto(phoneNumber, otp)
-        return when (role) {
-            AppRole.CUSTOMER -> api.verifyCustomerOtp(request)
-            AppRole.WORKER -> api.verifyWorkerOtp(request)
-        }
-    }
-
-    override suspend fun registerCustomer(phoneNumber: String, displayName: String, registrationToken: String) =
-        api.registerCustomer(CustomerRegistrationDto(phoneNumber, displayName, registrationToken))
 }

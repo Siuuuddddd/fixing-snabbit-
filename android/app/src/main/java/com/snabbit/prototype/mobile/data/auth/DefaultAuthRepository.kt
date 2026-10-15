@@ -9,12 +9,10 @@ import com.snabbit.prototype.mobile.data.network.ApiProblem
 import com.snabbit.prototype.mobile.domain.auth.AuthFailure
 import com.snabbit.prototype.mobile.domain.auth.AuthFailureReason
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
-import com.snabbit.prototype.mobile.domain.auth.AuthResult
 import com.snabbit.prototype.mobile.domain.auth.AuthDevice
 import com.snabbit.prototype.mobile.domain.auth.AuthSession
 import com.snabbit.prototype.mobile.domain.auth.GoogleIdToken
 import com.snabbit.prototype.mobile.domain.auth.GoogleSignInResult
-import com.snabbit.prototype.mobile.domain.auth.OtpChallenge
 import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.domain.auth.SessionUser
 import com.snabbit.prototype.mobile.domain.auth.WorkerPickerOption
@@ -27,12 +25,17 @@ import retrofit2.HttpException
 
 class DefaultAuthRepository(
     private val remoteDataSource: AuthRemoteDataSource,
-    private val tokenStore: TokenStore,
     private val role: AppRole,
     private val json: Json,
     private val sessionStore: SessionStore? = null,
     private val sessionManager: SessionManager? = null,
 ) : AuthRepository {
+    constructor(
+        remoteDataSource: AuthRemoteDataSource,
+        tokenStore: TokenStore,
+        role: AppRole,
+        json: Json,
+    ) : this(remoteDataSource, role, json, LegacyAuthSessionStore(tokenStore))
     override suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult = mapFailures {
         val request = GoogleSignInRequestDto(
             credential.value,
@@ -85,7 +88,6 @@ class DefaultAuthRepository(
             mapFailures { remoteDataSource.logout(role, allDevices) }
         } finally {
             if (sessionManager != null) sessionManager.signOut() else sessionStore?.clear()
-            tokenStore.clear()
         }
     }
 
@@ -95,28 +97,6 @@ class DefaultAuthRepository(
         val normalized = requireNotNull(saved.phoneNumber)
         sessionStore.save(current.copy(user = current.user.copy(phoneNumber = normalized)))
         normalized
-    }
-
-    override suspend fun requestOtp(phoneNumber: String): OtpChallenge = mapFailures {
-        val response = remoteDataSource.requestOtp(role, phoneNumber)
-        OtpChallenge(expiresInSeconds = response.expiresInSeconds)
-    }
-
-    override suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult = mapFailures {
-            val response = remoteDataSource.verifyOtp(role, phoneNumber, otp)
-            if (response.status == "REGISTRATION_REQUIRED") {
-                AuthResult.RegistrationRequired(requireNotNull(response.registrationToken))
-            } else {
-                tokenStore.saveAccessToken(requireNotNull(response.accessToken))
-                AuthResult.Authenticated
-            }
-    }
-
-    override suspend fun register(phoneNumber: String, displayName: String, registrationToken: String) {
-        mapFailures {
-            val response = remoteDataSource.registerCustomer(phoneNumber, displayName, registrationToken)
-            tokenStore.saveAccessToken(requireNotNull(response.accessToken))
-        }
     }
 
     private suspend fun <T> mapFailures(block: suspend () -> T): T = try {
@@ -140,7 +120,7 @@ class DefaultAuthRepository(
             "PHONE_REQUIRED" -> AuthFailureReason.PHONE_REQUIRED
             "SHARED_WORKER_SESSION_REQUIRED" -> AuthFailureReason.SHARED_WORKER_SESSION_REQUIRED
             else -> when (failure.code()) {
-            401 -> AuthFailureReason.INVALID_OR_EXPIRED_OTP
+            401 -> AuthFailureReason.INVALID_GOOGLE_TOKEN
             429 -> AuthFailureReason.RATE_LIMITED
             in 500..599 -> AuthFailureReason.SERVER
             else -> if (problem?.errorCode == "WORKER_PROFILE_REQUIRED") AuthFailureReason.WORKER_PROFILE_REQUIRED else AuthFailureReason.UNKNOWN
@@ -174,9 +154,17 @@ class DefaultAuthRepository(
             ),
         )
         requireNotNull(sessionStore) { "SessionStore is required for Google authentication" }.save(session)
-        tokenStore.saveAccessToken(session.accessToken)
         return session
     }
 
     private fun nowEpochSeconds(): Long = System.currentTimeMillis() / 1_000L
+}
+
+private class LegacyAuthSessionStore(private val tokenStore: TokenStore) : SessionStore {
+    override val session = kotlinx.coroutines.flow.flowOf(current())
+    override fun current(): AuthSession? = tokenStore.accessToken()?.let { token ->
+        AuthSession(token, "Bearer", Long.MAX_VALUE, "legacy", SessionUser("legacy", "", "", null, false, "CUSTOMER"))
+    }
+    override fun save(session: AuthSession) = tokenStore.saveAccessToken(session.accessToken)
+    override fun clear() = tokenStore.clear()
 }

@@ -1,9 +1,5 @@
 package com.snabbit.prototype.mobile.domain.auth
 
-data class OtpChallenge(
-    val expiresInSeconds: Long,
-)
-
 enum class AuthFailureReason {
     CANCELLED,
     NOT_CONFIGURED,
@@ -20,7 +16,6 @@ enum class AuthFailureReason {
     REFRESH_IN_PROGRESS,
     SHARED_WORKER_SESSION_REQUIRED,
     PHONE_REQUIRED,
-    INVALID_OR_EXPIRED_OTP,
     RATE_LIMITED,
     OFFLINE,
     SERVER,
@@ -46,9 +41,6 @@ interface AuthRepository {
     suspend fun refreshSession(): AuthSession = error("Session refresh is not implemented")
     suspend fun signOut(allDevices: Boolean) = Unit
     suspend fun saveCustomerPhone(phoneNumber: String): String = error("Phone update is not implemented")
-    suspend fun requestOtp(phoneNumber: String): OtpChallenge
-    suspend fun verifyOtp(phoneNumber: String, otp: String): AuthResult
-    suspend fun register(phoneNumber: String, displayName: String, registrationToken: String)
 }
 
 data class GoogleIdToken(val value: String, val nonce: String)
@@ -82,9 +74,4 @@ sealed interface GoogleSignInResult {
         val expiresAtEpochSeconds: Long,
         val workers: List<WorkerPickerOption>,
     ) : GoogleSignInResult
-}
-
-sealed interface AuthResult {
-    data object Authenticated : AuthResult
-    data class RegistrationRequired(val token: String) : AuthResult
 }

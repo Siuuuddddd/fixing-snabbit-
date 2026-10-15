@@ -1,52 +1,62 @@
 package com.snabbit.prototype.mobile.data.auth
 
-import com.snabbit.prototype.mobile.data.auth.remote.AccessTokenDto
 import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
-import com.snabbit.prototype.mobile.data.auth.remote.OtpChallengeDto
+import com.snabbit.prototype.mobile.data.auth.remote.GoogleSignInRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.RemoteGoogleSignInResult
+import com.snabbit.prototype.mobile.data.auth.remote.SessionResponseDto
+import com.snabbit.prototype.mobile.data.auth.remote.SessionUserDto
+import com.snabbit.prototype.mobile.domain.auth.AuthDevice
+import com.snabbit.prototype.mobile.domain.auth.AuthSession
+import com.snabbit.prototype.mobile.domain.auth.GoogleIdToken
+import com.snabbit.prototype.mobile.domain.auth.GoogleSignInResult
+import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.navigation.AppRole
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DefaultAuthRepositoryTest {
     @Test
-    fun `worker verification uses worker role and stores access token`() = runTest {
+    fun `worker Google sign in uses worker endpoint and stores rotating session`() = runTest {
         val remote = RecordingRemoteDataSource()
-        val tokenStore = InMemoryTokenStore()
-        val repository = DefaultAuthRepository(remote, tokenStore, AppRole.WORKER, Json)
+        val sessions = InMemorySessionStore()
+        val repository = DefaultAuthRepository(remote, AppRole.WORKER, Json, sessions)
 
-        repository.verifyOtp("+919876543210", "123456")
+        val result = repository.signInWithGoogle(GoogleIdToken("id-token", "nonce"), AuthDevice())
 
         assertEquals(AppRole.WORKER, remote.role)
-        assertEquals("secure-access-token", tokenStore.accessToken())
+        assertEquals("nonce", remote.request?.nonce)
+        assertEquals("secure-access-token", sessions.current()?.accessToken)
+        assertEquals("rotating-refresh-token", sessions.current()?.refreshToken)
+        assertTrue(result is GoogleSignInResult.Authenticated)
     }
 }
 
 private class RecordingRemoteDataSource : AuthRemoteDataSource {
     var role: AppRole? = null
+    var request: GoogleSignInRequestDto? = null
 
-    override suspend fun requestOtp(role: AppRole, phoneNumber: String): OtpChallengeDto {
+    override suspend fun signInWithGoogle(role: AppRole, request: GoogleSignInRequestDto): RemoteGoogleSignInResult {
         this.role = role
-        return OtpChallengeDto("OTP_SENT", 300)
+        this.request = request
+        return RemoteGoogleSignInResult.Session(
+            SessionResponseDto(
+                accessToken = "secure-access-token",
+                expiresIn = 900,
+                refreshToken = "rotating-refresh-token",
+                user = SessionUserDto("worker-id", "Savita", "worker@example.invalid", role = "WORKER"),
+            ),
+        )
     }
-
-    override suspend fun verifyOtp(role: AppRole, phoneNumber: String, otp: String): AccessTokenDto {
-        this.role = role
-        return AccessTokenDto("secure-access-token", "Bearer", 900)
-    }
-
-    override suspend fun registerCustomer(phoneNumber: String, displayName: String, registrationToken: String) =
-        AccessTokenDto(accessToken = "secure-access-token", tokenType = "Bearer", expiresInSeconds = 900)
 }
 
-private class InMemoryTokenStore : TokenStore {
-    private var token: String? = null
-    override fun accessToken(): String? = token
-    override fun saveAccessToken(token: String) {
-        this.token = token
-    }
-    override fun clear() {
-        token = null
-    }
+private class InMemorySessionStore : SessionStore {
+    private val value = MutableStateFlow<AuthSession?>(null)
+    override val session = value
+    override fun current(): AuthSession? = value.value
+    override fun save(session: AuthSession) { value.value = session }
+    override fun clear() { value.value = null }
 }
