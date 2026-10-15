@@ -63,7 +63,7 @@ class UserProfile(
     var lastLoginAt: Instant? = null,
     @Column(name = "sessions_valid_after", nullable = false)
     var sessionsValidAfter: Instant = Instant.EPOCH,
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "customer_auth_provider", joinColumns = [JoinColumn(name = "user_id")])
     @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false)
@@ -89,6 +89,7 @@ class UserProfile(
         displayName = name
         pictureUrl = picture
         authProvider = UserAuthProvider.GOOGLE
+        if (phoneE164 == null) authProviders.remove(UserAuthProvider.PHONE)
         authProviders.add(UserAuthProvider.GOOGLE)
         lastLoginAt = now
         updatedAt = now

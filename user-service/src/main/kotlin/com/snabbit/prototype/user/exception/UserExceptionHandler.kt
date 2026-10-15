@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.bind.MethodArgumentNotValidException
 
 @RestControllerAdvice
 class UserExceptionHandler {
@@ -37,6 +38,41 @@ class UserExceptionHandler {
     fun authRateLimited(error: AuthRateLimited): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, error.message.orEmpty()).also {
             it.setProperty("code", "RATE_LIMITED")
+            it.setProperty("retryAfterSeconds", error.retryAfterSeconds)
+        }
+
+    @ExceptionHandler(InvalidCredentials::class)
+    fun invalidCredentials(error: InvalidCredentials): ProblemDetail = authProblem(HttpStatus.UNAUTHORIZED, error, "INVALID_CREDENTIALS")
+
+    @ExceptionHandler(EmailNotVerified::class)
+    fun emailNotVerified(error: EmailNotVerified): ProblemDetail = authProblem(HttpStatus.FORBIDDEN, error, "EMAIL_NOT_VERIFIED")
+
+    @ExceptionHandler(WeakPassword::class)
+    fun weakPassword(error: WeakPassword): ProblemDetail = authProblem(HttpStatus.UNPROCESSABLE_ENTITY, error, "WEAK_PASSWORD").also {
+        it.setProperty("reason", error.reasonCode)
+    }
+
+    @ExceptionHandler(InvalidOrExpiredCode::class)
+    fun invalidCode(error: InvalidOrExpiredCode): ProblemDetail = authProblem(HttpStatus.UNAUTHORIZED, error, "INVALID_OR_EXPIRED_CODE")
+
+    @ExceptionHandler(TooManyCodeAttempts::class)
+    fun tooManyCodeAttempts(error: TooManyCodeAttempts): ProblemDetail = authProblem(HttpStatus.TOO_MANY_REQUESTS, error, "TOO_MANY_ATTEMPTS")
+
+    @ExceptionHandler(TermsNotAccepted::class)
+    fun termsNotAccepted(error: TermsNotAccepted): ProblemDetail = authProblem(HttpStatus.UNPROCESSABLE_ENTITY, error, "TERMS_NOT_ACCEPTED")
+
+    @ExceptionHandler(PasswordNotSet::class)
+    fun passwordNotSet(error: PasswordNotSet): ProblemDetail = authProblem(HttpStatus.CONFLICT, error, "PASSWORD_NOT_SET")
+
+    @ExceptionHandler(ValidationRejected::class)
+    fun validationRejected(error: ValidationRejected): ProblemDetail =
+        authProblem(HttpStatus.BAD_REQUEST, error, "VALIDATION_ERROR").also { it.setProperty("fields", error.fields) }
+
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun invalidRequest(error: MethodArgumentNotValidException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed").also { problem ->
+            problem.setProperty("code", "VALIDATION_ERROR")
+            problem.setProperty("fields", error.bindingResult.fieldErrors.associate { it.field to "INVALID_VALUE" })
         }
 
     @ExceptionHandler(CustomerAccountDisabled::class)
@@ -127,4 +163,7 @@ class UserExceptionHandler {
     @ExceptionHandler(PlusPurchaseUnavailable::class)
     fun plusPurchaseUnavailable(error: PlusPurchaseUnavailable): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, error.message.orEmpty())
+
+    private fun authProblem(status: HttpStatus, error: RuntimeException, code: String): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(status, error.message.orEmpty()).also { it.setProperty("code", code) }
 }

@@ -78,6 +78,29 @@ class CustomerSessionService(
     fun logoutAll(userId: UUID, reason: String = "LOGOUT_ALL") = invalidateAllSessions(userId, reason)
 
     @Transactional
+    fun rotateAfterCredentialChange(userId: UUID, sessionId: UUID): CustomerSessionResponse {
+        val now = clock.instant()
+        val user = users.findForUpdate(userId) ?: throw SessionRevoked()
+        val current = sessions.findForUpdate(sessionId) ?: throw SessionRevoked()
+        if (current.userId != userId) throw SessionRevoked()
+        ensureUsable(current, user, now)
+        sessions.findActiveByUserId(userId).filter { it.id != sessionId }.forEach {
+            revoke(it, now, "PASSWORD_CHANGED")
+        }
+        rotatedTokens.save(CustomerRotatedRefreshToken(UUID.randomUUID(), current.id, current.refreshTokenHash, now))
+        val replacement = OpaqueToken.generate()
+        current.refreshTokenHash = OpaqueToken.hash(replacement)
+        current.lastUsedAt = now
+        current.idleExpiresAt = minExpiry(now.plus(properties.refreshIdleTtl), current.absoluteExpiresAt)
+        return response(current, user, replacement, false, now)
+    }
+
+    @Transactional(readOnly = true)
+    fun currentUser(userId: UUID): CustomerSessionUser = users.findById(userId)
+        .map { userView(it, false) }
+        .orElseThrow { SessionRevoked() }
+
+    @Transactional
     fun invalidateAllSessions(userId: UUID, reason: String) {
         val now = clock.instant()
         val user = users.findForUpdate(userId) ?: throw SessionRevoked()
@@ -128,10 +151,18 @@ class CustomerSessionService(
         accessToken = accessToken(user.id, session.id, now),
         expiresIn = properties.accessTokenTtl.seconds,
         refreshToken = refreshToken,
-        user = CustomerSessionUser(
-            id = user.id, name = user.displayName, email = requireNotNull(user.email),
-            pictureUrl = user.pictureUrl, isNewUser = isNewUser,
-        ),
+        user = userView(user, isNewUser),
+    )
+
+    private fun userView(user: UserProfile, isNewUser: Boolean): CustomerSessionUser = CustomerSessionUser(
+        id = user.id,
+        name = user.displayName,
+        email = requireNotNull(user.email),
+        pictureUrl = user.pictureUrl,
+        isNewUser = isNewUser,
+        emailVerified = user.emailVerified,
+        hasPassword = user.passwordHash != null,
+        authProviders = user.authProviders.map { it.name }.toSortedSet(),
     )
 
     private fun accessToken(userId: UUID, sessionId: UUID, now: Instant): String {

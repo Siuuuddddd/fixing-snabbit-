@@ -27,6 +27,14 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
       enable-auto-commit: false
+  mail:
+    host: ${SMTP_HOST:mailpit}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_TLS_ENABLED:false}
 management:
   endpoints.web.exposure.include: health,info,prometheus
   endpoint.health.probes.enabled: true
@@ -57,6 +65,28 @@ auth:
   account-rate-window: ${AUTH_ACCOUNT_RATE_WINDOW:PT1M}
   max-attempts: 5
   expose-code: ${OTP_EXPOSE_CODE:false}
+
+email-auth:
+  sender: ${AUTH_EMAIL_SENDER:smtp}
+  from: ${SMTP_FROM:no-reply@localhost}
+  code-hmac-secret: ${AUTH_CODE_HMAC_SECRET:local-only-email-code-secret-change-me}
+  code-ttl: ${AUTH_CODE_TTL:PT10M}
+  code-max-attempts: ${AUTH_CODE_MAX_ATTEMPTS:5}
+  resend-cooldown: ${AUTH_CODE_RESEND_COOLDOWN:PT60S}
+  max-sends-per-hour: ${AUTH_CODE_MAX_SENDS_PER_HOUR:5}
+  terms-version: ${AUTH_TERMS_VERSION:current}
+  password-min-length: ${AUTH_PASSWORD_MIN_LENGTH:8}
+  password-max-length: ${AUTH_PASSWORD_MAX_LENGTH:128}
+  argon2-salt-length: ${AUTH_ARGON2_SALT_LENGTH:16}
+  argon2-hash-length: ${AUTH_ARGON2_HASH_LENGTH:32}
+  argon2-parallelism: ${AUTH_ARGON2_PARALLELISM:1}
+  argon2-memory-kb: ${AUTH_ARGON2_MEMORY_KB:19456}
+  argon2-iterations: ${AUTH_ARGON2_ITERATIONS:2}
+  bcrypt-strength: ${AUTH_BCRYPT_STRENGTH:12}
+  rate-limit-window: ${AUTH_EMAIL_RATE_LIMIT_WINDOW:PT1M}
+  rate-limit-per-identity: ${AUTH_EMAIL_RATE_LIMIT_PER_IDENTITY:10}
+  rate-limit-per-ip: ${AUTH_EMAIL_RATE_LIMIT_PER_IP:30}
+  maximum-delay: ${AUTH_EMAIL_RATE_LIMIT_MAX_DELAY:PT5M}
 
 otp:
   provider: ${OTP_PROVIDER:twilio-verify}
@@ -100,6 +130,13 @@ deployment.production.required-properties:
   - auth.jwt-secret
   - auth.google.verifier
   - auth.google.customer-client-ids
+  - email-auth.sender
+  - email-auth.from
+  - email-auth.code-hmac-secret
+  - spring.mail.host
+  - spring.mail.port
+  - spring.mail.username
+  - spring.mail.password
   - otp.provider
   - otp.account-sid
   - otp.api-key-sid

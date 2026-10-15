@@ -8,5 +8,8 @@ data class CustomerSessionUser(
     val email: String,
     val pictureUrl: String?,
     val isNewUser: Boolean,
+    val emailVerified: Boolean,
+    val hasPassword: Boolean,
+    val authProviders: Set<String>,
     val role: String = "CUSTOMER",
 )

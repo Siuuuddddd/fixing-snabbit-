@@ -36,6 +36,7 @@ class CustomerGoogleAccountService(
             if (byEmail.googleSub != null && byEmail.googleSub != identity.subject) {
                 throw CustomerAccountConflict()
             }
+            val unverifiedPassword = !byEmail.emailVerified && byEmail.passwordHash != null
             byEmail.applyGoogleIdentity(
                 identity.subject,
                 identity.email,
@@ -43,6 +44,11 @@ class CustomerGoogleAccountService(
                 identity.pictureUrl,
                 clock.instant(),
             )
+            if (unverifiedPassword) {
+                byEmail.passwordHash = null
+                byEmail.passwordUpdatedAt = null
+                byEmail.authProviders.remove(com.snabbit.prototype.user.domain.enums.UserAuthProvider.PASSWORD)
+            }
             return CustomerGoogleAccount(byEmail, false)
         }
 
@@ -56,6 +62,8 @@ class CustomerGoogleAccountService(
             plusExpiresAt = null,
             createdAt = now,
             updatedAt = now,
+            authProvider = com.snabbit.prototype.user.domain.enums.UserAuthProvider.GOOGLE,
+            authProviders = mutableSetOf(com.snabbit.prototype.user.domain.enums.UserAuthProvider.GOOGLE),
         )
         created.applyGoogleIdentity(
             identity.subject,

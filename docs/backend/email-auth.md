@@ -77,6 +77,7 @@ Email authentication must add the HMAC secret and real SMTP properties to User S
 
 - Step 0 complete: committed Google/JWT foundation verified; customer schema, session lifecycle, rate limiting, staff authentication, email capability, gateway routes, production guard, and development seed audited.
 - Step 1 complete: additive migration V14 adds password, verification timestamp, terms acceptance, provider-set, and purpose-separated email challenge storage; corresponding JPA mappings and repositories are in place.
+- Step 2 complete: customer register, verify, resend, email login, forgot/reset, authenticated change-password, and `me` endpoints are implemented. Google linking removes an unverified pre-registered password, Google-only customers can add a password through reset, and the existing rotating session response now reports verification and provider state.
 
 ## Gaps
 

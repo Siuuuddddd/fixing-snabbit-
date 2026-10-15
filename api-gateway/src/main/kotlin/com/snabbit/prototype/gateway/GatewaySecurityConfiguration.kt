@@ -47,6 +47,12 @@ class GatewaySecurityConfiguration {
                     .pathMatchers(
                         "/api/v1/auth/google",
                         "/api/v1/auth/refresh",
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/verify-email",
+                        "/api/v1/auth/resend-verification",
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/forgot-password",
+                        "/api/v1/auth/reset-password",
                         "/api/v1/worker-auth/google",
                         "/api/v1/worker-auth/select-profile",
                         "/api/v1/worker-auth/refresh",
@@ -55,7 +61,12 @@ class GatewaySecurityConfiguration {
                         "/webhooks/razorpay",
                     ).permitAll()
                     .pathMatchers("/api/v1/worker-auth/switch-profile", "/api/v1/worker-auth/logout", "/api/v1/worker-auth/logout-all").hasRole("WORKER")
-                    .pathMatchers("/api/v1/auth/logout", "/api/v1/auth/logout-all").hasRole("CUSTOMER")
+                    .pathMatchers(
+                        "/api/v1/auth/logout",
+                        "/api/v1/auth/logout-all",
+                        "/api/v1/auth/change-password",
+                        "/api/v1/auth/me",
+                    ).hasRole("CUSTOMER")
                     .pathMatchers("/api/v1/staff/support/**").hasAnyRole("SUPPORT_AGENT", "ADMIN")
                     .pathMatchers("/api/v1/staff/operations/**").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
                     .pathMatchers("/api/v1/staff/finance/**").hasAnyRole("FINANCE_OPERATOR", "ADMIN")

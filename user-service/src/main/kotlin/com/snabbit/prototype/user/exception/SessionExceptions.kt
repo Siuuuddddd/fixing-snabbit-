@@ -4,4 +4,4 @@ class SessionRevoked : RuntimeException("Session is no longer valid")
 
 class RefreshInProgress : RuntimeException("Refresh is already in progress")
 
-class AuthRateLimited : RuntimeException("Authentication request rate limit exceeded")
+class AuthRateLimited(val retryAfterSeconds: Long = 1) : RuntimeException("Authentication request rate limit exceeded")

@@ -55,10 +55,16 @@ class GatewayAuthorizationIntegrationTest {
     }
 
     @Test
-    fun `Google sign-in selection and refresh are public while logout stays role protected`() {
+    fun `customer and worker authentication entry points are public while account actions stay protected`() {
         listOf(
             "/api/v1/auth/google",
             "/api/v1/auth/refresh",
+            "/api/v1/auth/register",
+            "/api/v1/auth/verify-email",
+            "/api/v1/auth/resend-verification",
+            "/api/v1/auth/login",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/reset-password",
             "/api/v1/worker-auth/google",
             "/api/v1/worker-auth/select-profile",
             "/api/v1/worker-auth/refresh",
@@ -69,6 +75,8 @@ class GatewayAuthorizationIntegrationTest {
         }
 
         client.post().uri("/api/v1/auth/logout").exchange().expectStatus().isUnauthorized
+        client.post().uri("/api/v1/auth/change-password").exchange().expectStatus().isUnauthorized
+        client.get().uri("/api/v1/auth/me").exchange().expectStatus().isUnauthorized
         client.mutateWith(mockJwt().authorities(SimpleGrantedAuthority("ROLE_WORKER")))
             .post().uri("/api/v1/auth/logout").exchange().expectStatus().isForbidden
         client.post().uri("/api/v1/worker-auth/switch-profile").exchange().expectStatus().isUnauthorized
@@ -79,7 +87,6 @@ class GatewayAuthorizationIntegrationTest {
         listOf(
             "/api/v1/auth/otp/request",
             "/api/v1/auth/otp/verify",
-            "/api/v1/auth/register",
             "/api/v1/worker-auth/otp/request",
             "/api/v1/worker-auth/otp/verify",
         ).forEach { path ->
