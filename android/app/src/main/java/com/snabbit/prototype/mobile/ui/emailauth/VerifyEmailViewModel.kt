@@ -8,6 +8,7 @@ import com.snabbit.prototype.mobile.domain.auth.ResendVerificationUseCase
 import com.snabbit.prototype.mobile.domain.auth.VerifyEmailUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class VerifyEmailUiState(
     val email: String,
@@ -60,9 +63,14 @@ class VerifyEmailViewModel(
         viewModelScope.launch(dispatcher) {
             runCatching { verify(state.email, state.code) }
                 .onSuccess {
-                    pendingCredential.consume(state.email)?.let { credentialSaver.save(it.first, it.second) }
+                    val credential = pendingCredential.consume(state.email)
                     _uiState.update { it.copy(isSubmitting = false, code = "") }
                     _events.emit(VerifyEmailUiEvent.Authenticated)
+                    credential?.let { (email, password) ->
+                        withContext(NonCancellable) {
+                            withTimeoutOrNull(CREDENTIAL_SAVE_TIMEOUT_MILLIS) { credentialSaver.save(email, password) }
+                        }
+                    }
                 }
                 .onFailure { failure ->
                     pendingCredential.clear()
@@ -107,5 +115,7 @@ class VerifyEmailViewModel(
         _uiState.update { it.copy(code = "") }
         super.onCleared()
     }
+
+    private companion object { const val CREDENTIAL_SAVE_TIMEOUT_MILLIS = 30_000L }
 }
 

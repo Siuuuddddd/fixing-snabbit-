@@ -17,6 +17,7 @@ import com.snabbit.prototype.mobile.domain.auth.PendingPasswordCredentialStore
 import com.snabbit.prototype.mobile.domain.auth.RegisterUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,6 +26,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 enum class AuthTab { LOGIN, SIGN_UP }
 
@@ -114,9 +117,11 @@ class AuthViewModel(
         viewModelScope.launch(dispatcher) {
             runCatching { login(EmailValidator.normalize(state.loginEmail), state.loginPassword) }
                 .onSuccess {
-                    credentialSaver.save(EmailValidator.normalize(state.loginEmail), state.loginPassword)
+                    val email = EmailValidator.normalize(state.loginEmail)
+                    val password = state.loginPassword
                     _uiState.update { current -> current.copy(isSubmitting = false, loginPassword = "") }
                     _events.emit(AuthUiEvent.Authenticated)
+                    saveCredentialAfterNavigation(email, password)
                 }
                 .onFailure { failure ->
                     if ((failure as? AuthFailure)?.reason == AuthFailureReason.EMAIL_NOT_VERIFIED) {
@@ -177,6 +182,14 @@ class AuthViewModel(
         _uiState.update { it.copy(loginPassword = "", signUpPassword = "") }
         super.onCleared()
     }
+
+    private suspend fun saveCredentialAfterNavigation(email: String, password: String) {
+        withContext(NonCancellable) {
+            withTimeoutOrNull(CREDENTIAL_SAVE_TIMEOUT_MILLIS) { credentialSaver.save(email, password) }
+        }
+    }
+
+    private companion object { const val CREDENTIAL_SAVE_TIMEOUT_MILLIS = 30_000L }
 }
 
 private fun EmailAuthError.hasField(name: String): Boolean = fields.keys.any { it.equals(name, ignoreCase = true) }
