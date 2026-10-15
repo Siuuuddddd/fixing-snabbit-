@@ -122,3 +122,17 @@ The Google-auth work must add required Google client-ID configuration and reject
 - Access JWT compatibility is deliberate only for downstream UUID subject and role routing. Adding mandatory `sid` intentionally invalidates every OTP-era access token.
 - Session and refresh-token state belongs in User Service for customers and Worker Service for workers. Refresh tokens and selection tokens must be stored only as cryptographic hashes.
 - Arrival OTP, generic SMS notification delivery, and staff OTP are separate retention concerns that must be covered by regression tests before any login-OTP cleanup.
+
+## Progress
+
+- **Step 0 complete:** the current authentication, JWT, notification identity, OTP, profile, seed, Redis, and production-guard behavior is audited in this document. Checkpoint: `d2336cc`.
+- **Step 1 complete in the working checkpoint:** `platform-common` now owns a `GoogleIdentityVerifier` port and a Nimbus implementation that verifies RS256 signatures against Google's cached, rotation-aware published JWK set. It accepts only the two Google issuers, requires an unexpired token, checks the caller-specific configured audience, requires `email_verified`, requires `sub`, and optionally checks `nonce`. Only verified token claims produce subject, email, name, and picture attributes.
+- User Service reads `auth.google.customer-client-ids`; Worker Service reads `auth.google.worker-client-ids`. Both are comma-separated environment-backed lists. The production guard requires the applicable list, requires the real Google verifier, and rejects a stub value.
+- The verifier stub exists only under test sources. Tests cover valid verification, bad signature, wrong issuer/audience, expiry, unverified email, missing subject, nonce mismatch, JWK caching, and signing-key rotation. Platform, User Service, and Worker Service tests pass.
+
+## Gaps
+
+- Steps 2–6 remain: account linking/provisioning, worker shared-profile selection, rotating sessions, seed migration, setup/API documentation, and removal of customer/worker OTP routes.
+- Staff authentication still uses phone OTP through the shared `PhoneVerificationProvider`. It is intentionally unchanged and needs its own replacement project later.
+- Arrival OTP and notification SMS remain independent retained capabilities and require regression coverage at the removal checkpoint.
+- The mixed Android documentation files are intentionally not edited by this goal. After this work is complete, copy the API summary from `docs/backend/google-auth-api.md` into `docs/android/api-map.md` manually.

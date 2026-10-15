@@ -53,6 +53,10 @@ dev-seed:
 auth:
   issuer: https://auth.snabbit.local
   jwt-secret: ${JWT_SECRET:local-only-change-me-32-byte-secret}
+  google:
+    verifier: ${GOOGLE_IDENTITY_VERIFIER:google}
+    customer-client-ids: ${GOOGLE_CUSTOMER_CLIENT_IDS:}
+    worker-client-ids: ${GOOGLE_WORKER_CLIENT_IDS:}
   otp-pepper: ${OTP_PEPPER:local-only-otp-pepper}
   otp-ttl: PT5M
   request-cooldown: PT1M
@@ -88,6 +92,8 @@ deployment.production.required-properties:
   - spring.kafka.bootstrap-servers
   - auth.issuer
   - auth.jwt-secret
+  - auth.google.verifier
+  - auth.google.worker-client-ids
   - otp.provider
   - otp.account-sid
   - otp.api-key-sid

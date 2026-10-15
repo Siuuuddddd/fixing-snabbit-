@@ -91,4 +91,35 @@ class ProductionConfigurationGuardTest {
             )
         }
     }
+
+    @Test
+    fun `requires Google client identifiers in production`() {
+        val environment = MockEnvironment()
+            .withProperty("auth.google.verifier", "google")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(
+                environment,
+                ProductionGuardProperties(
+                    listOf("auth.google.verifier", "auth.google.customer-client-ids"),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects a stub Google verifier in production`() {
+        val environment = MockEnvironment()
+            .withProperty("auth.google.verifier", "stub")
+            .withProperty("auth.google.customer-client-ids", "client-id-from-runtime")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(
+                environment,
+                ProductionGuardProperties(
+                    listOf("auth.google.verifier", "auth.google.customer-client-ids"),
+                ),
+            )
+        }
+    }
 }

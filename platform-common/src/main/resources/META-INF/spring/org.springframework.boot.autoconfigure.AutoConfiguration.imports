@@ -1,4 +1,5 @@
 com.snabbit.prototype.platform.ProductionConfigurationGuardAutoConfiguration
 com.snabbit.prototype.platform.RestClientConfiguration
+com.snabbit.prototype.platform.GoogleIdentityAutoConfiguration
 com.snabbit.prototype.platform.PhoneVerificationAutoConfiguration
 com.snabbit.prototype.platform.SmsGatewayAutoConfiguration
