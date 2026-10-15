@@ -3,10 +3,14 @@ package com.snabbit.prototype.user.domain
 import com.snabbit.prototype.user.domain.enums.UserStatus
 import com.snabbit.prototype.user.domain.enums.UserAuthProvider
 import jakarta.persistence.Column
+import jakarta.persistence.CollectionTable
+import jakarta.persistence.ElementCollection
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.EnumType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import java.math.BigDecimal
@@ -40,6 +44,16 @@ class UserProfile(
     var email: String? = null,
     @Column(name = "email_verified", nullable = false)
     var emailVerified: Boolean = false,
+    @Column(name = "email_verified_at")
+    var emailVerifiedAt: Instant? = null,
+    @Column(name = "password_hash", length = 255)
+    var passwordHash: String? = null,
+    @Column(name = "password_updated_at")
+    var passwordUpdatedAt: Instant? = null,
+    @Column(name = "terms_accepted_at")
+    var termsAcceptedAt: Instant? = null,
+    @Column(name = "terms_version", length = 40)
+    var termsVersion: String? = null,
     @Column(name = "picture_url", length = 2048)
     var pictureUrl: String? = null,
     @Enumerated(EnumType.STRING)
@@ -49,6 +63,11 @@ class UserProfile(
     var lastLoginAt: Instant? = null,
     @Column(name = "sessions_valid_after", nullable = false)
     var sessionsValidAfter: Instant = Instant.EPOCH,
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "customer_auth_provider", joinColumns = [JoinColumn(name = "user_id")])
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider", nullable = false)
+    var authProviders: MutableSet<UserAuthProvider> = mutableSetOf(authProvider),
     @Column(name = "rating_sum", nullable = false)
     var ratingSum: Int = 0,
     @Column(name = "rating_count", nullable = false)
@@ -66,9 +85,11 @@ class UserProfile(
         googleSub = subject
         email = verifiedEmail
         emailVerified = true
+        emailVerifiedAt = emailVerifiedAt ?: now
         displayName = name
         pictureUrl = picture
         authProvider = UserAuthProvider.GOOGLE
+        authProviders.add(UserAuthProvider.GOOGLE)
         lastLoginAt = now
         updatedAt = now
     }
