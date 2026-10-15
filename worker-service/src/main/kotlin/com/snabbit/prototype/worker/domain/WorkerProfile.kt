@@ -2,6 +2,7 @@ package com.snabbit.prototype.worker.domain
 
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerTier
+import com.snabbit.prototype.worker.domain.enums.WorkerAuthProvider
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Enumerated
@@ -45,9 +46,42 @@ class WorkerProfile(
     var updatedAt: Instant,
     @Column(name = "joined_at", nullable = false)
     var joinedAt: Instant = createdAt,
+    @Column(name = "google_sub")
+    var googleSub: String? = null,
+    @Column(length = 320)
+    var email: String? = null,
+    @Column(name = "email_verified", nullable = false)
+    var emailVerified: Boolean = false,
+    @Column(name = "picture_url", length = 2048)
+    var pictureUrl: String? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    var authProvider: WorkerAuthProvider = WorkerAuthProvider.PHONE,
+    @Column(name = "last_login_at")
+    var lastLoginAt: Instant? = null,
+    @Column(nullable = false)
+    var seeded: Boolean = false,
     @Version
     var version: Long = 0,
 ) {
+    fun linkGoogleIdentity(
+        subject: String,
+        verifiedEmail: String,
+        name: String?,
+        picture: String?,
+        now: Instant,
+    ) {
+        check(!seeded) { "Seeded shared-login workers cannot store a Google subject" }
+        googleSub = subject
+        email = verifiedEmail
+        emailVerified = true
+        if (!name.isNullOrBlank()) displayName = name.trim()
+        pictureUrl = picture
+        authProvider = WorkerAuthProvider.GOOGLE
+        lastLoginAt = now
+        updatedAt = now
+    }
+
     fun averageRating(): BigDecimal = if (ratingCount == 0) {
         BigDecimal.ZERO
     } else {

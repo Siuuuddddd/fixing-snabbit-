@@ -9,6 +9,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class UserExceptionHandler {
+    @ExceptionHandler(CustomerAccountDisabled::class)
+    fun accountDisabled(error: CustomerAccountDisabled): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty()).also {
+            it.setProperty("code", "ACCOUNT_DISABLED")
+        }
+
+    @ExceptionHandler(CustomerAccountConflict::class)
+    fun accountConflict(error: CustomerAccountConflict): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "ACCOUNT_LINK_CONFLICT")
+        }
+
     @ExceptionHandler(UnverifiedTrialRecipient::class)
     fun unverifiedTrial(error: UnverifiedTrialRecipient): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {

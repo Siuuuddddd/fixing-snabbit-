@@ -4,6 +4,6 @@ import java.util.UUID
 
 data class CustomerContactSnapshot(
     val userId: UUID,
-    val phoneNumber: String,
+    val phoneNumber: String?,
     val displayName: String,
 )

@@ -13,4 +13,5 @@ data class WorkerAuthProperties(
     val accessTokenTtl: Duration,
     val maxAttempts: Int,
     val exposeCode: Boolean,
+    val sharedSelectionTokenTtl: Duration = Duration.ofMinutes(5),
 )

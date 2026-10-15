@@ -12,6 +12,7 @@ data class WorkerDevSeedProperties(
     val longitude: BigDecimal = BigDecimal("72.877426"),
     val serviceRadiusKm: BigDecimal = BigDecimal("50.00"),
     val workerLoginPhone: String = "",
+    val workerLoginEmail: String = "",
 ) {
     init {
         require(bookingWindowDays == 10) { "The development seed booking window must remain 10 days" }
@@ -19,6 +20,9 @@ data class WorkerDevSeedProperties(
         require(serviceRadiusKm > BigDecimal.ZERO) { "The development seed service radius must be positive" }
         require(workerLoginPhone.isBlank() || Regex("^\\+91[6-9]\\d{9}$").matches(workerLoginPhone)) {
             "dev-seed.worker-login-phone must be an Indian E.164 number"
+        }
+        require(workerLoginEmail.isBlank() || workerLoginEmail.contains('@')) {
+            "dev-seed.worker-login-email must be an email address"
         }
     }
 }

@@ -9,6 +9,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class WorkerExceptionHandler {
+    @ExceptionHandler(WorkerNotRegistered::class)
+    fun workerNotRegistered(error: WorkerNotRegistered): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, error.message.orEmpty()).also {
+            it.setProperty("code", "WORKER_NOT_REGISTERED")
+        }
+
+    @ExceptionHandler(InvalidWorkerSelectionGrant::class)
+    fun invalidSelection(error: InvalidWorkerSelectionGrant): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, error.message.orEmpty()).also {
+            it.setProperty("code", "INVALID_WORKER_SELECTION")
+        }
+
     @ExceptionHandler(UnverifiedTrialRecipient::class)
     fun unverifiedTrial(error: UnverifiedTrialRecipient): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {

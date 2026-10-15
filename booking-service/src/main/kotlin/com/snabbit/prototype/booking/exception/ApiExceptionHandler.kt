@@ -7,6 +7,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(CustomerPhoneRequired::class)
+    fun customerPhoneRequired(error: CustomerPhoneRequired): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "PHONE_REQUIRED")
+        }
+
     @ExceptionHandler(ArrivalOtpConflict::class)
     fun arrivalOtpConflict(error: ArrivalOtpConflict): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {

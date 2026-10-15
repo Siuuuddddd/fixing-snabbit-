@@ -6,6 +6,7 @@ import com.snabbit.prototype.booking.domain.enums.BookingType
 import com.snabbit.prototype.booking.dto.request.UpdateHomeContactRequest
 import com.snabbit.prototype.booking.dto.response.BookerContactSnapshot
 import com.snabbit.prototype.booking.exception.CustomerAccessDenied
+import com.snabbit.prototype.booking.exception.CustomerPhoneRequired
 import com.snabbit.prototype.booking.exception.HomeContactValidationException
 import com.snabbit.prototype.booking.exception.InvalidBookingState
 import com.snabbit.prototype.booking.repository.BookingRepository
@@ -59,6 +60,18 @@ class HomeContactServiceTest {
 
         assertTrue(result.isBooker)
         assertEquals("Booker", result.name)
+    }
+
+    @Test
+    fun `SELF requires the Google customer to save a phone first`() {
+        val booking = booking()
+        every { bookings.findForUpdate(booking.id) } returns booking
+        every { contacts.contact(booking.customerId) } returns
+            BookerContactSnapshot(booking.customerId, null, "Booker")
+
+        assertThrows(CustomerPhoneRequired::class.java) {
+            service.update(booking.id, booking.customerId, null)
+        }
     }
 
     @Test

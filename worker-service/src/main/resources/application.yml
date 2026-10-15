@@ -49,6 +49,7 @@ dev-seed:
   longitude: ${DEV_SEED_LONGITUDE:72.877426}
   service-radius-km: ${DEV_SEED_SERVICE_RADIUS_KM:50.00}
   worker-login-phone: ${DEV_SEED_WORKER_LOGIN_PHONE:}
+  worker-login-email: ${DEV_SEED_WORKER_LOGIN_EMAIL:}
 
 auth:
   issuer: https://auth.snabbit.local
@@ -63,6 +64,7 @@ auth:
   access-token-ttl: PT15M
   max-attempts: 5
   expose-code: ${OTP_EXPOSE_CODE:false}
+  shared-selection-token-ttl: PT5M
 
 otp:
   provider: ${OTP_PROVIDER:twilio-verify}
