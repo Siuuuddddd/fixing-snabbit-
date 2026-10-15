@@ -11,6 +11,7 @@ data class ProfileSummary(
     val email: String = "",
     val pictureUrl: String? = null,
     val phoneNumber: String? = null,
+    val hasPassword: Boolean = false,
 )
 
 interface ProfileRepository {

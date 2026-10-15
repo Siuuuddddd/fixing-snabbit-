@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Stars
 import androidx.compose.material3.Button
@@ -45,6 +46,7 @@ fun ProfileScreen(
     onSavePhone: () -> Unit,
     onSignOut: () -> Unit,
     onSignOutAll: () -> Unit,
+    onChangePassword: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PullToRefreshBox(state.isRefreshing, onRefresh, modifier.fillMaxSize()) {
@@ -101,6 +103,13 @@ fun ProfileScreen(
                         val passes = (profile.plusPasses ?: 0).toInt()
                         item { ProfileRow(Icons.Outlined.Stars, stringResource(R.string.profile_plus), if (profile.plusActive) pluralStringResource(R.plurals.profile_plus_active, passes, passes) else stringResource(R.string.profile_plus_inactive)) }
                     }
+                    if (profile.role != "WORKER" && profile.hasPassword) item {
+                        ProfileActionRow(
+                            icon = Icons.Outlined.Lock,
+                            title = stringResource(R.string.profile_change_password),
+                            onClick = onChangePassword,
+                        )
+                    }
                 }
                 state.error?.let { item { DataErrorPanel(it, onRetry) } }
                 item {
@@ -129,6 +138,20 @@ private fun ProfileRow(icon: ImageVector, title: String, value: String) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SnabbitSpacing.medium), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleMedium); Text(value, style = MaterialTheme.typography.bodyMedium) }
+        }
+    }
+}
+
+@Composable
+private fun ProfileActionRow(icon: ImageVector, title: String, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(SnabbitSpacing.medium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.titleMedium)
         }
     }
 }

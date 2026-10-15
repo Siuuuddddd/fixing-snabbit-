@@ -12,6 +12,7 @@ import com.snabbit.prototype.mobile.domain.session.SessionIdentityProvider
 import com.snabbit.prototype.mobile.domain.auth.AuthRepository
 import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.domain.auth.AuthSession
+import com.snabbit.prototype.mobile.domain.auth.EmailAuthRepository
 import com.snabbit.prototype.mobile.domain.auth.SessionUser
 import com.snabbit.prototype.mobile.domain.session.SessionManager
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,7 @@ class DefaultProfileRepository(
     private val notifications: NotificationRepository,
     private val auth: AuthRepository,
     private val sessionStore: SessionStore,
+    private val emailAuth: EmailAuthRepository? = null,
 ) : ProfileRepository {
     constructor(
         role: AppRole,
@@ -49,20 +51,23 @@ class DefaultProfileRepository(
             override suspend fun signOut(allDevices: Boolean) = session.signOut()
         },
         LegacyProfileSessionStore(identity, role),
+        null,
     )
     override suspend fun summary(): ProfileSummary {
         val subject = identity.customerId() ?: throw DataFailure(DataFailureReason.UNAUTHORIZED)
-        val user = sessionStore.current()?.user ?: throw DataFailure(DataFailureReason.UNAUTHORIZED)
+        val storedUser = sessionStore.current()?.user ?: throw DataFailure(DataFailureReason.UNAUTHORIZED)
         if (role == AppRole.WORKER) return ProfileSummary(
             subject, role.name, null, null, null, null,
-            user.name, user.email, user.pictureUrl, user.phoneNumber,
+            storedUser.name, storedUser.email, storedUser.pictureUrl, storedUser.phoneNumber,
         )
         return coroutineScope {
+            val user = async { emailAuth?.currentCustomer() ?: storedUser }
             val addressCount = async { addresses.addresses().size }
             val preferences = async { household.preferences() }
             val membership = async { plus.status() }
             val householdSnapshot = preferences.await()
             val plusSnapshot = membership.await()
+            val customer = user.await()
             ProfileSummary(
                 subject,
                 role.name,
@@ -75,10 +80,11 @@ class DefaultProfileRepository(
                     householdSnapshot.requiredEquipment.isNotEmpty(),
                 plusSnapshot.active,
                 plusSnapshot.availablePasses,
-                user.name,
-                user.email,
-                user.pictureUrl,
-                user.phoneNumber,
+                customer.name,
+                customer.email,
+                customer.pictureUrl,
+                customer.phoneNumber,
+                customer.hasPassword,
             )
         }
     }

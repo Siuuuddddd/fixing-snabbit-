@@ -16,6 +16,12 @@ import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.auth.remote.RetrofitAuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.auth.JwtSessionIdentityProvider
 import com.snabbit.prototype.mobile.data.auth.DefaultSessionManager
+import com.snabbit.prototype.mobile.data.auth.CredentialManagerPasswordSaver
+import com.snabbit.prototype.mobile.data.auth.DefaultEmailAuthRepository
+import com.snabbit.prototype.mobile.data.auth.InMemoryAuthNoticeStore
+import com.snabbit.prototype.mobile.data.auth.InMemoryPendingPasswordCredentialStore
+import com.snabbit.prototype.mobile.data.auth.remote.email.EmailAuthRemoteDataSource
+import com.snabbit.prototype.mobile.data.auth.remote.email.RetrofitEmailAuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.address.AndroidDeviceLocationDataSource
 import com.snabbit.prototype.mobile.data.address.DefaultAddressRepository
 import com.snabbit.prototype.mobile.data.address.remote.AddressApi
@@ -78,6 +84,18 @@ import com.snabbit.prototype.mobile.domain.auth.SignInWithGoogleUseCase
 import com.snabbit.prototype.mobile.domain.auth.SignOutAllUseCase
 import com.snabbit.prototype.mobile.domain.auth.SignOutUseCase
 import com.snabbit.prototype.mobile.domain.auth.SwitchWorkerProfileUseCase
+import com.snabbit.prototype.mobile.domain.auth.AuthNoticeStore
+import com.snabbit.prototype.mobile.domain.auth.ChangePasswordUseCase
+import com.snabbit.prototype.mobile.domain.auth.EmailAuthRepository
+import com.snabbit.prototype.mobile.domain.auth.ForgotPasswordUseCase
+import com.snabbit.prototype.mobile.domain.auth.LoginWithPasswordUseCase
+import com.snabbit.prototype.mobile.domain.auth.PasswordCredentialSaver
+import com.snabbit.prototype.mobile.domain.auth.PasswordRules
+import com.snabbit.prototype.mobile.domain.auth.PendingPasswordCredentialStore
+import com.snabbit.prototype.mobile.domain.auth.RegisterUseCase
+import com.snabbit.prototype.mobile.domain.auth.ResendVerificationUseCase
+import com.snabbit.prototype.mobile.domain.auth.ResetPasswordUseCase
+import com.snabbit.prototype.mobile.domain.auth.VerifyEmailUseCase
 import com.snabbit.prototype.mobile.domain.address.AddressRepository
 import com.snabbit.prototype.mobile.domain.address.DeviceLocationDataSource
 import com.snabbit.prototype.mobile.domain.catalog.CatalogRepository
@@ -144,6 +162,8 @@ import com.snabbit.prototype.mobile.navigation.titleRes
 import com.snabbit.prototype.mobile.navigation.LocalCustomerNavigation
 import com.snabbit.prototype.mobile.navigation.LocalGoogleIdTokenProvider
 import com.snabbit.prototype.mobile.navigation.LocalWorkerNavigation
+import com.snabbit.prototype.mobile.navigation.ChangePasswordRoute
+import com.snabbit.prototype.mobile.navigation.LocalProfileNavigation
 import com.snabbit.prototype.mobile.navigation.PushNavigationCoordinator
 import com.snabbit.prototype.mobile.ui.address.AddressScreen
 import com.snabbit.prototype.mobile.ui.address.AddressViewModel
@@ -185,6 +205,12 @@ import com.snabbit.prototype.mobile.ui.notification.NotificationsScreen
 import com.snabbit.prototype.mobile.ui.notification.NotificationsViewModel
 import com.snabbit.prototype.mobile.ui.profile.ProfileScreen
 import com.snabbit.prototype.mobile.ui.profile.ProfileViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.ChangePasswordScreen
+import com.snabbit.prototype.mobile.ui.emailauth.ChangePasswordUiEvent
+import com.snabbit.prototype.mobile.ui.emailauth.ChangePasswordViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.AuthViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.ForgotPasswordViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.VerifyEmailViewModel
 import com.snabbit.prototype.mobile.ui.common.EmptyErrorOfflineScreen
 import com.snabbit.prototype.mobile.ui.worker.WorkerEarningsScreen
 import com.snabbit.prototype.mobile.ui.worker.WorkerEarningsViewModel
@@ -221,6 +247,8 @@ private val storageModule = module {
     single(named("applicationScope")) { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
     single<SessionStore> { EncryptedSessionStore(androidContext(), get()) }
     single<PendingWorkerSelectionStore> { InMemoryPendingWorkerSelectionStore() }
+    single<PendingPasswordCredentialStore> { InMemoryPendingPasswordCredentialStore() }
+    single<AuthNoticeStore> { InMemoryAuthNoticeStore() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.create(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -234,7 +262,7 @@ private val networkModule = module {
     single { Json { ignoreUnknownKeys = true; explicitNulls = false } }
     single { AuthInterceptor(get(), get(), get()) }
     single<TokenRefresher> {
-        SessionTokenRefresher(get(), get(), get(), get(), BuildConfig.API_BASE_URL)
+        SessionTokenRefresher(get(), get(), get(), get(), BuildConfig.API_BASE_URL, get())
     }
     single { RefreshingAuthenticator(get()) }
     single {
@@ -259,6 +287,7 @@ private val networkModule = module {
     }
     single { get<Retrofit>().create(AuthApi::class.java) }
     single<AuthRemoteDataSource> { RetrofitAuthRemoteDataSource(get(), get()) }
+    single<EmailAuthRemoteDataSource> { RetrofitEmailAuthRemoteDataSource(get()) }
     single { get<Retrofit>().create(CatalogApi::class.java) }
     single<CatalogRemoteDataSource> { RetrofitCatalogRemoteDataSource(get()) }
     single { get<Retrofit>().create(AddressApi::class.java) }
@@ -290,6 +319,16 @@ private val repositoryModule = module {
     factory { ObserveSessionUseCase(get()) }
     single { PushNavigationCoordinator() }
     single<AuthRepository> { DefaultAuthRepository(get(), get(), get(), get(), get()) }
+    single<EmailAuthRepository> { DefaultEmailAuthRepository(get(), get(), get()) }
+    single<PasswordCredentialSaver> { CredentialManagerPasswordSaver(androidContext()) }
+    single { PasswordRules() }
+    factory { RegisterUseCase(get()) }
+    factory { VerifyEmailUseCase(get()) }
+    factory { ResendVerificationUseCase(get()) }
+    factory { LoginWithPasswordUseCase(get()) }
+    factory { ForgotPasswordUseCase(get()) }
+    factory { ResetPasswordUseCase(get()) }
+    factory { ChangePasswordUseCase(get()) }
     single<LaunchRepository> { DefaultLaunchRepository(get(), get(), get()) }
     single<SessionIdentityProvider> { JwtSessionIdentityProvider(get<SessionStore>(), get()) }
     single<SessionManager> { DefaultSessionManager(get()) }
@@ -324,7 +363,7 @@ private val repositoryModule = module {
     single<DeviceRegistrationStore> { DataStoreDeviceRegistrationStore(get()) }
     single<NotificationRepository> { DefaultNotificationRepository(get(), get(), get(), get(), get()) }
     single<NotificationRefreshEvents> { DefaultNotificationRefreshEvents() }
-    single<ProfileRepository> { DefaultProfileRepository(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<ProfileRepository> { DefaultProfileRepository(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     single<WorkerJobsRepository> { DefaultWorkerJobsRepository(get(), get()) }
     single<WorkerAvailabilityRepository> { DefaultWorkerAvailabilityRepository(get(), get()) }
     single<WorkerLocationRepository> { DefaultWorkerLocationRepository(get(), get()) }
@@ -337,6 +376,9 @@ private val viewModelModule = module {
     viewModel { (provider: GoogleIdTokenProvider) ->
         LoginViewModel(SignInWithGoogleUseCase(provider, get()), get(), BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank())
     }
+    viewModel { AuthViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { (email: String) -> VerifyEmailViewModel(email, get(), get(), get(), get()) }
+    viewModel { (email: String) -> ForgotPasswordViewModel(email, get(), get(), get(), get()) }
     viewModel { (provider: GoogleIdTokenProvider) ->
         WorkerPickerViewModel(provider, SelectWorkerProfileUseCase(provider, get()), get())
     }
@@ -366,6 +408,7 @@ private val viewModelModule = module {
     viewModel { MyBookingsViewModel(get()) }
     viewModel { NotificationsViewModel(get(), get()) }
     viewModel { (provider: GoogleIdTokenProvider) -> ProfileViewModel(get(), provider) }
+    viewModel { ChangePasswordViewModel(get(), get()) }
     viewModel { WorkerJobFeedViewModel(get()) }
     viewModel { WorkerScheduleViewModel(get()) }
     viewModel { (bookingId: String, visitIndex: Int) -> WorkerJobDetailsViewModel(bookingId, visitIndex, get(), get(), get()) }
@@ -587,6 +630,7 @@ private val navigationModule = module {
         NotificationsScreen(state, viewModel::refresh, viewModel::retry, viewModel::selectFilter, viewModel::markRead, viewModel::retryPushRegistration, navigation.back)
     }
     navigation<ProfileRoute> {
+        val navigation = LocalProfileNavigation.current
         val provider = LocalGoogleIdTokenProvider.current
         val viewModel = koinViewModel<ProfileViewModel> { parametersOf(provider) }
         val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -598,6 +642,27 @@ private val navigationModule = module {
             viewModel::savePhone,
             { viewModel.signOut(false) },
             { viewModel.signOut(true) },
+            navigation.openChangePassword,
+        )
+    }
+    navigation<ChangePasswordRoute> {
+        val navigation = LocalProfileNavigation.current
+        val viewModel = koinViewModel<ChangePasswordViewModel>()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(viewModel) {
+            viewModel.events.collect { event ->
+                if (event == ChangePasswordUiEvent.PasswordChanged) navigation.back()
+            }
+        }
+        ChangePasswordScreen(
+            state = state,
+            onCurrentChanged = viewModel::updateCurrent,
+            onNewChanged = viewModel::updateNew,
+            onToggleCurrent = viewModel::toggleCurrentVisibility,
+            onToggleNew = viewModel::toggleNewVisibility,
+            onBlur = viewModel::validateOnBlur,
+            onSubmit = viewModel::submit,
+            onBack = navigation.back,
         )
     }
     navigation<EmptyErrorOfflineRoute> { EmptyErrorOfflineScreen(onRetry = {}) }

@@ -4,6 +4,8 @@ import com.snabbit.prototype.mobile.data.auth.remote.AuthApi
 import com.snabbit.prototype.mobile.data.auth.remote.RefreshSessionRequestDto
 import com.snabbit.prototype.mobile.data.auth.remote.SessionResponseDto
 import com.snabbit.prototype.mobile.domain.auth.AuthSession
+import com.snabbit.prototype.mobile.domain.auth.AuthNotice
+import com.snabbit.prototype.mobile.domain.auth.AuthNoticeStore
 import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.domain.auth.SessionUser
 import com.snabbit.prototype.mobile.domain.session.SessionManager
@@ -27,6 +29,7 @@ class SessionTokenRefresher(
     private val role: AppRole,
     private val problemJson: Json,
     private val refreshCall: suspend (AppRole, String) -> SessionResponseDto,
+    private val authNoticeStore: AuthNoticeStore? = null,
 ) : TokenRefresher {
     constructor(
         store: SessionStore,
@@ -34,7 +37,8 @@ class SessionTokenRefresher(
         role: AppRole,
         json: Json,
         baseUrl: String,
-    ) : this(store, sessionManager, role, json, createRefreshCall(json, baseUrl))
+        authNoticeStore: AuthNoticeStore? = null,
+    ) : this(store, sessionManager, role, json, createRefreshCall(json, baseUrl), authNoticeStore)
 
     private val mutex = Mutex()
 
@@ -68,6 +72,7 @@ class SessionTokenRefresher(
                     return@repeat
                 }
                 if (code == "SESSION_REVOKED" || failure.code() in 400..499 && code != "REFRESH_IN_PROGRESS") {
+                    if (code == "SESSION_REVOKED") authNoticeStore?.publish(AuthNotice.SESSION_REVOKED)
                     sessionManager.signOut()
                 }
                 return null

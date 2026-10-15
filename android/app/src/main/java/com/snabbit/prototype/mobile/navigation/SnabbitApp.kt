@@ -36,6 +36,15 @@ import com.snabbit.prototype.mobile.ui.login.LoginUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerScreen
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.AuthUiEvent
+import com.snabbit.prototype.mobile.ui.emailauth.AuthViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.CustomerAuthScreen
+import com.snabbit.prototype.mobile.ui.emailauth.ForgotPasswordScreen
+import com.snabbit.prototype.mobile.ui.emailauth.ForgotPasswordUiEvent
+import com.snabbit.prototype.mobile.ui.emailauth.ForgotPasswordViewModel
+import com.snabbit.prototype.mobile.ui.emailauth.VerifyEmailScreen
+import com.snabbit.prototype.mobile.ui.emailauth.VerifyEmailUiEvent
+import com.snabbit.prototype.mobile.ui.emailauth.VerifyEmailViewModel
 import com.snabbit.prototype.mobile.ui.profile.PhoneRequiredDialog
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingScreen
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
@@ -91,7 +100,7 @@ private fun SnabbitAppContent(role: AppRole, googleIdTokenProvider: GoogleIdToke
             AppRole.WORKER -> WorkerShell(pushNavigation)
         }
     } else {
-        AuthenticationFlow(googleIdTokenProvider, onAuthenticated = { authenticated = true })
+        AuthenticationFlow(role, googleIdTokenProvider, onAuthenticated = { authenticated = true })
     }
     if (showPhoneRequired && role == AppRole.CUSTOMER) {
         PhoneRequiredDialog(
@@ -121,6 +130,7 @@ private fun SnabbitAppContent(role: AppRole, googleIdTokenProvider: GoogleIdToke
 
 @Composable
 private fun AuthenticationFlow(
+    role: AppRole,
     googleIdTokenProvider: GoogleIdTokenProvider,
     onAuthenticated: () -> Unit,
 ) {
@@ -161,10 +171,10 @@ private fun AuthenticationFlow(
             }
             entry<LoginRoute> {
                 val context = LocalContext.current
-                val viewModel = koinViewModel<LoginViewModel> { parametersOf(googleIdTokenProvider) }
-                val state by viewModel.uiState.collectAsStateWithLifecycle()
-                LaunchedEffect(viewModel) {
-                    viewModel.events.collect { event ->
+                val googleViewModel = koinViewModel<LoginViewModel> { parametersOf(googleIdTokenProvider) }
+                val googleState by googleViewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(googleViewModel) {
+                    googleViewModel.events.collect { event ->
                         when (event) {
                             LoginUiEvent.Authenticated -> onAuthenticated()
                             LoginUiEvent.OpenWorkerPicker -> backStack.replaceWith(WorkerPickerRoute)
@@ -177,10 +187,84 @@ private fun AuthenticationFlow(
                         }
                     }
                 }
-                LoginScreen(
+                if (role == AppRole.CUSTOMER) {
+                    val emailViewModel = koinViewModel<AuthViewModel>()
+                    val emailState by emailViewModel.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(emailViewModel) {
+                        emailViewModel.events.collect { event ->
+                            when (event) {
+                                AuthUiEvent.Authenticated -> onAuthenticated()
+                                is AuthUiEvent.VerifyEmail -> backStack.replaceWith(VerifyEmailRoute(event.email))
+                            }
+                        }
+                    }
+                    CustomerAuthScreen(
+                        state = emailState,
+                        googleState = googleState,
+                        onSelectTab = emailViewModel::selectTab,
+                        onLoginEmailChanged = emailViewModel::updateLoginEmail,
+                        onLoginPasswordChanged = emailViewModel::updateLoginPassword,
+                        onSignUpNameChanged = emailViewModel::updateSignUpName,
+                        onSignUpEmailChanged = emailViewModel::updateSignUpEmail,
+                        onSignUpPasswordChanged = emailViewModel::updateSignUpPassword,
+                        onTermsChanged = emailViewModel::setTermsAccepted,
+                        onTogglePassword = emailViewModel::togglePasswordVisibility,
+                        onEmailBlur = emailViewModel::validateEmailOnBlur,
+                        onNameBlur = emailViewModel::validateNameOnBlur,
+                        onPasswordBlur = emailViewModel::validatePasswordOnBlur,
+                        onSubmit = emailViewModel::submit,
+                        onForgotPassword = {
+                            val email = emailState.loginEmail.ifBlank { emailState.signUpEmail }
+                            backStack.add(ForgotPasswordRoute(email))
+                        },
+                        onContinueWithGoogle = googleViewModel::continueWithGoogle,
+                        onAddGoogleAccount = googleViewModel::addGoogleAccount,
+                        onTerms = {},
+                        onPrivacy = {},
+                        onDismissNotice = emailViewModel::dismissNotice,
+                    )
+                } else {
+                    LoginScreen(
+                        state = googleState,
+                        onContinueWithGoogle = googleViewModel::continueWithGoogle,
+                        onAddGoogleAccount = googleViewModel::addGoogleAccount,
+                    )
+                }
+            }
+            entry<VerifyEmailRoute> { route ->
+                val viewModel = koinViewModel<VerifyEmailViewModel> { parametersOf(route.email) }
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(viewModel) {
+                    viewModel.events.collect { event ->
+                        if (event == VerifyEmailUiEvent.Authenticated) onAuthenticated()
+                    }
+                }
+                VerifyEmailScreen(
                     state = state,
-                    onContinueWithGoogle = viewModel::continueWithGoogle,
-                    onAddGoogleAccount = viewModel::addGoogleAccount,
+                    onCodeChanged = viewModel::updateCode,
+                    onVerify = viewModel::submit,
+                    onResend = viewModel::resend,
+                    onChangeEmail = { backStack.replaceWith(LoginRoute) },
+                )
+            }
+            entry<ForgotPasswordRoute> { route ->
+                val viewModel = koinViewModel<ForgotPasswordViewModel> { parametersOf(route.email) }
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(viewModel) {
+                    viewModel.events.collect { event ->
+                        if (event == ForgotPasswordUiEvent.PasswordUpdated) backStack.replaceWith(LoginRoute)
+                    }
+                }
+                ForgotPasswordScreen(
+                    state = state,
+                    onEmailChanged = viewModel::updateEmail,
+                    onCodeChanged = viewModel::updateCode,
+                    onPasswordChanged = viewModel::updatePassword,
+                    onTogglePassword = viewModel::togglePasswordVisibility,
+                    onEmailBlur = viewModel::validateEmailOnBlur,
+                    onPasswordBlur = viewModel::validatePasswordOnBlur,
+                    onSubmit = viewModel::submit,
+                    onBack = { backStack.removeLastOrNull() },
                 )
             }
             entry<WorkerPickerRoute> {
@@ -261,7 +345,14 @@ private fun CustomerShell(pushNavigation: PushNavigationCoordinator) {
         openProfile = { selected = CustomerTab.PROFILE },
         back = { if (home.size > 1) home.removeLastOrNull() },
     )
-    CompositionLocalProvider(LocalCustomerNavigation provides navigation) {
+    val profileNavigation = ProfileNavigation(
+        openChangePassword = { profile.add(ChangePasswordRoute) },
+        back = { if (profile.size > 1) profile.removeLastOrNull() },
+    )
+    CompositionLocalProvider(
+        LocalCustomerNavigation provides navigation,
+        LocalProfileNavigation provides profileNavigation,
+    ) {
         AppShell(
             backStack = stacks.getValue(selected),
             bottomBar = { SnabbitBottomBar(CustomerTab.entries, selected, { selected = it }) },
@@ -300,7 +391,14 @@ private fun WorkerShell(pushNavigation: PushNavigationCoordinator) {
         openJob = { bookingId, visitIndex -> jobs.add(WorkerJobDetailsRoute(bookingId, visitIndex)) },
         back = { if (jobs.size > 1) jobs.removeLastOrNull() },
     )
-    CompositionLocalProvider(LocalWorkerNavigation provides navigation) {
+    val profileNavigation = ProfileNavigation(
+        openChangePassword = {},
+        back = { if (profile.size > 1) profile.removeLastOrNull() },
+    )
+    CompositionLocalProvider(
+        LocalWorkerNavigation provides navigation,
+        LocalProfileNavigation provides profileNavigation,
+    ) {
         AppShell(
             backStack = stacks.getValue(selected),
             bottomBar = { SnabbitBottomBar(WorkerTab.entries, selected, { selected = it }) },

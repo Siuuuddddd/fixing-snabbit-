@@ -3,6 +3,8 @@ package com.snabbit.prototype.mobile.data.network
 import com.snabbit.prototype.mobile.data.auth.remote.SessionResponseDto
 import com.snabbit.prototype.mobile.data.auth.remote.SessionUserDto
 import com.snabbit.prototype.mobile.domain.auth.AuthSession
+import com.snabbit.prototype.mobile.domain.auth.AuthNotice
+import com.snabbit.prototype.mobile.domain.auth.AuthNoticeStore
 import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.domain.auth.SessionUser
 import com.snabbit.prototype.mobile.domain.session.SessionManager
@@ -80,11 +82,16 @@ class SessionTokenRefresherTest {
     @Test fun `session revoked clears local session`() {
         val store = FakeSessionStore(session("old-access", "old-refresh"))
         val manager = FakeSessionManager(store)
-        val refresher = refresher(store, manager) { _, _ -> throw problem(401, "SESSION_REVOKED") }
+        val notices = FakeAuthNoticeStore()
+        val refresher = SessionTokenRefresher(
+            store, manager, AppRole.CUSTOMER, Json { ignoreUnknownKeys = true },
+            { _, _ -> throw problem(401, "SESSION_REVOKED") }, notices,
+        )
 
         assertNull(refresher.refreshAccessToken())
         assertNull(store.current())
         assertEquals(1, manager.signOutCalls)
+        assertEquals(AuthNotice.SESSION_REVOKED, notices.value)
     }
 
     @Test fun `network failure keeps current session`() {
@@ -103,6 +110,12 @@ class SessionTokenRefresherTest {
         manager: FakeSessionManager = FakeSessionManager(store),
         call: suspend (AppRole, String) -> SessionResponseDto,
     ) = SessionTokenRefresher(store, manager, AppRole.CUSTOMER, Json { ignoreUnknownKeys = true }, call)
+}
+
+private class FakeAuthNoticeStore : AuthNoticeStore {
+    var value: AuthNotice? = null
+    override fun publish(notice: AuthNotice) { value = notice }
+    override fun consume(): AuthNotice? = value.also { value = null }
 }
 
 private class FakeSessionStore(initial: AuthSession?) : SessionStore {
