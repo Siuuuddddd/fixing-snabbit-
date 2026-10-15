@@ -48,6 +48,7 @@ class DemoCustomerDevSeed(
         if (existing.id == customerId) runCatching { ensure(existing) }
     }
 
+    @Synchronized
     fun ensure(): UserProfile? {
         val email = properties.demoCustomerEmail.trim().lowercase()
         if (email.isBlank()) return null
