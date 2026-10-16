@@ -598,6 +598,13 @@ private val navigationModule = module {
             onTrack = { visitIndex -> navigation.openTracking(route.bookingId, visitIndex) },
             onCancelBooking = { navigation.openCancellation(route.bookingId) },
             onCompleted = { visitIndex, workerId -> navigation.openCompleted(route.bookingId, visitIndex, workerId) },
+            onSelectWorker = viewModel::selectWorker,
+            onHomeNameChanged = viewModel::setHomeName,
+            onHomePhoneChanged = viewModel::setHomePhone,
+            onPay = viewModel::pay,
+            onOtpChanged = viewModel::setOtp,
+            onVerifyOtp = viewModel::verifyOtp,
+            onResendOtp = viewModel::resendOtp,
         )
     }
     navigation<LiveTrackingRoute> { route ->

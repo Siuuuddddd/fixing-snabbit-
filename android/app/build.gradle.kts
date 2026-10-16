@@ -58,14 +58,6 @@ android {
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localValue("GOOGLE_WEB_CLIENT_ID_CUSTOMER")}\"")
             resValue("string", "app_name", "Snabbit")
         }
-        create("worker") {
-            dimension = "audience"
-            applicationIdSuffix = ".worker"
-            versionNameSuffix = "-worker"
-            buildConfigField("String", "APP_ROLE", "\"worker\"")
-            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localValue("GOOGLE_WEB_CLIENT_ID_WORKER")}\"")
-            resValue("string", "app_name", "Snabbit Worker")
-        }
     }
 
     buildFeatures {

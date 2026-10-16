@@ -8,6 +8,7 @@ import com.snabbit.prototype.mobile.domain.booking.BookingRepository
 import com.snabbit.prototype.mobile.domain.booking.BookingStatus
 import com.snabbit.prototype.mobile.domain.booking.BookingType
 import com.snabbit.prototype.mobile.domain.booking.VisitAvailability
+import com.snabbit.prototype.mobile.domain.booking.HomeContact
 import com.snabbit.prototype.mobile.domain.common.DataFailure
 import com.snabbit.prototype.mobile.domain.common.DataFailureReason
 import com.snabbit.prototype.mobile.domain.household.HouseholdPreferences
@@ -91,11 +92,13 @@ class BookingViewModelsTest {
     }
 
     @Test
-    fun `finding worker starts authoritative payment only after worker accepts`() = runTest {
+    fun `checkout starts payment only after explicit customer action`() = runTest {
         val bookings = FakeBookingRepository(status = BookingStatus.AWAITING_PAYMENT)
         val viewModel = FindingWorkerViewModel(
             "booking", "wallet", true, bookings, StandardTestDispatcher(testScheduler), 60_000, "payment-key",
         )
+        runCurrent()
+        viewModel.pay()
         runCurrent()
 
         assertEquals("payment-key", bookings.paymentKey)
@@ -130,6 +133,8 @@ private class FakeBookingRepository(
         return booking(if (status == BookingStatus.AWAITING_PAYMENT && bookingCalls > 1) BookingStatus.CONFIRMED else status)
     }
     override suspend fun cancelHold(bookingId: String) = booking(BookingStatus.CANCELLED)
+    override suspend fun updateHomeContact(bookingId: String, name: String?, phone: String?) =
+        HomeContact("Booker", "••••••3767", true)
     override suspend fun startPayment(bookingId: String, walletId: String, useWallet: Boolean, idempotencyKey: String): BookingPayment {
         paymentKey = idempotencyKey
         return BookingPayment("payment", 10_000, 7_000, 3_000, "PENDING", "order")

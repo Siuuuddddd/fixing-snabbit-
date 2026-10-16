@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,14 +33,71 @@ fun FindingWorkerScreen(
     onTrack: (Int) -> Unit,
     onCancelBooking: () -> Unit,
     onCompleted: (Int, String) -> Unit,
+    onSelectWorker: (String) -> Unit,
+    onHomeNameChanged: (String) -> Unit,
+    onHomePhoneChanged: (String) -> Unit,
+    onPay: () -> Unit,
+    onOtpChanged: (String) -> Unit,
+    onVerifyOtp: () -> Unit,
+    onResendOtp: () -> Unit,
 ) {
     Scaffold { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(SnabbitSpacing.large),
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(SnabbitSpacing.large),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(SnabbitSpacing.standard, Alignment.CenterVertically),
         ) {
             if (state.isLoading) CircularProgressIndicator()
+            if (state.booking?.status == BookingStatus.AWAITING_WORKER) {
+                Text("Choose a worker for visit ${state.activeVisitIndex + 1}", style = MaterialTheme.typography.headlineSmall)
+                if (state.favourites.isNotEmpty()) Text("Your favourites", style = MaterialTheme.typography.titleLarge)
+                state.favourites.forEach { worker ->
+                    SnabbitCard(Modifier.fillMaxWidth()) {
+                        Text("${worker.firstName} • ${worker.tier}", style = MaterialTheme.typography.titleMedium)
+                        Text("★ ${worker.rating} (${worker.ratingCount}) • ${worker.distanceKm} km")
+                        Text("${formatInrMinor(worker.priceMinor)} • surcharge ${formatInrMinor(worker.tierSurchargeMinor)}")
+                        SnabbitButton("Select ${worker.firstName}", { onSelectWorker(worker.workerId) }, enabled = !state.isSubmitting)
+                    }
+                }
+                if (state.others.isNotEmpty()) Text("Other available workers", style = MaterialTheme.typography.titleLarge)
+                state.others.forEach { worker ->
+                    SnabbitCard(Modifier.fillMaxWidth()) {
+                        Text("${worker.firstName} • ${worker.tier}", style = MaterialTheme.typography.titleMedium)
+                        Text("★ ${worker.rating} (${worker.ratingCount}) • ${worker.distanceKm} km")
+                        Text(formatInrMinor(worker.priceMinor))
+                        SnabbitButton("Select ${worker.firstName}", { onSelectWorker(worker.workerId) }, enabled = !state.isSubmitting)
+                    }
+                }
+                if (!state.isLoading && state.favourites.isEmpty() && state.others.isEmpty()) {
+                    Text("No worker available, change the time", color = MaterialTheme.colorScheme.error)
+                }
+            }
+            if (state.booking?.status == BookingStatus.AWAITING_PAYMENT) {
+                Text("Who will be at home?", style = MaterialTheme.typography.headlineSmall)
+                Text("Leave both fields blank to use your verified profile details.")
+                OutlinedTextField(state.homeContactName, onHomeNameChanged, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(state.homeContactPhone, onHomePhoneChanged, label = { Text("Indian mobile number") }, prefix = { Text("+91 ") }, modifier = Modifier.fillMaxWidth())
+                state.booking.visits.forEach { visit ->
+                    Text("Visit ${visit.visitIndex + 1}: ${visit.selectedWorkerName ?: "Selected worker"} • ${visit.durationMinutes / 60} hr")
+                }
+                SnabbitButton("Pay ${formatInrMinor(state.booking.quotedTotalMinor)}", onPay, enabled = !state.isSubmitting)
+            }
+            state.booking?.takeIf { it.status == BookingStatus.CONFIRMED }?.let { booking ->
+                val arrived = booking.visits.firstOrNull { it.jobStatus == "ARRIVED" }
+                if (arrived == null) {
+                    Text("Expert will arrive soon", style = MaterialTheme.typography.headlineSmall)
+                    Text("%02d:%02d".format(state.remainingSeconds / 60, state.remainingSeconds % 60), style = MaterialTheme.typography.displaySmall)
+                    booking.visits.firstOrNull { it.jobStatus != "COMPLETED" }?.let { Text(it.selectedWorkerName ?: "Your worker") }
+                } else {
+                    Text("Hurray! Your worker has arrived", style = MaterialTheme.typography.headlineSmall)
+                    Text("${arrived.selectedWorkerName ?: "Your worker"} • ${arrived.selectedWorkerTier.orEmpty()}")
+                    booking.maskedHomeContactPhone?.let { Text("Code sent to $it") }
+                    OutlinedTextField(state.otp, onOtpChanged, label = { Text("6-digit OTP") }, modifier = Modifier.fillMaxWidth())
+                    SnabbitButton("Start service", onVerifyOtp, enabled = state.otp.length == 6 && !state.isSubmitting)
+                    OutlinedButton(onClick = onResendOtp, modifier = Modifier.fillMaxWidth()) { Text("Resend OTP") }
+                    state.otpMessage?.let { Text(it) }
+                }
+            }
             state.booking?.let { booking ->
                 Text(stringResource(booking.status.titleRes()), style = MaterialTheme.typography.headlineMedium)
                 Text(stringResource(booking.status.messageRes()), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -67,7 +127,9 @@ fun FindingWorkerScreen(
                 }
             }
             state.booking?.takeIf { it.status == BookingStatus.COMPLETED }?.visits?.lastOrNull()?.let { visit ->
-                SnabbitButton(stringResource(R.string.completed_rate_prompt), { onCompleted(visit.visitIndex, visit.workerId) })
+                visit.workerId?.let { workerId ->
+                    SnabbitButton(stringResource(R.string.completed_rate_prompt), { onCompleted(visit.visitIndex, workerId) })
+                }
             }
         }
     }
