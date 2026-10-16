@@ -1,15 +1,17 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+import com.snabbit.prototype.worker.domain.enums.AvailabilityPeriod
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerTier
+import com.snabbit.prototype.worker.domain.WorkerAvailabilityRule
 import com.snabbit.prototype.worker.domain.WorkerAvailability
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
 import com.snabbit.prototype.worker.domain.WorkerCompatibility
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.domain.WorkerSkill
 import com.snabbit.prototype.worker.domain.WorkerSkillId
 import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
-import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
+import com.snabbit.prototype.worker.repository.WorkerAvailabilityRuleRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
@@ -27,7 +29,7 @@ import org.junit.jupiter.api.Test
 class WorkerMatchingServiceTest {
     private val profiles = mockk<WorkerProfileRepository>()
     private val skills = mockk<WorkerSkillRepository>()
-    private val availability = mockk<WorkerAvailabilityRepository>()
+    private val availability = mockk<WorkerAvailabilityRuleRepository>()
     private val compatibility = mockk<WorkerCompatibilityRepository>()
     private val tierPolicy = mockk<WorkerTierPolicy> {
         every { currentTier(any()) } answers { (invocation.args[0] as WorkerProfile).tier }
@@ -99,10 +101,8 @@ class WorkerMatchingServiceTest {
         every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns
             listOf(skill(standard.id), skill(veteran.id), skill(expert.id))
         every {
-            availability.findAllByServiceDateAndStatus(
-                LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE,
-            )
-        } returns listOf(available(standard.id), available(veteran.id), available(expert.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(standard.id), rule(veteran.id), rule(expert.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
             compatibility(standard.id, true), compatibility(veteran.id, true), compatibility(expert.id, true),
         )
@@ -126,8 +126,8 @@ class WorkerMatchingServiceTest {
         every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(favourite, near, far)
         every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(near.id), skill(far.id))
         every {
-            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
-        } returns listOf(available(near.id), available(far.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(near.id), rule(far.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
             compatibility(near.id, true), compatibility(far.id, true),
         )
@@ -151,8 +151,8 @@ class WorkerMatchingServiceTest {
         every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(favourite, veteran)
         every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(veteran.id))
         every {
-            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
-        } returns listOf(available(veteran.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(veteran.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(compatibility(veteran.id, true))
 
         val matches = service.match(
@@ -174,8 +174,8 @@ class WorkerMatchingServiceTest {
         every { profiles.findAllByStatus(WorkerStatus.ACTIVE) } returns listOf(favourite, other)
         every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(other.id))
         every {
-            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
-        } returns listOf(available(other.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(other.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(compatibility(other.id, true))
 
         val matches = service.match(
@@ -198,8 +198,8 @@ class WorkerMatchingServiceTest {
             skill(incompatible.id), skill(compatible.id),
         )
         every {
-            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
-        } returns listOf(available(incompatible.id), available(compatible.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(incompatible.id), rule(compatible.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
             compatibility(incompatible.id, true),
             compatibility(
@@ -231,8 +231,8 @@ class WorkerMatchingServiceTest {
             skill(incompatible.id), skill(compatible.id),
         )
         every {
-            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
-        } returns listOf(available(incompatible.id), available(compatible.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(incompatible.id), rule(compatible.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
             compatibility(incompatible.id, true),
             compatibility(
@@ -260,8 +260,8 @@ class WorkerMatchingServiceTest {
             skill(second.id),
         )
         every {
-            availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-03"), AvailabilityStatus.AVAILABLE)
-        } returns listOf(available(first.id), available(second.id))
+            availability.findAllByWorkerIdIn(any())
+        } returns listOf(rule(first.id), rule(second.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
             compatibility(first.id, true),
             compatibility(second.id, acceptsPets),
@@ -289,6 +289,13 @@ class WorkerMatchingServiceTest {
         accessibilityNeeds = emptyList(),
         favouriteWorkerIds = listOf(favouriteId),
         plusActive = true,
+    )
+
+    private fun rule(workerId: UUID) = WorkerAvailabilityRule(
+        workerId,
+        AvailabilityPeriod.MORNING,
+        LocalTime.of(8, 0),
+        LocalTime.of(11, 45),
     )
 
     private fun profile(tier: WorkerTier, name: String) = WorkerProfile(

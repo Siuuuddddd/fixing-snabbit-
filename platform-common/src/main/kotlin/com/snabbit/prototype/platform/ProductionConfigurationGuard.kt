@@ -26,6 +26,9 @@ class ProductionConfigurationGuard(
         require(!environment.getProperty("dev-seed.auto-progress", Boolean::class.java, false)) {
             "Unsafe production configuration: dev-seed.auto-progress must be false"
         }
+        require(!environment.getProperty("dev-simulation.enabled", Boolean::class.java, false)) {
+            "Unsafe production configuration: dev-simulation.enabled must be false"
+        }
         require(environment.getProperty("dev-seed.worker-login-email").isNullOrBlank()) {
             "Unsafe production configuration: dev-seed.worker-login-email must be empty"
         }

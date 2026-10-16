@@ -1,12 +1,11 @@
 package com.snabbit.prototype.worker.service
 
-import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
 import com.snabbit.prototype.worker.dto.response.WorkerMatch
 import com.snabbit.prototype.worker.exception.InvalidMatchRequest
-import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
+import com.snabbit.prototype.worker.repository.WorkerAvailabilityRuleRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
@@ -20,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional
 class WorkerMatchingService(
     private val profileRepository: WorkerProfileRepository,
     private val skillRepository: WorkerSkillRepository,
-    private val availabilityRepository: WorkerAvailabilityRepository,
+    private val availabilityRules: WorkerAvailabilityRuleRepository,
     private val compatibilityRepository: WorkerCompatibilityRepository,
     private val tierPolicy: WorkerTierPolicy,
     private val rankingPolicy: WorkerRankingPolicy,
@@ -33,15 +32,13 @@ class WorkerMatchingService(
     fun match(command: MatchWorkersCommand): List<WorkerMatch> {
         validate(command)
         val localStart = command.startsAt.atZone(zone)
-        val localEnd = localStart.plusMinutes(command.durationMinutes.toLong())
         val profiles = profileRepository.findAllByStatus(WorkerStatus.ACTIVE).associateBy(WorkerProfile::id)
         val skills = skillRepository.findAllByIdServiceCodeAndEnabledTrue(command.serviceCode.uppercase())
             .associateBy { it.id.workerId }
-        val availability = availabilityRepository
-            .findAllByServiceDateAndStatus(localStart.toLocalDate(), AvailabilityStatus.AVAILABLE)
-            .filter { it.availableFrom <= localStart.toLocalTime() && it.availableUntil >= localEnd.toLocalTime() }
-            .associateBy { it.workerId }
-        val candidateIds = profiles.keys.intersect(skills.keys).intersect(availability.keys)
+        val availableWorkerIds = availabilityRules.findAllByWorkerIdIn(profiles.keys)
+            .filter { it.containsStart(localStart.toLocalTime()) }
+            .mapTo(mutableSetOf()) { it.workerId }
+        val candidateIds = profiles.keys.intersect(skills.keys).intersect(availableWorkerIds)
         val compatibility = compatibilityRepository.findAllByWorkerIdIn(candidateIds).associateBy { it.workerId }
         val favouriteIds = command.favouriteWorkerIds.toSet()
 

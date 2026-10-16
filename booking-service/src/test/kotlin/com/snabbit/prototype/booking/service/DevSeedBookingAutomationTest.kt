@@ -5,6 +5,7 @@ import com.snabbit.prototype.booking.domain.Booking
 import com.snabbit.prototype.booking.domain.SlotHold
 import com.snabbit.prototype.booking.domain.WorkerOffer
 import com.snabbit.prototype.booking.domain.enums.BookingStatus
+import com.snabbit.prototype.booking.domain.enums.AssignmentType
 import com.snabbit.prototype.booking.domain.enums.BookingType
 import com.snabbit.prototype.booking.domain.enums.JobStatus
 import com.snabbit.prototype.booking.domain.enums.SlotHoldStatus
@@ -27,7 +28,7 @@ import org.springframework.data.domain.Pageable
 
 class DevSeedBookingAutomationTest {
     private val offers = mockk<WorkerOfferRepository>()
-    private val holds = mockk<SlotHoldRepository>()
+    private val holds = mockk<SlotHoldRepository>(relaxed = true)
     private val bookings = mockk<BookingRepository>()
     private val lifecycle = mockk<BookingLifecycleService>()
     private val now = Instant.parse("2026-10-14T06:00:00Z")
@@ -59,6 +60,9 @@ class DevSeedBookingAutomationTest {
                 any<Pageable>(),
             )
         } returns listOf(seeded, real)
+        every { holds.findById(seeded.slotHoldId) } returns Optional.of(
+            mockk { every { assignmentType } returns AssignmentType.PREFERRED },
+        )
         every { lifecycle.acceptOffer(seeded.bookingId, seeded.id, seeded.workerId) } returns mockk()
 
         service.autoAcceptOffers()

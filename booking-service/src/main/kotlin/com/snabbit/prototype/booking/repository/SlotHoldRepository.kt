@@ -109,4 +109,29 @@ interface SlotHoldRepository : JpaRepository<SlotHold, UUID> {
         @Param("now") now: Instant,
         @Param("limit") limit: Int,
     ): List<UUID>
+
+    @Query(
+        value = """
+            SELECT id FROM slot_hold
+            WHERE status = 'CONFIRMED' AND job_status = 'ASSIGNED'
+              AND arrival_due_at <= :now AND arrival_fired_at IS NULL
+            ORDER BY arrival_due_at
+            FOR UPDATE SKIP LOCKED
+            LIMIT :limit
+        """,
+        nativeQuery = true,
+    )
+    fun findDueArrivalIds(@Param("now") now: Instant, @Param("limit") limit: Int): List<UUID>
+
+    @Query(
+        value = """
+            SELECT id FROM slot_hold
+            WHERE status = 'CONFIRMED' AND job_status = 'IN_PROGRESS'
+              AND started_at <= :cutoff
+            ORDER BY started_at
+            LIMIT :limit
+        """,
+        nativeQuery = true,
+    )
+    fun findAutoCompleteCandidateIds(@Param("cutoff") cutoff: Instant, @Param("limit") limit: Int): List<UUID>
 }

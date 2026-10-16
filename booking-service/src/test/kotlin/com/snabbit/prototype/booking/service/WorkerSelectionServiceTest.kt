@@ -1,7 +1,6 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.domain.enums.WorkerSelectionSource
-import com.snabbit.prototype.booking.dto.request.ApplyWorkerSelectionCommand
+import com.snabbit.prototype.booking.dto.request.ApplyVisitWorkerSelectionCommand
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
 import com.snabbit.prototype.booking.dto.response.WorkerOptionSnapshot
 import com.snabbit.prototype.booking.dto.response.WorkerOptionVisitSnapshot
@@ -30,40 +29,26 @@ class WorkerSelectionServiceTest {
     @Test
     fun `customer selection sends authoritative tier and visit prices to lifecycle`() = runBlocking {
         val veteran = candidate(UUID.randomUUID(), "VETERAN", 3_000)
-        coEvery { options.options(bookingId, customerId) } returns WorkerOptionsSnapshot(bookingId, emptyList(), listOf(veteran))
-        val command = slot<ApplyWorkerSelectionCommand>()
-        every { lifecycle.applyWorkerSelection(capture(command)) } returns snapshot()
+        coEvery { options.options(bookingId, customerId, 0) } returns
+            WorkerOptionsSnapshot(bookingId, 0, emptyList(), listOf(veteran))
+        val command = slot<ApplyVisitWorkerSelectionCommand>()
+        every { lifecycle.applyVisitWorkerSelection(capture(command)) } returns snapshot()
 
-        service.select(bookingId, customerId, veteran.workerId)
+        service.select(bookingId, customerId, 0, veteran.workerId)
 
         assertEquals(veteran.workerId, command.captured.workerId)
         assertEquals("VETERAN", command.captured.tier)
-        assertEquals(WorkerSelectionSource.CUSTOMER, command.captured.source)
-        assertEquals(mapOf(0 to 21_000L, 1 to 39_000L), command.captured.grossVisitPricesMinor)
-    }
-
-    @Test
-    fun `blank selection automatically prefers first selectable favourite`() = runBlocking {
-        val unavailable = candidate(UUID.randomUUID(), "EXPERT", 5_000, selectable = false)
-        val favourite = candidate(UUID.randomUUID(), "EXPERT", 5_000)
-        val veteran = candidate(UUID.randomUUID(), "VETERAN", 3_000)
-        coEvery { options.options(bookingId, customerId) } returns
-            WorkerOptionsSnapshot(bookingId, listOf(unavailable, favourite), listOf(veteran))
-        val command = slot<ApplyWorkerSelectionCommand>()
-        every { lifecycle.applyWorkerSelection(capture(command)) } returns snapshot()
-
-        service.select(bookingId, customerId, null)
-
-        assertEquals(favourite.workerId, command.captured.workerId)
-        assertEquals(WorkerSelectionSource.AUTO, command.captured.source)
+        assertEquals(0, command.captured.visitIndex)
+        assertEquals(21_000L, command.captured.grossVisitPriceMinor)
     }
 
     @Test
     fun `stale or unlisted worker is rejected after fresh option lookup`() {
-        coEvery { options.options(bookingId, customerId) } returns WorkerOptionsSnapshot(bookingId, emptyList(), emptyList())
+        coEvery { options.options(bookingId, customerId, 0) } returns
+            WorkerOptionsSnapshot(bookingId, 0, emptyList(), emptyList())
 
         assertThrows(BookingRuleViolation::class.java) {
-            runBlocking { service.select(bookingId, customerId, UUID.randomUUID()) }
+            runBlocking { service.select(bookingId, customerId, 0, UUID.randomUUID()) }
         }
     }
 

@@ -1,17 +1,19 @@
 package com.snabbit.prototype.worker.service
 
+import com.snabbit.prototype.worker.domain.WorkerAvailabilityRule
 import com.snabbit.prototype.worker.domain.WorkerAvailability
+import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
 import com.snabbit.prototype.worker.domain.WorkerCompatibility
 import com.snabbit.prototype.worker.domain.WorkerProfile
 import com.snabbit.prototype.worker.domain.WorkerSkill
 import com.snabbit.prototype.worker.domain.WorkerSkillId
-import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
+import com.snabbit.prototype.worker.domain.enums.AvailabilityPeriod
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerTier
 import com.snabbit.prototype.worker.dto.request.WorkerOptionVisitRequest
 import com.snabbit.prototype.worker.dto.request.WorkerOptionsCommand
 import com.snabbit.prototype.worker.rating.WorkerRankingPolicy
-import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
+import com.snabbit.prototype.worker.repository.WorkerAvailabilityRuleRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
@@ -30,7 +32,7 @@ import org.junit.jupiter.api.Test
 class WorkerOptionsServiceTest {
     private val profiles = mockk<WorkerProfileRepository>()
     private val skills = mockk<WorkerSkillRepository>()
-    private val availability = mockk<WorkerAvailabilityRepository>()
+    private val availability = mockk<WorkerAvailabilityRuleRepository>()
     private val compatibility = mockk<WorkerCompatibilityRepository>()
     private val tiers = mockk<WorkerTierPolicy> {
         every { currentTier(any()) } answers { (firstArg<WorkerProfile>()).tier }
@@ -57,7 +59,7 @@ class WorkerOptionsServiceTest {
         WorkerLocationPolicy(),
     )
     private val firstStart = Instant.parse("2026-10-15T04:30:00Z")
-    private val secondStart = Instant.parse("2026-10-16T04:30:00Z")
+    private val secondStart = Instant.parse("2026-10-16T06:30:00Z")
 
     @Test
     fun `keeps an incompatible favourite visible with reasons for every failed visit`() {
@@ -66,9 +68,7 @@ class WorkerOptionsServiceTest {
         every { profiles.findAllById(listOf(favourite.id)) } returns listOf(favourite)
         every { skills.findAllByIdServiceCodeAndEnabledTrue("HOUSE_CLEANING") } returns listOf(skill(favourite.id))
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(workerCompatibility(favourite.id, acceptsPets = false))
-        every { availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-15"), AvailabilityStatus.AVAILABLE) } returns
-            listOf(available(favourite.id, LocalDate.parse("2026-10-15")))
-        every { availability.findAllByServiceDateAndStatus(LocalDate.parse("2026-10-16"), AvailabilityStatus.AVAILABLE) } returns emptyList()
+        every { availability.findAllByWorkerIdIn(any()) } returns listOf(rule(favourite.id))
 
         val option = service.options(command(favourite.id, hasPets = true)).single()
 
@@ -81,7 +81,7 @@ class WorkerOptionsServiceTest {
     }
 
     @Test
-    fun `returns only selectable veteran non favourites with per visit prices`() {
+    fun `returns selectable workers across tiers with per visit prices`() {
         val favourite = profile(WorkerTier.VETERAN, "Favourite Veteran")
         val veteran = profile(WorkerTier.VETERAN, "Nearby Veteran")
         val standard = profile(WorkerTier.STANDARD, "Standard Worker")
@@ -92,15 +92,15 @@ class WorkerOptionsServiceTest {
         every { compatibility.findAllByWorkerIdIn(any()) } returns listOf(
             workerCompatibility(favourite.id), workerCompatibility(veteran.id), workerCompatibility(standard.id),
         )
-        listOf(LocalDate.parse("2026-10-15"), LocalDate.parse("2026-10-16")).forEach { date ->
-            every { availability.findAllByServiceDateAndStatus(date, AvailabilityStatus.AVAILABLE) } returns listOf(
-                available(favourite.id, date), available(veteran.id, date), available(standard.id, date),
-            )
-        }
+        every { availability.findAllByWorkerIdIn(any()) } returns listOf(
+            rule(favourite.id, LocalTime.MIN, LocalTime.MAX),
+            rule(veteran.id, LocalTime.MIN, LocalTime.MAX),
+            rule(standard.id, LocalTime.MIN, LocalTime.MAX),
+        )
 
         val options = service.options(command(favourite.id, hasPets = false))
 
-        assertEquals(setOf(favourite.id, veteran.id), options.map { it.workerId }.toSet())
+        assertEquals(setOf(favourite.id, veteran.id, standard.id), options.map { it.workerId }.toSet())
         val veteranOption = options.single { it.workerId == veteran.id }
         assertTrue(veteranOption.selectable)
         assertEquals(listOf(21_000L, 39_000L), veteranOption.visits.map { it.priceMinor })
@@ -130,6 +130,12 @@ class WorkerOptionsServiceTest {
         accessibilityNeeds = emptyList(),
         favouriteWorkerIds = listOf(favouriteId),
     )
+
+    private fun rule(
+        workerId: UUID,
+        firstStart: LocalTime = LocalTime.of(8, 0),
+        lastStart: LocalTime = LocalTime.of(11, 45),
+    ) = WorkerAvailabilityRule(workerId, AvailabilityPeriod.MORNING, firstStart, lastStart)
 
     private fun profile(tier: WorkerTier, name: String) = WorkerProfile(
         id = UUID.randomUUID(),

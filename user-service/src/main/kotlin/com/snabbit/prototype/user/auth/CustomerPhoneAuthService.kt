@@ -136,6 +136,7 @@ class CustomerPhoneAuthService(
         val now = clock.instant()
         requestedName?.trim()?.takeIf(String::isNotEmpty)?.let { user.displayName = it }
         user.authProviders.add(UserAuthProvider.PHONE)
+        user.phoneVerifiedAt = user.phoneVerifiedAt ?: now
         user.authProvider = UserAuthProvider.PHONE
         user.lastLoginAt = now
         user.updatedAt = now

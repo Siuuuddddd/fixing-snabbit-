@@ -68,6 +68,8 @@ class UserProfile(
     @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false)
     var authProviders: MutableSet<UserAuthProvider> = mutableSetOf(authProvider),
+    @Column(name = "phone_verified_at")
+    var phoneVerifiedAt: Instant? = null,
     @Column(name = "rating_sum", nullable = false)
     var ratingSum: Int = 0,
     @Column(name = "rating_count", nullable = false)
@@ -97,6 +99,12 @@ class UserProfile(
 
     fun hasActivePlus(now: Instant): Boolean =
         plusActive && (plusExpiresAt == null || plusExpiresAt!!.isAfter(now))
+
+    fun verifyPhone(phone: String, now: Instant) {
+        phoneE164 = phone
+        phoneVerifiedAt = now
+        updatedAt = now
+    }
 
     fun averageRating(): BigDecimal = if (ratingCount == 0) {
         BigDecimal.ZERO

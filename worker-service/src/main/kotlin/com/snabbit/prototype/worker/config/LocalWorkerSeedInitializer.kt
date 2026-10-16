@@ -33,7 +33,7 @@ class LocalWorkerSeedInitializer(
     fun refresh() {
         val today = LocalDate.now(clock.withZone(zone))
         workers.forEachIndexed { index, worker -> upsertWorker(worker, index, today) }
-        refreshAvailability(today)
+        refreshAvailabilityRules()
     }
 
     private fun upsertWorker(worker: SeedWorker, index: Int, today: LocalDate) {
@@ -105,21 +105,19 @@ class LocalWorkerSeedInitializer(
         )
     }
 
-    private fun refreshAvailability(today: LocalDate) {
-        DevSeedWorkerIds.all.forEach { workerId ->
-            repeat(properties.bookingWindowDays + properties.marginDays) { offset ->
-                jdbc.update(
-                    """
-                    INSERT INTO worker_availability (
-                        id, worker_id, service_date, available_from, available_until, status
-                    ) VALUES (?, ?, ?, '00:00', '23:59:59', 'AVAILABLE')
-                    ON CONFLICT (worker_id, service_date) DO UPDATE SET
-                        available_from = '00:00', available_until = '23:59:59', status = 'AVAILABLE',
-                        version = worker_availability.version + 1
-                    """.trimIndent(),
-                    UUID.randomUUID(), workerId, today.plusDays(offset.toLong()),
-                )
-            }
+    private fun refreshAvailabilityRules() {
+        val placeholders = DevSeedWorkerIds.all.joinToString(",") { "?" }
+        jdbc.update("DELETE FROM worker_availability WHERE worker_id IN ($placeholders)", *DevSeedWorkerIds.all.toTypedArray())
+        availabilityRules.forEach { rule ->
+            jdbc.update(
+                """
+                INSERT INTO worker_availability_rule (worker_id, period, first_start, last_start)
+                VALUES (?, ?, ?::time, ?::time)
+                ON CONFLICT (worker_id, period) DO UPDATE SET
+                    first_start = EXCLUDED.first_start, last_start = EXCLUDED.last_start
+                """.trimIndent(),
+                rule.workerId, rule.period, rule.firstStart, rule.lastStart,
+            )
         }
     }
 
@@ -144,6 +142,21 @@ class LocalWorkerSeedInitializer(
         SeedWorker(DevSeedWorkerIds.SHIVANI, "Shivani", 2, "STANDARD", 54, 12),
         SeedWorker(DevSeedWorkerIds.ALISHA, "Alisha", 1, "STANDARD", 35, 8),
     )
+
+    private data class SeedAvailabilityRule(
+        val workerId: UUID,
+        val period: String,
+        val firstStart: String,
+        val lastStart: String,
+    )
+
+    private val availabilityRules = listOf(
+        DevSeedWorkerIds.SAVITA, DevSeedWorkerIds.VINEETA, DevSeedWorkerIds.SANGEETA, DevSeedWorkerIds.SHIVANI,
+    ).map { SeedAvailabilityRule(it, "MORNING", "08:00", "11:45") } + listOf(
+        DevSeedWorkerIds.DEEPIKA, DevSeedWorkerIds.ASHA, DevSeedWorkerIds.SANA, DevSeedWorkerIds.ALISHA,
+    ).map { SeedAvailabilityRule(it, "AFTERNOON", "12:00", "15:45") } + listOf(
+        DevSeedWorkerIds.SAILEE, DevSeedWorkerIds.VAISHALI, DevSeedWorkerIds.DEEPIKA,
+    ).map { SeedAvailabilityRule(it, "EVENING", "16:00", "19:00") }
 
     private val servicePrices = mapOf(
         "HOUSE_CLEANING" to 18_000L,

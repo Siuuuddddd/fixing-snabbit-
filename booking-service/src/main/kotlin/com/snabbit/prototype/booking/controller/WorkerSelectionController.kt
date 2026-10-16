@@ -18,6 +18,6 @@ class WorkerSelectionController(private val service: WorkerSelectionService) {
     suspend fun select(
         @PathVariable bookingId: UUID,
         @RequestHeader("X-Authenticated-User-Id") customerId: UUID,
-        @RequestBody(required = false) request: WorkerSelectionRequest?,
-    ): BookingSnapshot = service.select(bookingId, customerId, request?.workerId)
+        @RequestBody request: WorkerSelectionRequest,
+    ): BookingSnapshot = service.select(bookingId, customerId, request.visitIndex, request.workerId)
 }

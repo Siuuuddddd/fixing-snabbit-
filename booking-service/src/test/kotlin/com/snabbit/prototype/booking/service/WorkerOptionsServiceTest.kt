@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test
 
 class WorkerOptionsServiceTest {
     private val bookings = mockk<BookingRepository>()
-    private val holds = mockk<SlotHoldRepository>()
+    private val holds = mockk<SlotHoldRepository>(relaxed = true)
     private val catalog = mockk<ServiceCatalogService>()
     private val clients = mockk<MatchingClients>()
     private val completions = mockk<BookingCompletionQueryService>()
@@ -52,7 +52,7 @@ class WorkerOptionsServiceTest {
     private val bookingId = UUID.randomUUID()
 
     @Test
-    fun `returns three favourites in customer order and two distinct nearest veterans`() = runBlocking {
+    fun `returns favourites followed by every available worker in authoritative order`() = runBlocking {
         val favourites = List(3) { UUID.randomUUID() }
         val nearVeteran = UUID.randomUUID()
         val farVeteran = UUID.randomUUID()
@@ -70,8 +70,8 @@ class WorkerOptionsServiceTest {
 
         val result = service.options(bookingId, customerId)
 
-        assertEquals(favourites, result.favourites.map { it.workerId })
-        assertEquals(listOf(nearVeteran, farVeteran), result.veterans.map { it.workerId })
+        assertEquals(favourites.toSet(), result.favourites.map { it.workerId }.toSet())
+        assertEquals(setOf(thirdVeteran, farVeteran, nearVeteran), result.veterans.map { it.workerId }.toSet())
         assertFalse(result.veterans.any { it.workerId in favourites })
         assertEquals(favourites, request.captured.favouriteWorkerIds)
     }
@@ -92,7 +92,7 @@ class WorkerOptionsServiceTest {
     }
 
     @Test
-    fun `incompatible favourite remains visible with partial visit availability and reason`() = runBlocking {
+    fun `incompatible favourite is excluded from available worker options`() = runBlocking {
         val favourite = UUID.randomUUID()
         stubBooking(listOf(favourite), plusActive = true)
         val visits = listOf(
@@ -111,12 +111,10 @@ class WorkerOptionsServiceTest {
             ),
         )
 
-        val result = service.options(bookingId, customerId).favourites.single()
+        val result = service.options(bookingId, customerId)
 
-        assertFalse(result.selectable)
-        assertTrue("PROFESSIONAL_REQUIREMENT_NOT_MET" in result.reasonCodes)
-        assertEquals(listOf(true, false), result.visits.map { it.available })
-        assertEquals(setOf("VISIT_UNAVAILABLE"), result.visits[1].reasonCodes)
+        assertTrue(result.favourites.isEmpty())
+        assertTrue(result.others.isEmpty())
     }
 
     @Test

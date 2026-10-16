@@ -88,6 +88,18 @@ class SlotHold(
     val requirementsSnapshot: BookingRequirements = BookingRequirements(),
     @Column(name = "duration_minutes", nullable = false)
     val durationMinutes: Int = 60,
+    @Column(name = "arrival_due_at")
+    var arrivalDueAt: Instant? = null,
+    @Column(name = "arrival_fired_at")
+    var arrivalFiredAt: Instant? = null,
+    @Column(name = "arrival_evidence", length = 24)
+    var arrivalEvidence: String? = null,
+    @Column(name = "selected_worker_name", length = 120)
+    var selectedWorkerName: String? = null,
+    @Column(name = "selected_worker_rating", precision = 3, scale = 2)
+    var selectedWorkerRating: BigDecimal? = null,
+    @Column(name = "selected_worker_rating_count")
+    var selectedWorkerRatingCount: Int? = null,
     @Version
     var version: Long = 0,
 ) {
@@ -164,6 +176,24 @@ class SlotHold(
         arrivalLatitude = latitude
         arrivalLongitude = longitude
         arrivalAccuracyMeters = accuracyMeters
+    }
+
+    fun scheduleSimulatedArrival(dueAt: Instant) {
+        if (arrivalDueAt == null) arrivalDueAt = dueAt
+    }
+
+    fun simulatedArrive(latitude: BigDecimal, longitude: BigDecimal, now: Instant) {
+        if (jobStatus == JobStatus.ARRIVED) return
+        check(status == SlotHoldStatus.CONFIRMED && jobStatus == JobStatus.ASSIGNED) {
+            "Only an assigned confirmed visit can simulate arrival"
+        }
+        jobStatus = JobStatus.ARRIVED
+        arrivedAt = now
+        arrivalFiredAt = now
+        arrivalEvidence = "SIMULATED"
+        arrivalLatitude = latitude
+        arrivalLongitude = longitude
+        arrivalAccuracyMeters = BigDecimal.ONE
     }
 
     fun start(now: Instant) {

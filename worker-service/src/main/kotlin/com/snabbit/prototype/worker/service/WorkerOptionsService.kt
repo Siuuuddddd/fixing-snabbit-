@@ -1,7 +1,6 @@
 package com.snabbit.prototype.worker.service
 
 import com.snabbit.prototype.worker.domain.WorkerProfile
-import com.snabbit.prototype.worker.domain.enums.AvailabilityStatus
 import com.snabbit.prototype.worker.domain.enums.WorkerStatus
 import com.snabbit.prototype.worker.dto.request.MatchWorkersCommand
 import com.snabbit.prototype.worker.dto.request.WorkerOptionsCommand
@@ -9,7 +8,7 @@ import com.snabbit.prototype.worker.dto.response.WorkerOptionEvaluation
 import com.snabbit.prototype.worker.dto.response.WorkerOptionVisitEvaluation
 import com.snabbit.prototype.worker.exception.InvalidMatchRequest
 import com.snabbit.prototype.worker.rating.WorkerRankingPolicy
-import com.snabbit.prototype.worker.repository.WorkerAvailabilityRepository
+import com.snabbit.prototype.worker.repository.WorkerAvailabilityRuleRepository
 import com.snabbit.prototype.worker.repository.WorkerCompatibilityRepository
 import com.snabbit.prototype.worker.repository.WorkerProfileRepository
 import com.snabbit.prototype.worker.repository.WorkerSkillRepository
@@ -22,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional
 class WorkerOptionsService(
     private val profiles: WorkerProfileRepository,
     private val skills: WorkerSkillRepository,
-    private val availability: WorkerAvailabilityRepository,
+    private val availabilityRules: WorkerAvailabilityRuleRepository,
     private val compatibility: WorkerCompatibilityRepository,
     private val tiers: WorkerTierPolicy,
     private val ranking: WorkerRankingPolicy,
@@ -42,17 +41,11 @@ class WorkerOptionsService(
         val supportedSkills = skills.findAllByIdServiceCodeAndEnabledTrue(command.serviceCode.uppercase())
             .mapTo(mutableSetOf()) { it.id.workerId }
         val preferences = compatibility.findAllByWorkerIdIn(candidateIds).associateBy { it.workerId }
-        val availabilityByDate = command.visits.map { it.startsAt.atZone(zone).toLocalDate() }.distinct()
-            .associateWith { date ->
-                availability.findAllByServiceDateAndStatus(date, AvailabilityStatus.AVAILABLE)
-                    .associateBy { it.workerId }
-            }
+        val rulesByWorker = availabilityRules.findAllByWorkerIdIn(candidateIds).groupBy { it.workerId }
 
         return candidates.values.mapNotNull { profile ->
             val tier = tiers.currentTier(profile)
             val favourite = profile.id in favouriteIds
-            if (!favourite && tier.name != "VETERAN") return@mapNotNull null
-
             val representative = command.visits.first().toMatchCommand(command)
             val compatibilityResult = compatibilityPolicy.evaluate(representative, preferences[profile.id])
             val location = locationPolicy.evaluate(
@@ -72,10 +65,7 @@ class WorkerOptionsService(
             val surcharge = tiers.surchargeMinor(tier)
             val visitEvaluations = command.visits.map { visit ->
                 val localStart = visit.startsAt.atZone(zone)
-                val localEnd = localStart.plusMinutes(visit.durationMinutes.toLong())
-                val row = availabilityByDate.getValue(localStart.toLocalDate())[profile.id]
-                val scheduleAvailable = row != null &&
-                    row.availableFrom <= localStart.toLocalTime() && row.availableUntil >= localEnd.toLocalTime()
+                val scheduleAvailable = rulesByWorker[profile.id].orEmpty().any { it.containsStart(localStart.toLocalTime()) }
                 val reasons = linkedSetOf<String>().apply {
                     addAll(commonReasons)
                     if (!scheduleAvailable) add("VISIT_UNAVAILABLE")

@@ -122,6 +122,19 @@ class Booking(
         updatedAt = now
     }
 
+    fun recordVisitSelections(workerIds: Collection<UUID>, grossTotal: Long, netTotal: Long, now: Instant) {
+        check(status == BookingStatus.AWAITING_WORKER || status == BookingStatus.AWAITING_PAYMENT) {
+            "Booking is not accepting worker selections"
+        }
+        require(workerIds.isNotEmpty() && grossTotal >= 0 && netTotal in 0..grossTotal)
+        selectedWorkerId = workerIds.distinct().singleOrNull()
+        workerSelectionSource = WorkerSelectionSource.CUSTOMER
+        grossTotalMinor = grossTotal
+        quotedTotalMinor = netTotal
+        status = BookingStatus.AWAITING_PAYMENT
+        updatedAt = now
+    }
+
     fun recordAutomaticSelection(workerId: UUID?, now: Instant) {
         if (workerSelectionSource == null) {
             selectedWorkerId = workerId

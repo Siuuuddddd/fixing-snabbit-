@@ -27,16 +27,12 @@ class ArrivalOtpDispatchService(
         val now = clock.instant()
         challenge.beginSend(now, properties.arrivalOtp.maxSends)
 
-        val workerPhone = try {
+        // Local seed workers use non-routable placeholder numbers. An unavailable worker
+        // contact must not prevent delivery to the customer's verified home contact.
+        val workerPhone = runCatching {
             IndianPhoneNumber.normalize(workers.contact(challenge.assignedWorkerId).phoneNumber)
-        } catch (_: RuntimeException) {
-            challenge.deliveryFailed(now)
-            if (challenge.sendCount >= properties.arrivalOtp.maxSends) {
-                terminalFailure(challenge.bookingId, challenge.visitIndex, challenge.assignedWorkerId, now)
-            }
-            return
-        }
-        if (workerPhone == challenge.destinationPhoneE164) {
+        }.getOrNull()
+        if (workerPhone != null && workerPhone == challenge.destinationPhoneE164) {
             challenge.blockDelivery(now, properties.arrivalOtp.maxSends)
             terminalFailure(challenge.bookingId, challenge.visitIndex, challenge.assignedWorkerId, now)
             return

@@ -7,6 +7,7 @@ import com.snabbit.prototype.booking.dto.response.HomeContactSnapshot
 import com.snabbit.prototype.booking.exception.BookingNotFound
 import com.snabbit.prototype.booking.exception.CustomerAccessDenied
 import com.snabbit.prototype.booking.exception.CustomerPhoneRequired
+import com.snabbit.prototype.booking.exception.CustomerPhoneVerificationRequired
 import com.snabbit.prototype.booking.exception.HomeContactResolutionUnavailable
 import com.snabbit.prototype.booking.exception.HomeContactValidationException
 import com.snabbit.prototype.booking.exception.InvalidBookingState
@@ -85,6 +86,7 @@ class HomeContactService(
         val name = contact.displayName.trim().takeIf { it.length in 2..60 }
             ?: throw HomeContactResolutionUnavailable("Booker contact is temporarily unavailable")
         val rawPhone = contact.phoneNumber?.takeIf(String::isNotBlank) ?: throw CustomerPhoneRequired()
+        if (!contact.phoneVerified) throw CustomerPhoneVerificationRequired()
         val phone = try {
             IndianPhoneNumber.normalize(rawPhone)
         } catch (_: IllegalArgumentException) {

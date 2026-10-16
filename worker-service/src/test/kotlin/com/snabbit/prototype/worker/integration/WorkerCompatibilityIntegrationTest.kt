@@ -80,9 +80,15 @@ class WorkerCompatibilityIntegrationTest {
             ),
         )
         assertEquals(
-            120,
+            0,
             jdbc.queryForObject(
                 "SELECT count(*) FROM worker_availability WHERE worker_id::text LIKE '60000000-0000-0000-0000-%'", Int::class.java,
+            ),
+        )
+        assertEquals(
+            11,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM worker_availability_rule WHERE worker_id::text LIKE '60000000-0000-0000-0000-%'", Int::class.java,
             ),
         )
         assertEquals(
@@ -133,7 +139,7 @@ class WorkerCompatibilityIntegrationTest {
             LocalTime.of(8, 0),
             ZoneId.of("Asia/Kolkata"),
         ).toInstant()
-        val expectedByTier = mapOf("EXPERT" to 3, "VETERAN" to 2, "STANDARD" to 5)
+        val expectedByTier = mapOf("EXPERT" to 2, "VETERAN" to 1, "STANDARD" to 1)
 
         expectedByTier.forEach { (tier, expected) ->
             listOf("VEGETARIAN", "NON_VEGETARIAN", "JAIN").forEach { foodContext ->

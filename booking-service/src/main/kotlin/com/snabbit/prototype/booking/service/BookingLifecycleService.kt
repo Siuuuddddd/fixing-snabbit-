@@ -13,6 +13,7 @@ import com.snabbit.prototype.booking.domain.WorkerDayCapacity
 import com.snabbit.prototype.booking.domain.WorkerOffer
 import com.snabbit.prototype.booking.dto.request.CreateBookingCommand
 import com.snabbit.prototype.booking.dto.request.ApplyWorkerSelectionCommand
+import com.snabbit.prototype.booking.dto.request.ApplyVisitWorkerSelectionCommand
 import com.snabbit.prototype.booking.dto.request.VisitCommand
 import com.snabbit.prototype.booking.dto.request.WorkerLocationCommand
 import com.snabbit.prototype.booking.dto.response.BookingOwnershipSnapshot
@@ -49,6 +50,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.beans.factory.annotation.Value
 
 @Service
 class BookingLifecycleService(
@@ -62,6 +64,14 @@ class BookingLifecycleService(
     private val properties: BookingProperties,
     private val clock: Clock,
 ) {
+    @Value("\${dev-simulation.enabled:false}")
+    private var devSimulationEnabled: Boolean = false
+
+    @Value("\${dev.arrival-delay-seconds:120}")
+    private var devArrivalDelaySeconds: Long = 120
+
+    @Value("\${dev.multi-day-arrival-mode:SEQUENTIAL}")
+    private var devMultiDayArrivalMode: String = "SEQUENTIAL"
     @Transactional
     fun create(command: CreateBookingCommand): BookingSnapshot {
         validateVisitCollection(command)
@@ -338,6 +348,73 @@ class BookingLifecycleService(
     }
 
     @Transactional
+    fun applyVisitWorkerSelection(command: ApplyVisitWorkerSelectionCommand): BookingSnapshot {
+        val now = clock.instant()
+        val booking = requireBookingForUpdate(command.bookingId)
+        if (booking.customerId != command.customerId) throw CustomerAccessDenied()
+        if (booking.status !in setOf(BookingStatus.AWAITING_WORKER, BookingStatus.AWAITING_PAYMENT)) {
+            throw InvalidBookingState("Worker selection can only change before payment confirmation")
+        }
+        val holds = requireHolds(command.bookingId)
+        val hold = holds.firstOrNull { it.visitIndex == command.visitIndex }
+            ?: throw InvalidBookingState("Booking visit does not exist")
+        if (hold.status != SlotHoldStatus.HELD || !hold.expiresAt.isAfter(now)) {
+            throw InvalidBookingState("Booking slot hold is no longer active")
+        }
+        val local = hold.startsAt.atZone(properties.zoneId)
+        capacityRepository.findForUpdate(command.workerId, local.toLocalDate())
+            ?: throw SlotUnavailable("Selected worker has no booking capacity on ${local.toLocalDate()}")
+        if (slotHoldRepository.hasActiveOverlapExcludingBooking(
+                command.workerId, hold.startsAt, hold.endsAt, now, booking.id,
+            )
+        ) throw SlotUnavailable("Selected worker is no longer available for this visit")
+        if (holds.any { other ->
+                other.id != hold.id && other.assignmentType != AssignmentType.UNASSIGNED &&
+                    other.workerId == command.workerId && other.startsAt < hold.endsAt && hold.startsAt < other.endsAt
+            }
+        ) throw SlotUnavailable("Selected worker cannot take overlapping visits in this booking")
+
+        offerRepository.findAllByBookingIdOrderByCreatedAt(booking.id)
+            .filter { it.slotHoldId == hold.id && it.status == WorkerOfferStatus.OFFERED }
+            .forEach { it.expire(now) }
+        hold.workerId = command.workerId
+        hold.preferredWorkerId = command.workerId
+        hold.assignedWorkerTier = command.tier
+        hold.tierSurchargeMinor = command.tierSurchargeMinor
+        hold.quotedPriceMinor = command.grossVisitPriceMinor
+        hold.selectedWorkerName = command.workerName
+        hold.selectedWorkerRating = command.workerRating
+        hold.selectedWorkerRatingCount = command.workerRatingCount
+        hold.assignmentType = AssignmentType.PREFERRED
+        val selected = holds.filter { it.assignmentType != AssignmentType.UNASSIGNED }
+        if (selected.size == holds.size) {
+            val grossTotal = selected.sumOf(SlotHold::quotedPriceMinor)
+            val netTotal = (grossTotal - booking.plusDiscountMinor).coerceAtLeast(0)
+            val netPrices = allocateNetVisitPrices(holds, holds.associate { it.visitIndex to it.quotedPriceMinor }, netTotal)
+            holds.forEach { it.quotedPriceMinor = netPrices.getValue(it.visitIndex) }
+            booking.recordVisitSelections(selected.map(SlotHold::workerId), grossTotal, netTotal, now)
+        }
+        val offer = WorkerOffer(
+            id = UUID.randomUUID(), bookingId = booking.id, slotHoldId = hold.id, workerId = command.workerId,
+            status = WorkerOfferStatus.OFFERED,
+            expiresAt = minOf(now.plus(properties.workerOfferDuration), hold.expiresAt), createdAt = now,
+        )
+        offerRepository.save(offer)
+        outboxWriter.append(
+            booking.id,
+            "VisitWorkerSelected",
+            mapOf(
+                "bookingId" to booking.id,
+                "customerId" to booking.customerId,
+                "visitIndex" to command.visitIndex,
+                "workerId" to command.workerId,
+            ),
+            now,
+        )
+        return currentSnapshot(booking)
+    }
+
+    @Transactional
     fun ensureAutomaticSelection(bookingId: UUID, expectedCustomerId: UUID): BookingSnapshot {
         val now = clock.instant()
         val booking = requireBookingForUpdate(bookingId)
@@ -349,6 +426,16 @@ class BookingLifecycleService(
         val workerIds = holds.map(SlotHold::workerId).distinct()
         booking.recordAutomaticSelection(workerIds.singleOrNull(), now)
         return currentSnapshot(booking)
+    }
+
+    @Transactional(readOnly = true)
+    fun hasCompleteWorkerSelection(bookingId: UUID, expectedCustomerId: UUID): Boolean {
+        val booking = bookingRepository.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        if (booking.customerId != expectedCustomerId) throw CustomerAccessDenied()
+        val holds = requireHolds(bookingId)
+        return holds.isNotEmpty() && holds.all {
+            it.status == SlotHoldStatus.HELD && it.assignmentType != AssignmentType.UNASSIGNED
+        }
     }
 
     @Transactional(readOnly = true)
@@ -591,6 +678,15 @@ class BookingLifecycleService(
         }
 
         holds.forEach(SlotHold::confirm)
+        if (devSimulationEnabled) {
+            if (booking.bookingType == BookingType.MULTI_DAY &&
+                !devMultiDayArrivalMode.equals("SIMULTANEOUS", ignoreCase = true)
+            ) {
+                holds.minByOrNull(SlotHold::visitIndex)?.scheduleSimulatedArrival(now.plusSeconds(devArrivalDelaySeconds))
+            } else {
+                holds.forEach { it.scheduleSimulatedArrival(now.plusSeconds(devArrivalDelaySeconds)) }
+            }
+        }
         booking.confirm(paymentReference, now)
         outboxWriter.append(
             bookingId,
@@ -862,6 +958,10 @@ class BookingLifecycleService(
         if (booking.status == BookingStatus.CONFIRMED && holds.all { it.jobStatus == JobStatus.COMPLETED }) {
             booking.complete(now)
             outboxWriter.append(bookingId, "BookingCompleted", mapOf("bookingId" to bookingId, "completedAt" to now), now)
+        } else if (devSimulationEnabled && booking.bookingType == BookingType.MULTI_DAY) {
+            holds.filter { it.jobStatus == JobStatus.ASSIGNED && it.arrivalDueAt == null }
+                .minByOrNull(SlotHold::visitIndex)
+                ?.scheduleSimulatedArrival(now.plusSeconds(devArrivalDelaySeconds))
         }
         return snapshot(booking, holds, offerRepository.findAllByBookingIdOrderByCreatedAt(bookingId))
     }
@@ -1093,6 +1193,10 @@ class BookingLifecycleService(
                     otpStatusDisplayText = otpStatus?.displayText,
                     assignedWorkerTier = hold.assignedWorkerTier,
                     tierSurchargeMinor = hold.tierSurchargeMinor,
+                    arrivalDueAt = hold.arrivalDueAt,
+                    selectedWorkerName = hold.selectedWorkerName,
+                    selectedWorkerRating = hold.selectedWorkerRating,
+                    selectedWorkerRatingCount = hold.selectedWorkerRatingCount,
                 )
             },
             cancellationType = booking.cancellationType,
@@ -1102,6 +1206,8 @@ class BookingLifecycleService(
             cancelledAt = booking.cancelledAt,
             selectedWorkerId = booking.selectedWorkerId,
             selectionSource = booking.workerSelectionSource?.name,
+            serverNow = clock.instant(),
+            maskedHomeContactPhone = booking.homeContactPhoneE164?.let { "+91 ••••••${it.takeLast(4)}" },
         )
     }
 

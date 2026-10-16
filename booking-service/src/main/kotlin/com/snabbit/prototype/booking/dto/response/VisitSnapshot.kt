@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
+import java.math.BigDecimal
 
 data class VisitSnapshot(
     val visitIndex: Int,
@@ -32,4 +33,8 @@ data class VisitSnapshot(
     val otpStatusDisplayText: String? = null,
     val assignedWorkerTier: String = "STANDARD",
     val tierSurchargeMinor: Long = 0,
+    val arrivalDueAt: Instant? = null,
+    val selectedWorkerName: String? = null,
+    val selectedWorkerRating: BigDecimal? = null,
+    val selectedWorkerRatingCount: Int? = null,
 )

@@ -22,4 +22,6 @@ data class BookingSnapshot(
     val selectedWorkerId: UUID? = null,
     val selectionSource: String? = null,
     val holdExpiresAt: Instant? = visits.minOfOrNull(VisitSnapshot::holdExpiresAt),
+    val serverNow: Instant = Instant.EPOCH,
+    val maskedHomeContactPhone: String? = null,
 )

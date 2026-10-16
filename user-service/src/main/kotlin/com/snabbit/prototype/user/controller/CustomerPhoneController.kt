@@ -33,7 +33,8 @@ class CustomerPhoneController(
         if (authenticatedUserId != userId) throw CustomerAccessDenied()
         val user = users.findForUpdate(userId) ?: throw UserNotFound(userId)
         user.phoneE164 = IndianPhoneNumber.normalize(request.phoneNumber)
+        user.phoneVerifiedAt = null
         user.updatedAt = clock.instant()
-        return CustomerContactSnapshot(user.id, user.phoneE164, user.displayName)
+        return CustomerContactSnapshot(user.id, user.phoneE164, user.displayName, false)
     }
 }

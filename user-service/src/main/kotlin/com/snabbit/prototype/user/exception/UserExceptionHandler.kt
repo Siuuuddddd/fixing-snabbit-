@@ -13,6 +13,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 
 @RestControllerAdvice
 class UserExceptionHandler {
+    @ExceptionHandler(PhoneInUse::class)
+    fun phoneInUse(error: PhoneInUse): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "PHONE_IN_USE")
+        }
+
     @ExceptionHandler(GoogleIdentityVerificationException::class)
     fun invalidGoogleIdentity(error: GoogleIdentityVerificationException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Google sign-in could not be verified").also {

@@ -88,6 +88,7 @@ class VisitArrivalChallenge(
         check(allowedAt == null || !now.isBefore(allowedAt)) { "Arrival OTP resend cooldown is active" }
         status = ArrivalChallengeStatus.PENDING
         providerVerificationRef = null
+        attemptCount = 0
         updatedAt = now
     }
 

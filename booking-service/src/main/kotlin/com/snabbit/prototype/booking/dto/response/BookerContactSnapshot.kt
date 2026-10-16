@@ -6,4 +6,5 @@ data class BookerContactSnapshot(
     val userId: UUID,
     val phoneNumber: String?,
     val displayName: String,
+    val phoneVerified: Boolean = true,
 )

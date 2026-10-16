@@ -2,4 +2,7 @@ package com.snabbit.prototype.booking.dto.request
 
 import java.util.UUID
 
-data class WorkerSelectionRequest(val workerId: UUID? = null)
+data class WorkerSelectionRequest(
+    val visitIndex: Int,
+    val workerId: UUID,
+)

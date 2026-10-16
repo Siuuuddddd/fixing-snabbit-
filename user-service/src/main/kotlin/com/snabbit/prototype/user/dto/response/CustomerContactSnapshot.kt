@@ -6,4 +6,5 @@ data class CustomerContactSnapshot(
     val userId: UUID,
     val phoneNumber: String?,
     val displayName: String,
+    val phoneVerified: Boolean = false,
 )

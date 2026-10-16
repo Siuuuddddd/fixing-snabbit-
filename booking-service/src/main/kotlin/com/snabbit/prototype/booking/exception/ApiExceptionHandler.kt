@@ -7,6 +7,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(CustomerPhoneVerificationRequired::class)
+    fun customerPhoneVerificationRequired(error: CustomerPhoneVerificationRequired): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
+            it.setProperty("code", "PHONE_VERIFICATION_REQUIRED")
+        }
+
     @ExceptionHandler(CustomerPhoneRequired::class)
     fun customerPhoneRequired(error: CustomerPhoneRequired): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.message.orEmpty()).also {
@@ -54,7 +60,11 @@ class ApiExceptionHandler {
         }
     @ExceptionHandler(BookingRuleViolation::class)
     fun bookingRuleViolation(error: BookingRuleViolation): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty())
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, error.message.orEmpty()).also {
+            if (error.message == "WORKER_SELECTION_REQUIRED") {
+                it.setProperty("code", "WORKER_SELECTION_REQUIRED")
+            }
+        }
 
     @ExceptionHandler(PlusRequired::class)
     fun plusRequired(error: PlusRequired): ProblemDetail =

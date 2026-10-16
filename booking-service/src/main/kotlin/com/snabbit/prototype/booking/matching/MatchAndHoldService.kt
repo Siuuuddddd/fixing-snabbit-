@@ -28,6 +28,7 @@ import com.snabbit.prototype.booking.domain.enums.AssignmentType
 import com.snabbit.prototype.booking.domain.enums.ExpertPreference
 import com.snabbit.prototype.booking.domain.enums.FallbackPolicy
 import com.snabbit.prototype.booking.service.BookingLifecycleService
+import com.snabbit.prototype.booking.repository.SlotHoldRepository
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Clock
@@ -47,6 +48,7 @@ class MatchAndHoldService(
     private val properties: BookingProperties,
     private val clock: Clock,
     private val windowPolicy: BookingWindowPolicy,
+    private val holds: SlotHoldRepository? = null,
 ) {
     suspend fun availability(command: MatchAndHoldCommand): BookingAvailabilitySnapshot {
         validateRequest(command)
@@ -152,7 +154,7 @@ class MatchAndHoldService(
                         startsAt = start,
                         duration = durations[index],
                         quotedPriceMinor = netVisitPrices[index],
-                        assignmentType = AssignmentType.valueOf(match.assignmentType),
+                        assignmentType = AssignmentType.UNASSIGNED,
                         preferredWorkerId = command.favouriteWorkerId,
                         assignedWorkerTier = match.tier,
                         tierSurchargeMinor = if (
@@ -356,7 +358,14 @@ class MatchAndHoldService(
                                 ?.name
                         },
                     ),
-                )
+                ).filterNot { candidate ->
+                    holds?.hasActiveOverlap(
+                        candidate.workerId,
+                        start,
+                        start.plus(durations[index]),
+                        clock.instant(),
+                    ) == true
+                }
             }
         }.awaitAll()
     }

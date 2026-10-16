@@ -31,7 +31,7 @@ class BookingPaymentServiceTest {
         val command = command()
         val expected = payment(command)
         every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
-        every { bookings.ensureAutomaticSelection(command.bookingId, command.authenticatedCustomerId) } returns mockk()
+        every { bookings.hasCompleteWorkerSelection(command.bookingId, command.authenticatedCustomerId) } returns true
         every { bookings.extendHoldsForPayment(command.bookingId) } returns
             quote(command.bookingId, command.authenticatedCustomerId).copy(holdExpiresAt = now.plusSeconds(600))
         every { client.start(command) } returns expected
@@ -68,7 +68,7 @@ class BookingPaymentServiceTest {
     fun `payment initiation failure releases the booking holds`() {
         val command = command()
         every { bookings.paymentQuote(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
-        every { bookings.ensureAutomaticSelection(command.bookingId, command.authenticatedCustomerId) } returns mockk()
+        every { bookings.hasCompleteWorkerSelection(command.bookingId, command.authenticatedCustomerId) } returns true
         every { bookings.extendHoldsForPayment(command.bookingId) } returns quote(command.bookingId, command.authenticatedCustomerId)
         every { client.start(command) } throws PaymentServiceUnavailable("offline", IllegalStateException())
         every { bookings.cancel(command.bookingId, command.authenticatedCustomerId) } returns mockk()

@@ -41,6 +41,7 @@ class DevSeedBookingAutomation(
             PageRequest.of(0, 100),
         ).asSequence()
             .filter { it.workerId in DevSeedWorkerIds.all }
+            .filter { offer -> holds.findById(offer.slotHoldId).orElse(null)?.assignmentType != com.snabbit.prototype.booking.domain.enums.AssignmentType.UNASSIGNED }
             .forEach { offer -> runCatching { lifecycle.acceptOffer(offer.bookingId, offer.id, offer.workerId) } }
     }
 

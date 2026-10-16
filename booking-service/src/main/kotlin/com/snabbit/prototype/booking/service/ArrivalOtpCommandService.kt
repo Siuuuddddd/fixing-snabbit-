@@ -33,6 +33,19 @@ class ArrivalOtpCommandService(
     private val clock: Clock,
 ) {
     @Transactional(noRollbackFor = [ArrivalOtpConflict::class])
+    fun verifyForCustomer(
+        bookingId: UUID,
+        visitIndex: Int,
+        customerId: UUID,
+        code: String,
+    ): ArrivalOtpStatusSnapshot {
+        val booking = bookings.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        if (booking.customerId != customerId) throw ArrivalOtpAccessDenied()
+        val hold = holds.findVisitForUpdate(bookingId, visitIndex) ?: throw BookingNotFound(bookingId)
+        return verifyAndStart(bookingId, visitIndex, hold.workerId, code)
+    }
+
+    @Transactional(noRollbackFor = [ArrivalOtpConflict::class])
     fun verifyAndStart(
         bookingId: UUID,
         visitIndex: Int,
@@ -129,7 +142,7 @@ class ArrivalOtpCommandService(
             ?: throw ArrivalOtpConflict("ARRIVAL_OTP_NOT_AVAILABLE", "Arrival OTP challenge is not available")
         val now = clock.instant()
         if (challenge.sendCount >= properties.arrivalOtp.maxSends) {
-            throw ArrivalOtpConflict("ARRIVAL_OTP_SEND_LIMIT", "Arrival OTP send limit reached")
+            throw ArrivalOtpConflict("OTP_LIMIT_REACHED", "Arrival OTP send limit reached")
         }
         val allowedAt = challenge.lastSentAt?.plus(properties.arrivalOtp.resendCooldown)
         if (allowedAt != null && now.isBefore(allowedAt)) {
@@ -145,6 +158,19 @@ class ArrivalOtpCommandService(
             throw ArrivalOtpConflict("ARRIVAL_OTP_NOT_AVAILABLE", "Arrival OTP cannot be resent in its current state")
         }
         events.publishEvent(ArrivalChallengeCreatedEvent(challenge.id))
-        return ArrivalOtpStatusSnapshot(ArrivalOtpStatus.OTP_SENT.name, "Arrival OTP resend requested")
+        return ArrivalOtpStatusSnapshot(
+            ArrivalOtpStatus.OTP_SENT.name,
+            "Arrival OTP resend requested",
+            properties.arrivalOtp.maxSends - challenge.sendCount,
+            properties.arrivalOtp.resendCooldown.seconds,
+        )
+    }
+
+    @Transactional
+    fun resendForCustomer(bookingId: UUID, visitIndex: Int, customerId: UUID): ArrivalOtpStatusSnapshot {
+        val booking = bookings.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
+        if (booking.customerId != customerId) throw ArrivalOtpAccessDenied()
+        val hold = holds.findVisitForUpdate(bookingId, visitIndex) ?: throw BookingNotFound(bookingId)
+        return resend(bookingId, visitIndex, hold.workerId)
     }
 }

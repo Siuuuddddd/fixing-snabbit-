@@ -1,7 +1,6 @@
 package com.snabbit.prototype.booking.service
 
-import com.snabbit.prototype.booking.domain.enums.WorkerSelectionSource
-import com.snabbit.prototype.booking.dto.request.ApplyWorkerSelectionCommand
+import com.snabbit.prototype.booking.dto.request.ApplyVisitWorkerSelectionCommand
 import com.snabbit.prototype.booking.dto.response.BookingSnapshot
 import com.snabbit.prototype.booking.exception.BookingRuleViolation
 import java.util.UUID
@@ -12,26 +11,27 @@ class WorkerSelectionService(
     private val options: WorkerOptionsService,
     private val lifecycle: BookingLifecycleService,
 ) {
-    suspend fun select(bookingId: UUID, customerId: UUID, requestedWorkerId: UUID?): BookingSnapshot {
-        val available = options.options(bookingId, customerId)
-        val listed = available.favourites + available.veterans
-        val selected = if (requestedWorkerId == null) {
-            available.favourites.firstOrNull { it.selectable } ?: available.veterans.firstOrNull { it.selectable }
-        } else {
-            listed.firstOrNull { it.workerId == requestedWorkerId }
-        } ?: throw BookingRuleViolation("The requested worker is not an eligible booking option")
+    suspend fun select(bookingId: UUID, customerId: UUID, visitIndex: Int, requestedWorkerId: UUID): BookingSnapshot {
+        val available = options.options(bookingId, customerId, visitIndex)
+        val selected = (available.favourites + available.others)
+            .firstOrNull { it.workerId == requestedWorkerId }
+            ?: throw BookingRuleViolation("The requested worker is not an eligible booking option")
         if (!selected.selectable || selected.visits.any { !it.available }) {
-            throw BookingRuleViolation("The requested worker is no longer available for every visit")
+            throw BookingRuleViolation("The requested worker is no longer available for this visit")
         }
-        return lifecycle.applyWorkerSelection(
-            ApplyWorkerSelectionCommand(
+        val visit = selected.visits.single { it.visitIndex == visitIndex }
+        return lifecycle.applyVisitWorkerSelection(
+            ApplyVisitWorkerSelectionCommand(
                 bookingId = bookingId,
                 customerId = customerId,
+                visitIndex = visitIndex,
                 workerId = selected.workerId,
                 tier = selected.tier,
                 tierSurchargeMinor = selected.tierSurchargeMinor,
-                grossVisitPricesMinor = selected.visits.associate { it.visitIndex to it.priceMinor },
-                source = if (requestedWorkerId == null) WorkerSelectionSource.AUTO else WorkerSelectionSource.CUSTOMER,
+                grossVisitPriceMinor = visit.priceMinor,
+                workerName = selected.firstName,
+                workerRating = selected.averageRating,
+                workerRatingCount = selected.ratingCount,
             ),
         )
     }

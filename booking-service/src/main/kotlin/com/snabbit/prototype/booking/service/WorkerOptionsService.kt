@@ -33,13 +33,15 @@ class WorkerOptionsService(
 ) {
     private val zone = ZoneId.of("Asia/Kolkata")
 
-    suspend fun options(bookingId: UUID, customerId: UUID): WorkerOptionsSnapshot {
+    suspend fun options(bookingId: UUID, customerId: UUID, visitIndex: Int? = null): WorkerOptionsSnapshot {
         val booking = bookings.findById(bookingId).orElseThrow { BookingNotFound(bookingId) }
         if (booking.customerId != customerId) throw CustomerAccessDenied()
         if (booking.status !in setOf(BookingStatus.AWAITING_WORKER, BookingStatus.AWAITING_PAYMENT)) {
             throw InvalidBookingState("Worker options are available only before payment")
         }
-        val visits = holds.findAllByBookingIdOrderByVisitIndex(bookingId)
+        val allVisits = holds.findAllByBookingIdOrderByVisitIndex(bookingId)
+        val visits = visitIndex?.let { requested -> allVisits.filter { it.visitIndex == requested } } ?: allVisits
+        if (visitIndex != null && visits.isEmpty()) throw InvalidBookingState("Booking visit does not exist")
         if (visits.isEmpty() || visits.any { it.status != SlotHoldStatus.HELD || !it.expiresAt.isAfter(clock.instant()) }) {
             throw InvalidBookingState("Booking slot holds are no longer active")
         }
@@ -52,20 +54,38 @@ class WorkerOptionsService(
         val offering = catalog.requireActive(booking.serviceId)
         val evaluations = clients.workerOptions(
             query(offering.code, offering.basePricePerHourMinor, visits, latitude, longitude, booking.requirements, favouriteIds),
-        )
+        ).filter { candidate ->
+            visits.none { visit ->
+                holds.hasActiveOverlapExcludingBooking(
+                    candidate.workerId, visit.startsAt, visit.endsAt, clock.instant(), booking.id,
+                )
+            }
+        }
         val byId = evaluations.associateBy(WorkerOptionEvaluationResponse::workerId)
-        val favourites = favouriteIds.mapNotNull(byId::get).map(::snapshot)
-        val veterans = evaluations.asSequence()
-            .filter { it.tier == "VETERAN" && it.workerId !in favouriteIds && it.selectable }
-            .sortedWith(
-                compareBy<WorkerOptionEvaluationResponse>(WorkerOptionEvaluationResponse::distanceKm)
-                    .thenByDescending(WorkerOptionEvaluationResponse::rankScore)
-                    .thenBy { it.workerId.toString() },
-            )
-            .take(2)
+        val optionOrder = compareByDescending<WorkerOptionEvaluationResponse> { tierRank(it.tier) }
+            .thenByDescending { it.averageRating }
+            .thenBy { it.distanceKm }
+            .thenBy { candidate -> candidate.visits.sumOf { it.priceMinor } }
+            .thenBy { it.workerId.toString() }
+        val favourites = evaluations.asSequence()
+            .filter { it.workerId in favouriteIds && it.selectable }
+            .sortedWith(optionOrder)
             .map(::snapshot)
             .toList()
-        return WorkerOptionsSnapshot(booking.id, favourites, veterans)
+        val others = evaluations.asSequence()
+            .filter { it.workerId !in favouriteIds && it.selectable }
+            .sortedWith(
+                optionOrder,
+            )
+            .map(::snapshot)
+            .toList()
+        return WorkerOptionsSnapshot(booking.id, visitIndex, favourites, others)
+    }
+
+    private fun tierRank(tier: String): Int = when (tier) {
+        "EXPERT" -> 3
+        "VETERAN" -> 2
+        else -> 1
     }
 
     private fun query(
