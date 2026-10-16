@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class UserDevSeedProperties(
     val enabled: Boolean = false,
     val demoCustomerEmail: String = "",
+    val demoCustomerPhone: String = "",
     val demoCustomerName: String = "Demo Customer",
     val plusValidityDays: Int = 365,
     val plusExtendWhenDaysRemain: Int = 30,
@@ -13,6 +14,12 @@ data class UserDevSeedProperties(
     init {
         require(demoCustomerEmail.isBlank() || demoCustomerEmail.contains('@')) {
             "dev-seed.demo-customer-email must be an email address"
+        }
+        require(demoCustomerPhone.isBlank() || demoCustomerPhone.matches(Regex("^\\+91[6-9][0-9]{9}$"))) {
+            "dev-seed.demo-customer-phone must be a +91 Indian mobile number"
+        }
+        require(demoCustomerPhone.isBlank() || demoCustomerEmail.isNotBlank()) {
+            "dev-seed.demo-customer-email is required when demo-customer-phone is configured"
         }
         require(demoCustomerName.isNotBlank() && demoCustomerName.length <= 120) {
             "dev-seed.demo-customer-name must be 1 to 120 characters"

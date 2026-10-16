@@ -25,6 +25,7 @@ import javax.crypto.spec.SecretKeySpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
@@ -65,6 +66,20 @@ class CustomerSessionServiceTest {
         assertEquals(listOf("CUSTOMER"), jwt.getClaimAsStringList("roles"))
         assertNotEquals(response.refreshToken, saved.captured.refreshTokenHash)
         assertEquals(OpaqueToken.hash(response.refreshToken), saved.captured.refreshTokenHash)
+    }
+
+    @Test
+    fun `remembered sessions slide while unremembered sessions end after twenty four hours`() {
+        val saved = mutableListOf<CustomerSession>()
+        every { sessions.findActiveByUserId(user.id) } returns emptyList()
+        every { sessions.save(capture(saved)) } answers { firstArg() }
+
+        service.create(user, null, null, false, rememberMe = true)
+        service.create(user, null, null, false, rememberMe = false)
+
+        assertNull(saved[0].absoluteExpiresAt)
+        assertEquals(start.plus(Duration.ofHours(24)), saved[1].absoluteExpiresAt)
+        assertEquals(start.plus(Duration.ofHours(24)), saved[1].idleExpiresAt)
     }
 
     @Test

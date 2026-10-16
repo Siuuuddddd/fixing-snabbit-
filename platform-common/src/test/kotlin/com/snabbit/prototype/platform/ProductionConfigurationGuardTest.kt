@@ -42,6 +42,26 @@ class ProductionConfigurationGuardTest {
     }
 
     @Test
+    fun `rejects a seeded customer phone in production`() {
+        val environment = MockEnvironment()
+            .withProperty("dev-seed.demo-customer-phone", "+919876543210")
+            .withProperty("service-auth.token", "a-secure-secret-injected-by-the-runtime")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(environment, ProductionGuardProperties(listOf("service-auth.token")))
+        }
+    }
+
+    @Test
+    fun `rejects logging OTP provider in production`() {
+        val environment = MockEnvironment().withProperty("otp.provider", "logging")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProductionConfigurationGuard(environment, ProductionGuardProperties(listOf("otp.provider")))
+        }
+    }
+
+    @Test
     fun `accepts explicitly supplied production values`() {
         val environment = MockEnvironment()
             .withProperty("spring.datasource.url", "jdbc:postgresql://database.internal/users")

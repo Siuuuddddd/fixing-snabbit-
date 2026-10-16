@@ -32,6 +32,9 @@ class ProductionConfigurationGuard(
         require(environment.getProperty("dev-seed.demo-customer-email").isNullOrBlank()) {
             "Unsafe production configuration: dev-seed.demo-customer-email must be empty"
         }
+        require(environment.getProperty("dev-seed.demo-customer-phone").isNullOrBlank()) {
+            "Unsafe production configuration: dev-seed.demo-customer-phone must be empty"
+        }
         require(properties.requiredProperties.isNotEmpty()) {
             "deployment.production.required-properties must list this service's production settings"
         }

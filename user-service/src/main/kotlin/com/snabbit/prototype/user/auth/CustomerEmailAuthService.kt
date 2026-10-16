@@ -85,7 +85,7 @@ class CustomerEmailAuthService(
         user.emailVerifiedAt = now
         user.authProviders.add(UserAuthProvider.PASSWORD)
         user.updatedAt = now
-        return sessions.create(user, request.deviceId, request.deviceName, true)
+        return sessions.create(user, request.deviceId, request.deviceName, true, request.rememberMe)
     }
 
     @Transactional
@@ -117,7 +117,7 @@ class CustomerEmailAuthService(
         }
         user.lastLoginAt = clock.instant()
         user.updatedAt = clock.instant()
-        return sessions.create(user, request.deviceId, request.deviceName, false)
+        return sessions.create(user, request.deviceId, request.deviceName, false, request.rememberMe)
     }
 
     @Transactional

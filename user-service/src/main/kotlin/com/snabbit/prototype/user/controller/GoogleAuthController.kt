@@ -32,7 +32,7 @@ class GoogleAuthController(
         val identity = verifier.verify(request.idToken, google.customerAudiences(), request.nonce)
         rateLimiter.check("sign-in", identity.subject)
         val account = accounts.resolve(identity)
-        return sessions.create(account.profile, request.deviceId, request.deviceName, account.newUser)
+        return sessions.create(account.profile, request.deviceId, request.deviceName, account.newUser, request.rememberMe)
     }
 
     @PostMapping("/refresh")

@@ -15,6 +15,7 @@ data class AuthProperties(
     val exposeCode: Boolean,
     val refreshIdleTtl: Duration = Duration.ofDays(180),
     val refreshAbsoluteTtl: Duration? = null,
+    val shortSessionAbsoluteTtl: Duration = Duration.ofHours(24),
     val refreshGraceWindow: Duration = Duration.ofSeconds(10),
     val maxActiveSessions: Int = 10,
     val accountRateLimit: Long = 20,

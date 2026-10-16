@@ -8,4 +8,5 @@ data class EmailLoginRequest(
     @field:NotBlank val password: String,
     @field:Size(max = 255) val deviceId: String? = null,
     @field:Size(max = 255) val deviceName: String? = null,
+    val rememberMe: Boolean = true,
 )

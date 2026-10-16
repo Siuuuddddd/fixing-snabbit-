@@ -7,4 +7,5 @@ data class GoogleSignInRequest(
     val nonce: String? = null,
     val deviceId: String? = null,
     val deviceName: String? = null,
+    val rememberMe: Boolean = true,
 )

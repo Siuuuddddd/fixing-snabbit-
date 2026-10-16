@@ -2,6 +2,7 @@ package com.snabbit.prototype.user.exception
 
 import com.snabbit.prototype.platform.UnverifiedTrialRecipient
 import com.snabbit.prototype.platform.VerificationProviderUnavailable
+import com.snabbit.prototype.platform.VerificationProviderRateLimited
 import com.snabbit.prototype.platform.GoogleIdentityFailure
 import com.snabbit.prototype.platform.GoogleIdentityVerificationException
 import org.springframework.http.HttpStatus
@@ -97,6 +98,13 @@ class UserExceptionHandler {
     fun providerUnavailable(error: VerificationProviderUnavailable): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, error.message.orEmpty()).also {
             it.setProperty("errorCode", "OTP_PROVIDER_UNAVAILABLE")
+        }
+
+    @ExceptionHandler(VerificationProviderRateLimited::class)
+    fun providerRateLimited(error: VerificationProviderRateLimited): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, error.message.orEmpty()).also {
+            it.setProperty("code", "RATE_LIMITED")
+            it.setProperty("retryAfterSeconds", 30)
         }
     @ExceptionHandler(UserNotFound::class)
     fun notFound(error: UserNotFound): ProblemDetail =

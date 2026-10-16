@@ -9,4 +9,5 @@ data class VerifyEmailRequest(
     @field:Pattern(regexp = "^[0-9]{6}$") val code: String,
     @field:Size(max = 255) val deviceId: String? = null,
     @field:Size(max = 255) val deviceName: String? = null,
+    val rememberMe: Boolean = true,
 )

@@ -38,6 +38,9 @@ AUTH_ARGON2_PARALLELISM, AUTH_ARGON2_MEMORY_KB, AUTH_ARGON2_ITERATIONS
 AUTH_BCRYPT_STRENGTH        # fallback only when Bouncy Castle is unavailable
 AUTH_EMAIL_RATE_LIMIT_WINDOW, AUTH_EMAIL_RATE_LIMIT_PER_IDENTITY
 AUTH_EMAIL_RATE_LIMIT_PER_IP, AUTH_EMAIL_RATE_LIMIT_MAX_DELAY
+AUTH_PHONE_RESEND_COOLDOWN, AUTH_PHONE_MAX_SENDS_PER_HOUR
+AUTH_PHONE_MAX_ATTEMPTS, AUTH_PHONE_RATE_LIMIT_WINDOW, AUTH_PHONE_RATE_LIMIT_PER_IP
+AUTH_REFRESH_IDLE_TTL, AUTH_REFRESH_ABSOLUTE_TTL, AUTH_SHORT_SESSION_ABSOLUTE_TTL
 OTP_PEPPER
 OTP_PROVIDER=twilio-verify
 TWILIO_ACCOUNT_SID
@@ -56,7 +59,7 @@ FAVOURITES_MAX_COUNT, FAVOURITES_REQUIRE_COMPLETED_VISIT # defaults 3 and true
 WORKER_RATING_UPDATE_WINDOW, WORKER_RANK_PRIOR_MEAN, WORKER_RANK_PRIOR_WEIGHT
 ```
 
-`DEV_SEED_ENABLED`, `DEV_SEED_AUTO_ACCEPT_OFFERS`, and `DEV_SEED_AUTO_PROGRESS` must remain `false` in production. The production startup guard rejects the development seed or either seeded-worker automation even if every other provider setting is valid.
+`DEV_SEED_ENABLED`, `DEV_SEED_AUTO_ACCEPT_OFFERS`, and `DEV_SEED_AUTO_PROGRESS` must remain `false` in production. `DEV_SEED_DEMO_CUSTOMER_EMAIL` and `DEV_SEED_DEMO_CUSTOMER_PHONE` must remain empty. The production startup guard rejects the development seed, seeded identities, or either seeded-worker automation even if every other provider setting is valid.
 
 Booking Service uses a separate arrival-verification adapter and state machine even when it shares the same Twilio account or Verify service. Production startup requires `ARRIVAL_OTP_PROVIDER=twilio-verify`, API-key credentials, and a Verify service SID; the development `stub` adapter is rejected by the production guard. Never log OTP codes, provider secrets, full home-contact numbers, or Twilio response bodies.
 
@@ -92,7 +95,7 @@ SMTP_AUTH
 SMTP_TLS_ENABLED
 ```
 
-Customer authentication email is sent directly by User Service over SMTP. Codes are never published to Kafka or an outbox. Use a dedicated random `AUTH_CODE_HMAC_SECRET`; do not reuse the JWT, database, SMTP, or service-auth secret. Production startup rejects a missing HMAC secret, local/Mailpit SMTP hosts, and non-SMTP sender adapters. Staff authentication continues to require Twilio Verify and is not part of the customer email-auth flow.
+Customer authentication email is sent directly by User Service over SMTP. Codes are never published to Kafka or an outbox. Use a dedicated random `AUTH_CODE_HMAC_SECRET`; do not reuse the JWT, database, SMTP, or service-auth secret. Customer and staff phone authentication both use the shared Twilio Verify adapter, while their endpoints, throttles, and account lookup remain separate. Production startup rejects a missing HMAC secret, local/Mailpit SMTP hosts, non-SMTP sender adapters, and any OTP provider other than `twilio-verify`. Never log or return an OTP. Arrival verification remains a separate booking workflow.
 
 Register `https://<api-host>/webhooks/razorpay` in Razorpay and subscribe to captured-payment events. Do not expose database, Kafka, Redis or service ports publicly.
 

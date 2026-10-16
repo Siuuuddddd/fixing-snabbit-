@@ -42,6 +42,7 @@ management:
 dev-seed:
   enabled: ${DEV_SEED_ENABLED:false}
   demo-customer-email: ${DEV_SEED_DEMO_CUSTOMER_EMAIL:}
+  demo-customer-phone: ${DEV_SEED_DEMO_CUSTOMER_PHONE:}
   demo-customer-name: ${DEV_SEED_DEMO_CUSTOMER_NAME:Demo Customer}
   plus-validity-days: ${DEV_SEED_PLUS_VALIDITY_DAYS:365}
   plus-extend-when-days-remain: ${DEV_SEED_PLUS_EXTEND_WHEN_DAYS_REMAIN:30}
@@ -59,6 +60,7 @@ auth:
   access-token-ttl: PT15M
   refresh-idle-ttl: ${AUTH_REFRESH_IDLE_TTL:P180D}
   refresh-absolute-ttl: ${AUTH_REFRESH_ABSOLUTE_TTL:}
+  short-session-absolute-ttl: ${AUTH_SHORT_SESSION_ABSOLUTE_TTL:PT24H}
   refresh-grace-window: ${AUTH_REFRESH_GRACE_WINDOW:PT10S}
   max-active-sessions: ${AUTH_MAX_ACTIVE_SESSIONS:10}
   account-rate-limit: ${AUTH_ACCOUNT_RATE_LIMIT:20}
@@ -87,6 +89,13 @@ email-auth:
   rate-limit-per-identity: ${AUTH_EMAIL_RATE_LIMIT_PER_IDENTITY:10}
   rate-limit-per-ip: ${AUTH_EMAIL_RATE_LIMIT_PER_IP:30}
   maximum-delay: ${AUTH_EMAIL_RATE_LIMIT_MAX_DELAY:PT5M}
+
+phone-auth:
+  resend-cooldown: ${AUTH_PHONE_RESEND_COOLDOWN:PT30S}
+  max-sends-per-hour: ${AUTH_PHONE_MAX_SENDS_PER_HOUR:5}
+  max-attempts: ${AUTH_PHONE_MAX_ATTEMPTS:5}
+  rate-limit-window: ${AUTH_PHONE_RATE_LIMIT_WINDOW:PT1M}
+  rate-limit-per-ip: ${AUTH_PHONE_RATE_LIMIT_PER_IP:30}
 
 otp:
   provider: ${OTP_PROVIDER:twilio-verify}

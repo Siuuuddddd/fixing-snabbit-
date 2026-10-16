@@ -5,7 +5,8 @@ import java.util.UUID
 data class CustomerSessionUser(
     val id: UUID,
     val name: String,
-    val email: String,
+    val email: String?,
+    val phoneNumber: String?,
     val pictureUrl: String?,
     val isNewUser: Boolean,
     val emailVerified: Boolean,

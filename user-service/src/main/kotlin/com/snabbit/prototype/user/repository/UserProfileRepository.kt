@@ -10,6 +10,10 @@ import org.springframework.data.repository.query.Param
 
 interface UserProfileRepository : JpaRepository<UserProfile, UUID> {
     fun findByPhoneE164(phoneE164: String): UserProfile?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from UserProfile user where user.phoneE164 = :phone")
+    fun findByPhoneForUpdate(@Param("phone") phone: String): UserProfile?
     fun findByGoogleSub(googleSub: String): UserProfile?
     fun findByEmailIgnoreCase(email: String): UserProfile?
 

@@ -65,6 +65,8 @@ class GatewayAuthorizationIntegrationTest {
             "/api/v1/auth/login",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
+            "/api/v1/auth/otp/request",
+            "/api/v1/auth/otp/verify",
             "/api/v1/worker-auth/google",
             "/api/v1/worker-auth/select-profile",
             "/api/v1/worker-auth/refresh",
@@ -83,10 +85,8 @@ class GatewayAuthorizationIntegrationTest {
     }
 
     @Test
-    fun `removed customer and worker OTP routes are not public while staff OTP remains public`() {
+    fun `customer and staff OTP routes are public while removed worker OTP stays protected`() {
         listOf(
-            "/api/v1/auth/otp/request",
-            "/api/v1/auth/otp/verify",
             "/api/v1/worker-auth/otp/request",
             "/api/v1/worker-auth/otp/verify",
         ).forEach { path ->

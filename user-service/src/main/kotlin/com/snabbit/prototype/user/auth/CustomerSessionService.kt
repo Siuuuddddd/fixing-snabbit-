@@ -35,16 +35,28 @@ class CustomerSessionService(
     private val clock: Clock,
 ) {
     @Transactional
-    fun create(user: UserProfile, deviceId: String?, deviceName: String?, isNewUser: Boolean): CustomerSessionResponse {
+    fun create(
+        user: UserProfile,
+        deviceId: String?,
+        deviceName: String?,
+        isNewUser: Boolean,
+        rememberMe: Boolean = true,
+    ): CustomerSessionResponse {
         val now = clock.instant()
         enforceCap(user.id, now)
         val rawRefresh = OpaqueToken.generate()
+        val absoluteExpiry = if (rememberMe) {
+            properties.refreshAbsoluteTtl?.let(now::plus)
+        } else {
+            now.plus(properties.shortSessionAbsoluteTtl)
+        }
         val session = CustomerSession(
             id = UUID.randomUUID(), userId = user.id, role = ROLE,
             refreshTokenHash = OpaqueToken.hash(rawRefresh), tokenFamilyId = UUID.randomUUID(),
             deviceId = clean(deviceId), deviceName = clean(deviceName), sharedLogin = false,
-            createdAt = now, lastUsedAt = now, idleExpiresAt = now.plus(properties.refreshIdleTtl),
-            absoluteExpiresAt = properties.refreshAbsoluteTtl?.let(now::plus),
+            createdAt = now, lastUsedAt = now,
+            idleExpiresAt = minExpiry(now.plus(properties.refreshIdleTtl), absoluteExpiry),
+            absoluteExpiresAt = absoluteExpiry,
         )
         sessions.save(session)
         return response(session, user, rawRefresh, isNewUser, now)
@@ -157,7 +169,8 @@ class CustomerSessionService(
     private fun userView(user: UserProfile, isNewUser: Boolean): CustomerSessionUser = CustomerSessionUser(
         id = user.id,
         name = user.displayName,
-        email = requireNotNull(user.email),
+        email = user.email,
+        phoneNumber = user.phoneE164,
         pictureUrl = user.pictureUrl,
         isNewUser = isNewUser,
         emailVerified = user.emailVerified,
