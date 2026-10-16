@@ -4,6 +4,12 @@ import androidx.compose.ui.graphics.Color
 
 val SnabbitPink = Color(0xFFF80E78)
 val SnabbitPinkDark = Color(0xFFFF5A9E)
+val LoginAccent = Color(0xFFF70673)
+val LoginAccentDark = Color(0xFFFF5A9E)
+val LoginBackdrop = Color(0xFFCB2F60)
+val LoginBackdropDark = Color(0xFF761B3D)
+val LoginTitle = Color(0xFF667085)
+val LoginTitleDark = Color(0xFFC6CAD4)
 val Saffron = Color(0xFFF8B020)
 val Mint = Color(0xFFE6F7F1)
 val Peach = Color(0xFFFFF1C5)

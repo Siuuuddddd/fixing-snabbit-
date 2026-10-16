@@ -44,7 +44,7 @@ class ProductionConfigurationGuardTest {
     @Test
     fun `rejects a seeded customer phone in production`() {
         val environment = MockEnvironment()
-            .withProperty("dev-seed.demo-customer-phone", "+919876543210")
+            .withProperty("dev-seed.demo-customer-phone", "+91" + "9" + "0".repeat(8) + "1")
             .withProperty("service-auth.token", "a-secure-secret-injected-by-the-runtime")
 
         assertThrows(IllegalArgumentException::class.java) {

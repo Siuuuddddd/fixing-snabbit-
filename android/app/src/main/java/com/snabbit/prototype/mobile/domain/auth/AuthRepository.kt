@@ -41,6 +41,19 @@ class AuthFailure(
 interface AuthRepository {
     suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult =
         error("Google sign-in is not implemented")
+    suspend fun signInWithGoogle(
+        credential: GoogleIdToken,
+        device: AuthDevice,
+        rememberMe: Boolean,
+    ): GoogleSignInResult = signInWithGoogle(credential, device)
+    suspend fun requestPhoneOtp(phoneNumber: String): Long = error("Phone OTP is not implemented")
+    suspend fun verifyPhoneOtp(
+        phoneNumber: String,
+        code: String,
+        rememberMe: Boolean,
+        name: String? = null,
+        device: AuthDevice = AuthDevice(),
+    ): AuthSession = error("Phone OTP is not implemented")
     suspend fun selectWorkerProfile(
         credential: GoogleIdToken,
         selectionToken: String,
@@ -60,7 +73,7 @@ data class AuthDevice(val id: String? = null, val name: String? = null)
 data class SessionUser(
     val id: String,
     val name: String,
-    val email: String,
+    val email: String?,
     val pictureUrl: String?,
     val isNewUser: Boolean,
     val role: String,

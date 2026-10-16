@@ -8,7 +8,22 @@ data class GoogleSignInRequestDto(
     val nonce: String? = null,
     val deviceId: String? = null,
     val deviceName: String? = null,
+    val rememberMe: Boolean = true,
 )
+
+@Serializable data class PhoneOtpRequestDto(val phoneNumber: String)
+
+@Serializable
+data class PhoneOtpVerifyRequestDto(
+    val phoneNumber: String,
+    val code: String,
+    val rememberMe: Boolean,
+    val name: String? = null,
+    val deviceId: String? = null,
+    val deviceName: String? = null,
+)
+
+@Serializable data class PhoneOtpAcceptedDto(val status: String, val retryAfterSeconds: Long)
 
 @Serializable
 data class WorkerSelectProfileRequestDto(
@@ -29,7 +44,8 @@ data class WorkerSelectProfileRequestDto(
 data class SessionUserDto(
     val id: String,
     val name: String,
-    val email: String,
+    val email: String? = null,
+    val phoneNumber: String? = null,
     val pictureUrl: String? = null,
     val isNewUser: Boolean = false,
     val role: String,

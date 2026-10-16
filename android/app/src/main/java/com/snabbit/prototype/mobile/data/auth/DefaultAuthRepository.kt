@@ -2,6 +2,8 @@ package com.snabbit.prototype.mobile.data.auth
 
 import com.snabbit.prototype.mobile.data.auth.remote.AuthRemoteDataSource
 import com.snabbit.prototype.mobile.data.auth.remote.GoogleSignInRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.PhoneOtpRequestDto
+import com.snabbit.prototype.mobile.data.auth.remote.PhoneOtpVerifyRequestDto
 import com.snabbit.prototype.mobile.data.auth.remote.RemoteGoogleSignInResult
 import com.snabbit.prototype.mobile.data.auth.remote.SessionResponseDto
 import com.snabbit.prototype.mobile.data.auth.remote.WorkerSelectProfileRequestDto
@@ -36,12 +38,20 @@ class DefaultAuthRepository(
         role: AppRole,
         json: Json,
     ) : this(remoteDataSource, role, json, LegacyAuthSessionStore(tokenStore))
-    override suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult = mapFailures {
+    override suspend fun signInWithGoogle(credential: GoogleIdToken, device: AuthDevice): GoogleSignInResult =
+        signInWithGoogle(credential, device, rememberMe = true)
+
+    override suspend fun signInWithGoogle(
+        credential: GoogleIdToken,
+        device: AuthDevice,
+        rememberMe: Boolean,
+    ): GoogleSignInResult = mapFailures {
         val request = GoogleSignInRequestDto(
             credential.value,
             credential.nonce,
             device.id,
             device.name,
+            rememberMe,
         )
         when (val result = remoteDataSource.signInWithGoogle(role, request)) {
             is RemoteGoogleSignInResult.Session -> GoogleSignInResult.Authenticated(store(result.value))
@@ -51,6 +61,24 @@ class DefaultAuthRepository(
                 result.value.workers.map { WorkerPickerOption(it.workerId, it.name, it.tier) },
             )
         }
+    }
+
+    override suspend fun requestPhoneOtp(phoneNumber: String): Long = mapFailures {
+        remoteDataSource.requestPhoneOtp(PhoneOtpRequestDto(phoneNumber)).retryAfterSeconds
+    }
+
+    override suspend fun verifyPhoneOtp(
+        phoneNumber: String,
+        code: String,
+        rememberMe: Boolean,
+        name: String?,
+        device: AuthDevice,
+    ): AuthSession = mapFailures {
+        store(
+            remoteDataSource.verifyPhoneOtp(
+                PhoneOtpVerifyRequestDto(phoneNumber, code, rememberMe, name, device.id, device.name),
+            ),
+        )
     }
 
     override suspend fun selectWorkerProfile(
@@ -117,6 +145,9 @@ class DefaultAuthRepository(
             "SESSION_REVOKED" -> AuthFailureReason.SESSION_REVOKED
             "REFRESH_IN_PROGRESS" -> AuthFailureReason.REFRESH_IN_PROGRESS
             "RATE_LIMITED" -> AuthFailureReason.RATE_LIMITED
+            "INVALID_OR_EXPIRED_CODE" -> AuthFailureReason.INVALID_OR_EXPIRED_CODE
+            "TOO_MANY_ATTEMPTS" -> AuthFailureReason.TOO_MANY_ATTEMPTS
+            "OTP_PROVIDER_UNAVAILABLE" -> AuthFailureReason.SERVER
             "PHONE_REQUIRED" -> AuthFailureReason.PHONE_REQUIRED
             "SHARED_WORKER_SESSION_REQUIRED" -> AuthFailureReason.SHARED_WORKER_SESSION_REQUIRED
             else -> when (failure.code()) {
@@ -126,7 +157,7 @@ class DefaultAuthRepository(
             else -> if (problem?.errorCode == "WORKER_PROFILE_REQUIRED") AuthFailureReason.WORKER_PROFILE_REQUIRED else AuthFailureReason.UNKNOWN
             }
         }
-        throw AuthFailure(reason, problem?.detail)
+        throw AuthFailure(reason, problem?.detail, problem?.retryAfterSeconds)
     } catch (failure: CancellationException) {
         throw failure
     } catch (failure: Exception) {
@@ -150,7 +181,8 @@ class DefaultAuthRepository(
                 response.user.pictureUrl,
                 response.user.isNewUser,
                 response.user.role,
-                sessionStore?.current()?.user?.takeIf { it.id == response.user.id }?.phoneNumber,
+                response.user.phoneNumber
+                    ?: sessionStore?.current()?.user?.takeIf { it.id == response.user.id }?.phoneNumber,
                 response.user.emailVerified,
                 response.user.hasPassword,
                 response.user.authProviders.toSet(),

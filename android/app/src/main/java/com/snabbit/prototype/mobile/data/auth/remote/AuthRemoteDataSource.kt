@@ -10,6 +10,10 @@ sealed interface RemoteGoogleSignInResult {
 }
 
 interface AuthRemoteDataSource {
+    suspend fun requestPhoneOtp(request: PhoneOtpRequestDto): PhoneOtpAcceptedDto =
+        error("Phone OTP is not implemented")
+    suspend fun verifyPhoneOtp(request: PhoneOtpVerifyRequestDto): SessionResponseDto =
+        error("Phone OTP is not implemented")
     suspend fun signInWithGoogle(role: AppRole, request: GoogleSignInRequestDto): RemoteGoogleSignInResult =
         error("Google sign-in is not implemented")
     suspend fun selectWorkerProfile(request: WorkerSelectProfileRequestDto): SessionResponseDto =
@@ -25,6 +29,8 @@ class RetrofitAuthRemoteDataSource(
     private val api: AuthApi,
     private val json: Json,
 ) : AuthRemoteDataSource {
+    override suspend fun requestPhoneOtp(request: PhoneOtpRequestDto) = api.requestPhoneOtp(request)
+    override suspend fun verifyPhoneOtp(request: PhoneOtpVerifyRequestDto) = api.verifyPhoneOtp(request)
     override suspend fun signInWithGoogle(role: AppRole, request: GoogleSignInRequestDto): RemoteGoogleSignInResult =
         when (role) {
             AppRole.CUSTOMER -> RemoteGoogleSignInResult.Session(api.googleCustomer(request))

@@ -56,7 +56,7 @@ private data class StoredSession(
     val refreshToken: String,
     val userId: String,
     val userName: String,
-    val userEmail: String,
+    val userEmail: String? = null,
     val pictureUrl: String?,
     val isNewUser: Boolean,
     val role: String,

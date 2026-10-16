@@ -8,7 +8,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.snabbit.prototype.mobile.domain.auth.AuthFailure
@@ -26,7 +26,12 @@ class CredentialManagerGoogleIdTokenProvider(
     override suspend fun requestIdToken(): GoogleIdToken {
         if (serverClientId.isBlank()) throw AuthFailure(AuthFailureReason.NOT_CONFIGURED)
         val nonce = randomNonce()
-        val option = GetSignInWithGoogleOption.Builder(serverClientId).setNonce(nonce).build()
+        val option = GetGoogleIdOption.Builder()
+            .setServerClientId(serverClientId)
+            .setFilterByAuthorizedAccounts(false)
+            .setAutoSelectEnabled(false)
+            .setNonce(nonce)
+            .build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         return try {
             val credential = credentialManager.getCredential(activity, request).credential

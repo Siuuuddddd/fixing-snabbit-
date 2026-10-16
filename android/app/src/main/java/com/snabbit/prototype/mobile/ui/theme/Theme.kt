@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val ColorWhite = androidx.compose.ui.graphics.Color.White
 
@@ -36,10 +37,17 @@ fun SnabbitTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = SnabbitTypography,
-        shapes = SnabbitShapes,
-        content = content,
-    )
+    val loginColors = if (darkTheme) {
+        LoginColors(LoginAccentDark, LoginBackdropDark, LoginTitleDark)
+    } else {
+        LoginColors(LoginAccent, LoginBackdrop, LoginTitle)
+    }
+    CompositionLocalProvider(LocalLoginColors provides loginColors) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            typography = SnabbitTypography,
+            shapes = SnabbitShapes,
+            content = content,
+        )
+    }
 }

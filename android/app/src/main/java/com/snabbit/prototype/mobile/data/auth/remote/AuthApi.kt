@@ -15,6 +15,12 @@ import retrofit2.http.Path
 import kotlinx.serialization.json.JsonObject
 
 interface AuthApi {
+    @POST("api/v1/auth/otp/request")
+    suspend fun requestPhoneOtp(@Body request: PhoneOtpRequestDto): PhoneOtpAcceptedDto
+
+    @POST("api/v1/auth/otp/verify")
+    suspend fun verifyPhoneOtp(@Body request: PhoneOtpVerifyRequestDto): SessionResponseDto
+
     @POST("api/v1/auth/register")
     suspend fun register(@Body request: EmailRegisterRequestDto): AcceptedAuthRequestDto
 

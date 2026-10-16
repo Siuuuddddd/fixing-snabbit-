@@ -34,6 +34,12 @@ import com.snabbit.prototype.mobile.ui.components.SnabbitBottomBar
 import com.snabbit.prototype.mobile.ui.login.LoginScreen
 import com.snabbit.prototype.mobile.ui.login.LoginUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
+import com.snabbit.prototype.mobile.ui.login.CustomerLoginScreen
+import com.snabbit.prototype.mobile.ui.login.CustomerLoginUiEvent
+import com.snabbit.prototype.mobile.ui.login.CustomerLoginViewModel
+import com.snabbit.prototype.mobile.ui.login.PhoneOtpScreen
+import com.snabbit.prototype.mobile.ui.login.PhoneOtpUiEvent
+import com.snabbit.prototype.mobile.ui.login.PhoneOtpViewModel
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerScreen
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerViewModel
 import com.snabbit.prototype.mobile.ui.emailauth.AuthUiEvent
@@ -171,59 +177,42 @@ private fun AuthenticationFlow(
             }
             entry<LoginRoute> {
                 val context = LocalContext.current
-                val googleViewModel = koinViewModel<LoginViewModel> { parametersOf(googleIdTokenProvider) }
-                val googleState by googleViewModel.uiState.collectAsStateWithLifecycle()
-                LaunchedEffect(googleViewModel) {
-                    googleViewModel.events.collect { event ->
-                        when (event) {
-                            LoginUiEvent.Authenticated -> onAuthenticated()
-                            LoginUiEvent.OpenWorkerPicker -> backStack.replaceWith(WorkerPickerRoute)
-                            LoginUiEvent.AddGoogleAccount -> context.startActivity(
-                                Intent(Settings.ACTION_ADD_ACCOUNT).putExtra(
-                                    Settings.EXTRA_ACCOUNT_TYPES,
-                                    arrayOf("com.google"),
-                                ),
-                            )
-                        }
-                    }
-                }
                 if (role == AppRole.CUSTOMER) {
-                    val emailViewModel = koinViewModel<AuthViewModel>()
-                    val emailState by emailViewModel.uiState.collectAsStateWithLifecycle()
-                    LaunchedEffect(emailViewModel) {
-                        emailViewModel.events.collect { event ->
+                    val viewModel = koinViewModel<CustomerLoginViewModel> { parametersOf(googleIdTokenProvider) }
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(viewModel) {
+                        viewModel.events.collect { event ->
                             when (event) {
-                                AuthUiEvent.Authenticated -> onAuthenticated()
-                                is AuthUiEvent.VerifyEmail -> backStack.replaceWith(VerifyEmailRoute(event.email))
+                                CustomerLoginUiEvent.Authenticated -> onAuthenticated()
+                                CustomerLoginUiEvent.AddGoogleAccount -> context.openGoogleAccountSettings()
+                                is CustomerLoginUiEvent.OpenEmail -> backStack.add(EmailAuthRoute(event.rememberMe))
+                                is CustomerLoginUiEvent.OpenOtp -> backStack.add(
+                                    PhoneOtpRoute(event.phoneNumber, event.rememberMe, event.resendSeconds),
+                                )
                             }
                         }
                     }
-                    CustomerAuthScreen(
-                        state = emailState,
-                        googleState = googleState,
-                        onSelectTab = emailViewModel::selectTab,
-                        onLoginEmailChanged = emailViewModel::updateLoginEmail,
-                        onLoginPasswordChanged = emailViewModel::updateLoginPassword,
-                        onSignUpNameChanged = emailViewModel::updateSignUpName,
-                        onSignUpEmailChanged = emailViewModel::updateSignUpEmail,
-                        onSignUpPasswordChanged = emailViewModel::updateSignUpPassword,
-                        onTermsChanged = emailViewModel::setTermsAccepted,
-                        onTogglePassword = emailViewModel::togglePasswordVisibility,
-                        onEmailBlur = emailViewModel::validateEmailOnBlur,
-                        onNameBlur = emailViewModel::validateNameOnBlur,
-                        onPasswordBlur = emailViewModel::validatePasswordOnBlur,
-                        onSubmit = emailViewModel::submit,
-                        onForgotPassword = {
-                            val email = emailState.loginEmail.ifBlank { emailState.signUpEmail }
-                            backStack.add(ForgotPasswordRoute(email))
-                        },
-                        onContinueWithGoogle = googleViewModel::continueWithGoogle,
-                        onAddGoogleAccount = googleViewModel::addGoogleAccount,
-                        onTerms = {},
-                        onPrivacy = {},
-                        onDismissNotice = emailViewModel::dismissNotice,
+                    CustomerLoginScreen(
+                        state = state,
+                        onPhoneChanged = viewModel::updatePhone,
+                        onRememberChanged = viewModel::setRememberMe,
+                        onContinue = viewModel::continueWithPhone,
+                        onGoogle = viewModel::continueWithGoogle,
+                        onAddGoogleAccount = viewModel::addGoogleAccount,
+                        onEmail = viewModel::openEmail,
                     )
                 } else {
+                    val googleViewModel = koinViewModel<LoginViewModel> { parametersOf(googleIdTokenProvider) }
+                    val googleState by googleViewModel.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(googleViewModel) {
+                        googleViewModel.events.collect { event ->
+                            when (event) {
+                                LoginUiEvent.Authenticated -> onAuthenticated()
+                                LoginUiEvent.OpenWorkerPicker -> backStack.replaceWith(WorkerPickerRoute)
+                                LoginUiEvent.AddGoogleAccount -> context.openGoogleAccountSettings()
+                            }
+                        }
+                    }
                     LoginScreen(
                         state = googleState,
                         onContinueWithGoogle = googleViewModel::continueWithGoogle,
@@ -231,8 +220,63 @@ private fun AuthenticationFlow(
                     )
                 }
             }
+            entry<PhoneOtpRoute> { route ->
+                val viewModel = koinViewModel<PhoneOtpViewModel> {
+                    parametersOf(route.phoneNumber, route.rememberMe, route.resendSeconds)
+                }
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(viewModel) {
+                    viewModel.events.collect { event ->
+                        if (event == PhoneOtpUiEvent.Authenticated) onAuthenticated()
+                    }
+                }
+                PhoneOtpScreen(
+                    state = state,
+                    onCodeChanged = viewModel::updateCode,
+                    onVerify = viewModel::submit,
+                    onResend = viewModel::resend,
+                    onChangeNumber = { backStack.removeLastOrNull() },
+                )
+            }
+            entry<EmailAuthRoute> { route ->
+                val emailViewModel = koinViewModel<AuthViewModel> { parametersOf(route.rememberMe) }
+                val emailState by emailViewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(emailViewModel) {
+                    emailViewModel.events.collect { event ->
+                        when (event) {
+                            AuthUiEvent.Authenticated -> onAuthenticated()
+                            is AuthUiEvent.VerifyEmail -> backStack.add(VerifyEmailRoute(event.email, event.rememberMe))
+                        }
+                    }
+                }
+                CustomerAuthScreen(
+                    state = emailState,
+                    googleState = null,
+                    onSelectTab = emailViewModel::selectTab,
+                    onLoginEmailChanged = emailViewModel::updateLoginEmail,
+                    onLoginPasswordChanged = emailViewModel::updateLoginPassword,
+                    onSignUpNameChanged = emailViewModel::updateSignUpName,
+                    onSignUpEmailChanged = emailViewModel::updateSignUpEmail,
+                    onSignUpPasswordChanged = emailViewModel::updateSignUpPassword,
+                    onTermsChanged = emailViewModel::setTermsAccepted,
+                    onTogglePassword = emailViewModel::togglePasswordVisibility,
+                    onEmailBlur = emailViewModel::validateEmailOnBlur,
+                    onNameBlur = emailViewModel::validateNameOnBlur,
+                    onPasswordBlur = emailViewModel::validatePasswordOnBlur,
+                    onSubmit = emailViewModel::submit,
+                    onForgotPassword = {
+                        val email = emailState.loginEmail.ifBlank { emailState.signUpEmail }
+                        backStack.add(ForgotPasswordRoute(email))
+                    },
+                    onContinueWithGoogle = {},
+                    onAddGoogleAccount = {},
+                    onTerms = {},
+                    onPrivacy = {},
+                    onDismissNotice = emailViewModel::dismissNotice,
+                )
+            }
             entry<VerifyEmailRoute> { route ->
-                val viewModel = koinViewModel<VerifyEmailViewModel> { parametersOf(route.email) }
+                val viewModel = koinViewModel<VerifyEmailViewModel> { parametersOf(route.email, route.rememberMe) }
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 LaunchedEffect(viewModel) {
                     viewModel.events.collect { event ->
@@ -285,6 +329,15 @@ private fun AuthenticationFlow(
 private fun NavBackStack<NavKey>.replaceWith(route: NavKey) {
     clear()
     add(route)
+}
+
+private fun android.content.Context.openGoogleAccountSettings() {
+    startActivity(
+        Intent(Settings.ACTION_ADD_ACCOUNT).putExtra(
+            Settings.EXTRA_ACCOUNT_TYPES,
+            arrayOf("com.google"),
+        ),
+    )
 }
 
 @OptIn(KoinExperimentalAPI::class)

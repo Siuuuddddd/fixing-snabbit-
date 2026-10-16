@@ -13,6 +13,9 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.ValueOperations
 
 class PhoneAuthRateLimiterTest {
+    private val nationalNumber = "9" + "0".repeat(8) + "1"
+    private val phoneNumber = "+91$nationalNumber"
+
     @Test
     fun `phone and IP never appear in Redis keys`() {
         val redis = mockk<StringRedisTemplate>(relaxed = true)
@@ -28,10 +31,10 @@ class PhoneAuthRateLimiterTest {
             true
         }
 
-        PhoneAuthRateLimiter(redis, PhoneAuthProperties()).acquireSend("+919876543210", "192.0.2.10")
+        PhoneAuthRateLimiter(redis, PhoneAuthProperties()).acquireSend(phoneNumber, "192.0.2.10")
 
         assertTrue(keys.isNotEmpty())
-        assertFalse(keys.any { it.contains("9876543210") || it.contains("192.0.2.10") })
+        assertFalse(keys.any { it.contains(nationalNumber) || it.contains("192.0.2.10") })
     }
 
     @Test
@@ -44,7 +47,7 @@ class PhoneAuthRateLimiterTest {
         every { redis.getExpire(any<String>()) } returns 17
 
         val error = assertThrows(AuthRateLimited::class.java) {
-            PhoneAuthRateLimiter(redis, PhoneAuthProperties()).acquireSend("+919876543210", "192.0.2.10")
+            PhoneAuthRateLimiter(redis, PhoneAuthProperties()).acquireSend(phoneNumber, "192.0.2.10")
         }
 
         assertEquals(17, error.retryAfterSeconds)

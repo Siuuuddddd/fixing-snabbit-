@@ -78,12 +78,14 @@ import com.snabbit.prototype.mobile.domain.auth.GoogleIdTokenProvider
 import com.snabbit.prototype.mobile.domain.auth.ObserveSessionUseCase
 import com.snabbit.prototype.mobile.domain.auth.PendingWorkerSelectionStore
 import com.snabbit.prototype.mobile.domain.auth.RefreshSessionUseCase
+import com.snabbit.prototype.mobile.domain.auth.RequestPhoneOtpUseCase
 import com.snabbit.prototype.mobile.domain.auth.SelectWorkerProfileUseCase
 import com.snabbit.prototype.mobile.domain.auth.SessionStore
 import com.snabbit.prototype.mobile.domain.auth.SignInWithGoogleUseCase
 import com.snabbit.prototype.mobile.domain.auth.SignOutAllUseCase
 import com.snabbit.prototype.mobile.domain.auth.SignOutUseCase
 import com.snabbit.prototype.mobile.domain.auth.SwitchWorkerProfileUseCase
+import com.snabbit.prototype.mobile.domain.auth.VerifyPhoneOtpUseCase
 import com.snabbit.prototype.mobile.domain.auth.AuthNoticeStore
 import com.snabbit.prototype.mobile.domain.auth.ChangePasswordUseCase
 import com.snabbit.prototype.mobile.domain.auth.EmailAuthRepository
@@ -171,6 +173,8 @@ import com.snabbit.prototype.mobile.ui.home.HomeScreen
 import com.snabbit.prototype.mobile.ui.home.HomeViewModel
 import com.snabbit.prototype.mobile.ui.home.HomeUiEvent
 import com.snabbit.prototype.mobile.ui.login.LoginViewModel
+import com.snabbit.prototype.mobile.ui.login.CustomerLoginViewModel
+import com.snabbit.prototype.mobile.ui.login.PhoneOtpViewModel
 import com.snabbit.prototype.mobile.ui.login.WorkerPickerViewModel
 import com.snabbit.prototype.mobile.ui.onboarding.OnboardingViewModel
 import com.snabbit.prototype.mobile.ui.placeholder.PlaceholderScreen
@@ -314,6 +318,8 @@ private val repositoryModule = module {
     factory { (provider: GoogleIdTokenProvider) -> SelectWorkerProfileUseCase(provider, get()) }
     factory { SwitchWorkerProfileUseCase(get()) }
     factory { RefreshSessionUseCase(get()) }
+    factory { RequestPhoneOtpUseCase(get()) }
+    factory { VerifyPhoneOtpUseCase(get()) }
     factory { (provider: GoogleIdTokenProvider) -> SignOutUseCase(get(), provider) }
     factory { (provider: GoogleIdTokenProvider) -> SignOutAllUseCase(get(), provider) }
     factory { ObserveSessionUseCase(get()) }
@@ -376,8 +382,18 @@ private val viewModelModule = module {
     viewModel { (provider: GoogleIdTokenProvider) ->
         LoginViewModel(SignInWithGoogleUseCase(provider, get()), get(), BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank())
     }
-    viewModel { AuthViewModel(get(), get(), get(), get(), get(), get()) }
-    viewModel { (email: String) -> VerifyEmailViewModel(email, get(), get(), get(), get()) }
+    viewModel { (provider: GoogleIdTokenProvider) ->
+        CustomerLoginViewModel(get(), SignInWithGoogleUseCase(provider, get()), BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank())
+    }
+    viewModel { (phone: String, rememberMe: Boolean, resendSeconds: Long) ->
+        PhoneOtpViewModel(phone, rememberMe, resendSeconds, get(), get())
+    }
+    viewModel { (rememberMe: Boolean) ->
+        AuthViewModel(get(), get(), get(), get(), get(), get(), rememberMe = rememberMe)
+    }
+    viewModel { (email: String, rememberMe: Boolean) ->
+        VerifyEmailViewModel(email, get(), get(), get(), get(), rememberMe = rememberMe)
+    }
     viewModel { (email: String) -> ForgotPasswordViewModel(email, get(), get(), get(), get()) }
     viewModel { (provider: GoogleIdTokenProvider) ->
         WorkerPickerViewModel(provider, SelectWorkerProfileUseCase(provider, get()), get())

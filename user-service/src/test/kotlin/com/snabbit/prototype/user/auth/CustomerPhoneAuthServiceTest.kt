@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.ObjectProvider
 
 class CustomerPhoneAuthServiceTest {
+    private val nationalNumber = "9" + "0".repeat(8) + "1"
+    private val phoneNumber = "+91$nationalNumber"
     private val provider = mockk<PhoneVerificationProvider>(relaxed = true)
     private val challenges = mockk<OtpChallengeStore>(relaxed = true)
     private val limiter = mockk<PhoneAuthRateLimiter>(relaxed = true)
@@ -53,46 +55,46 @@ class CustomerPhoneAuthServiceTest {
 
     @Test
     fun `request normalizes Indian phone and never returns provider debug code`() {
-        every { provider.start("+919876543210") } returns VerificationStartResult(300, debugCode = "123456")
+        every { provider.start(phoneNumber) } returns VerificationStartResult(300, debugCode = "123456")
 
-        val retryAfter = service.request("9876543210", "192.0.2.10")
+        val retryAfter = service.request(nationalNumber, "192.0.2.10")
 
         assertEquals(30, retryAfter)
-        verify { limiter.acquireSend("+919876543210", "192.0.2.10") }
-        verify { provider.start("+919876543210") }
+        verify { limiter.acquireSend(phoneNumber, "192.0.2.10") }
+        verify { provider.start(phoneNumber) }
     }
 
     @Test
     fun `approved code creates phone-only customer and forwards remember choice`() {
-        every { provider.check("+919876543210", "123456") } returns VerificationStatus.APPROVED
-        every { users.findByPhoneForUpdate("+919876543210") } returns null
+        every { provider.check(phoneNumber, "123456") } returns VerificationStatus.APPROVED
+        every { users.findByPhoneForUpdate(phoneNumber) } returns null
         val saved = slot<UserProfile>()
         every { users.save(capture(saved)) } answers { firstArg() }
         val response = response()
         every { sessions.create(any(), any(), any(), true, false) } returns response
 
         val actual = service.verify(
-            PhoneOtpVerifyRequest("9876543210", "123456", "Asha", rememberMe = false),
+            PhoneOtpVerifyRequest(nationalNumber, "123456", "Test Customer", rememberMe = false),
             "192.0.2.10",
         )
 
         assertEquals(response, actual)
-        assertEquals("+919876543210", saved.captured.phoneE164)
+        assertEquals(phoneNumber, saved.captured.phoneE164)
         assertEquals(null, saved.captured.email)
-        assertEquals("Asha", saved.captured.displayName)
+        assertEquals("Test Customer", saved.captured.displayName)
         verify { sessions.create(saved.captured, null, null, true, false) }
     }
 
     @Test
     fun `fifth wrong code burns challenge`() {
-        every { provider.check("+919876543210", "000000") } returns VerificationStatus.WRONG_CODE
+        every { provider.check(phoneNumber, "000000") } returns VerificationStatus.WRONG_CODE
         every { challenges.incrementAttempts(any(), authProperties.otpTtl) } returns 5
 
         assertThrows(TooManyCodeAttempts::class.java) {
-            service.verify(PhoneOtpVerifyRequest("+919876543210", "000000"), "192.0.2.10")
+            service.verify(PhoneOtpVerifyRequest(phoneNumber, "000000"), "192.0.2.10")
         }
 
-        verify { provider.clear("+919876543210") }
+        verify { provider.clear(phoneNumber) }
         verify { challenges.clear(any()) }
     }
 
@@ -101,7 +103,7 @@ class CustomerPhoneAuthServiceTest {
         expiresIn = 900,
         refreshToken = "refresh",
         user = CustomerSessionUser(
-            UUID.randomUUID(), "Asha", null, "+919876543210", null,
+            UUID.randomUUID(), "Test Customer", null, phoneNumber, null,
             true, false, false, setOf("PHONE"),
         ),
     )

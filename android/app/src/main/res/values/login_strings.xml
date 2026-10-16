@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_banner_description">Snabbit house help in 10 minutes</string>
+    <string name="login_or_signup">Log in or sign up</string>
+    <string name="india_flag_description">India</string>
+    <string name="india_dial_code">+91</string>
+    <string name="enter_phone_number">Enter Phone Number</string>
+    <string name="remember_login">Remember my login for faster sign-in</string>
+    <string name="login_continue">Continue</string>
+    <string name="google_login_description">Continue with Google</string>
+    <string name="email_login_description">Continue with email</string>
+    <string name="login_legal_intro">By continuing, you agree to our</string>
+    <string name="terms_of_service">Terms of Service</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="content_policy">Content Policy</string>
+    <string name="login_error_invalid_phone">Enter a valid 10-digit Indian mobile number.</string>
+    <string name="login_error_server">Sign-in is temporarily unavailable. Please try again.</string>
+    <string name="phone_otp_title">Enter verification code</string>
+    <string name="phone_otp_subtitle">Enter the 6-digit code sent to %1$s</string>
+    <string name="phone_otp_code">6-digit code</string>
+    <string name="phone_otp_verify">Verify and continue</string>
+    <string name="phone_otp_resend">Resend code</string>
+    <string name="phone_otp_resend_countdown">Resend code in %1$d seconds</string>
+    <string name="phone_otp_change_number">Change number</string>
+    <string name="phone_otp_error_invalid">That code is invalid or expired. Request a new code and try again.</string>
+    <string name="phone_otp_error_attempts">Too many incorrect attempts. Request a new code.</string>
+</resources>

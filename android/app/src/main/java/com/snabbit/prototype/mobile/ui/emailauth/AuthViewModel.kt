@@ -52,7 +52,7 @@ data class AuthUiState(
 
 sealed interface AuthUiEvent {
     data object Authenticated : AuthUiEvent
-    data class VerifyEmail(val email: String) : AuthUiEvent
+    data class VerifyEmail(val email: String, val rememberMe: Boolean = true) : AuthUiEvent
 }
 
 class AuthViewModel(
@@ -63,6 +63,7 @@ class AuthViewModel(
     private val credentialSaver: PasswordCredentialSaver,
     noticeStore: AuthNoticeStore,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val rememberMe: Boolean = true,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState(notice = noticeStore.consume()))
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -115,7 +116,7 @@ class AuthViewModel(
         }
         _uiState.update { it.copy(isSubmitting = true, error = null) }
         viewModelScope.launch(dispatcher) {
-            runCatching { login(EmailValidator.normalize(state.loginEmail), state.loginPassword) }
+            runCatching { login(EmailValidator.normalize(state.loginEmail), state.loginPassword, rememberMe) }
                 .onSuccess {
                     val email = EmailValidator.normalize(state.loginEmail)
                     val password = state.loginPassword
@@ -127,7 +128,7 @@ class AuthViewModel(
                     if ((failure as? AuthFailure)?.reason == AuthFailureReason.EMAIL_NOT_VERIFIED) {
                         pendingCredential.clear()
                         _uiState.update { it.copy(isSubmitting = false, loginPassword = "") }
-                        _events.emit(AuthUiEvent.VerifyEmail(EmailValidator.normalize(state.loginEmail)))
+                        _events.emit(AuthUiEvent.VerifyEmail(EmailValidator.normalize(state.loginEmail), rememberMe))
                     } else {
                         val error = failure.toEmailAuthError()
                         _uiState.update {
@@ -159,7 +160,7 @@ class AuthViewModel(
                 .onSuccess {
                     pendingCredential.save(email, state.signUpPassword)
                     _uiState.update { it.copy(isSubmitting = false, signUpPassword = "") }
-                    _events.emit(AuthUiEvent.VerifyEmail(email))
+                    _events.emit(AuthUiEvent.VerifyEmail(email, rememberMe))
                 }
                 .onFailure { failure ->
                     val error = failure.toEmailAuthError()

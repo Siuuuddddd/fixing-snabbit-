@@ -58,7 +58,7 @@ class DefaultProfileRepository(
         val storedUser = sessionStore.current()?.user ?: throw DataFailure(DataFailureReason.UNAUTHORIZED)
         if (role == AppRole.WORKER) return ProfileSummary(
             subject, role.name, null, null, null, null,
-            storedUser.name, storedUser.email, storedUser.pictureUrl, storedUser.phoneNumber,
+            storedUser.name, storedUser.email.orEmpty(), storedUser.pictureUrl, storedUser.phoneNumber,
         )
         return coroutineScope {
             val user = async { emailAuth?.currentCustomer() ?: storedUser }
@@ -81,7 +81,7 @@ class DefaultProfileRepository(
                 plusSnapshot.active,
                 plusSnapshot.availablePasses,
                 customer.name,
-                customer.email,
+                customer.email.orEmpty(),
                 customer.pictureUrl,
                 customer.phoneNumber,
                 customer.hasPassword,

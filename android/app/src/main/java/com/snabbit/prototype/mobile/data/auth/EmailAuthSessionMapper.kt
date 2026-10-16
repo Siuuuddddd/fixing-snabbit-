@@ -12,7 +12,7 @@ internal fun SessionUserDto.toDomain(phoneNumber: String? = null) = SessionUser(
     pictureUrl = pictureUrl,
     isNewUser = isNewUser,
     role = role,
-    phoneNumber = phoneNumber,
+    phoneNumber = phoneNumber ?: this.phoneNumber,
     emailVerified = emailVerified,
     hasPassword = hasPassword,
     authProviders = authProviders.toSet(),

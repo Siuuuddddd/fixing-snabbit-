@@ -6,8 +6,8 @@ class RegisterUseCase(private val repository: EmailAuthRepository) {
 }
 
 class VerifyEmailUseCase(private val repository: EmailAuthRepository) {
-    suspend operator fun invoke(email: String, code: String, device: AuthDevice = AuthDevice()) =
-        repository.verifyEmail(email, code, device)
+    suspend operator fun invoke(email: String, code: String, rememberMe: Boolean = true, device: AuthDevice = AuthDevice()) =
+        repository.verifyEmail(email, code, rememberMe, device)
 }
 
 class ResendVerificationUseCase(private val repository: EmailAuthRepository) {
@@ -15,8 +15,8 @@ class ResendVerificationUseCase(private val repository: EmailAuthRepository) {
 }
 
 class LoginWithPasswordUseCase(private val repository: EmailAuthRepository) {
-    suspend operator fun invoke(email: String, password: String, device: AuthDevice = AuthDevice()) =
-        repository.login(email, password, device)
+    suspend operator fun invoke(email: String, password: String, rememberMe: Boolean = true, device: AuthDevice = AuthDevice()) =
+        repository.login(email, password, rememberMe, device)
 }
 
 class ForgotPasswordUseCase(private val repository: EmailAuthRepository) {

@@ -27,20 +27,26 @@ class DefaultEmailAuthRepository(
     private val json: Json,
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1_000L },
 ) : EmailAuthRepository {
+    override suspend fun verifyEmail(email: String, code: String, device: AuthDevice): AuthSession =
+        verifyEmail(email, code, rememberMe = true, device = device)
+
     override suspend fun register(name: String, email: String, password: String, device: AuthDevice) = mapFailures {
         remote.register(EmailRegisterRequestDto(name.trim(), EmailValidator.normalize(email), password, true, device.id, device.name))
     }
 
-    override suspend fun verifyEmail(email: String, code: String, device: AuthDevice): AuthSession = mapFailures {
-        store(remote.verifyEmail(VerifyEmailRequestDto(EmailValidator.normalize(email), code, device.id, device.name)))
+    override suspend fun verifyEmail(email: String, code: String, rememberMe: Boolean, device: AuthDevice): AuthSession = mapFailures {
+        store(remote.verifyEmail(VerifyEmailRequestDto(EmailValidator.normalize(email), code, device.id, device.name, rememberMe)))
     }
 
     override suspend fun resendVerification(email: String) = mapFailures {
         remote.resendVerification(EmailOnlyRequestDto(EmailValidator.normalize(email)))
     }
 
-    override suspend fun login(email: String, password: String, device: AuthDevice): AuthSession = mapFailures {
-        store(remote.login(EmailLoginRequestDto(EmailValidator.normalize(email), password, device.id, device.name)))
+    override suspend fun login(email: String, password: String, device: AuthDevice): AuthSession =
+        login(email, password, rememberMe = true, device = device)
+
+    override suspend fun login(email: String, password: String, rememberMe: Boolean, device: AuthDevice): AuthSession = mapFailures {
+        store(remote.login(EmailLoginRequestDto(EmailValidator.normalize(email), password, device.id, device.name, rememberMe)))
     }
 
     override suspend fun forgotPassword(email: String) = mapFailures {
@@ -64,7 +70,8 @@ class DefaultEmailAuthRepository(
     }
 
     private fun store(response: com.snabbit.prototype.mobile.data.auth.remote.SessionResponseDto): AuthSession {
-        val phone = sessionStore.current()?.user?.takeIf { it.id == response.user.id }?.phoneNumber
+        val phone = response.user.phoneNumber
+            ?: sessionStore.current()?.user?.takeIf { it.id == response.user.id }?.phoneNumber
         return response.toDomain(nowEpochSeconds(), phone).also(sessionStore::save)
     }
 

@@ -18,6 +18,7 @@ data class VerifyEmailRequestDto(
     val code: String,
     val deviceId: String? = null,
     val deviceName: String? = null,
+    val rememberMe: Boolean = true,
 )
 
 @Serializable
@@ -26,6 +27,7 @@ data class EmailLoginRequestDto(
     val password: String,
     val deviceId: String? = null,
     val deviceName: String? = null,
+    val rememberMe: Boolean = true,
 )
 
 @Serializable data class EmailOnlyRequestDto(val email: String)

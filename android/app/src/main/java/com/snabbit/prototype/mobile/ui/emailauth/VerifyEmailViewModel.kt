@@ -41,6 +41,7 @@ class VerifyEmailViewModel(
     private val pendingCredential: PendingPasswordCredentialStore,
     private val credentialSaver: PasswordCredentialSaver,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val rememberMe: Boolean = true,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(VerifyEmailUiState(email))
     val uiState: StateFlow<VerifyEmailUiState> = _uiState.asStateFlow()
@@ -61,7 +62,7 @@ class VerifyEmailViewModel(
         if (state.isSubmitting || state.code.length != 6) return
         _uiState.update { it.copy(isSubmitting = true, error = null) }
         viewModelScope.launch(dispatcher) {
-            runCatching { verify(state.email, state.code) }
+            runCatching { verify(state.email, state.code, rememberMe) }
                 .onSuccess {
                     val credential = pendingCredential.consume(state.email)
                     _uiState.update { it.copy(isSubmitting = false, code = "") }

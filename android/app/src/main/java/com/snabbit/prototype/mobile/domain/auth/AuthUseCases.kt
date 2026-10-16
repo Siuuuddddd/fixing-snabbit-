@@ -4,8 +4,24 @@ class SignInWithGoogleUseCase(
     private val tokenProvider: GoogleIdTokenProvider,
     private val repository: AuthRepository,
 ) {
-    suspend operator fun invoke(device: AuthDevice = AuthDevice()): GoogleSignInResult =
-        repository.signInWithGoogle(tokenProvider.requestIdToken(), device)
+    suspend operator fun invoke(
+        device: AuthDevice = AuthDevice(),
+        rememberMe: Boolean = true,
+    ): GoogleSignInResult = repository.signInWithGoogle(tokenProvider.requestIdToken(), device, rememberMe)
+}
+
+class RequestPhoneOtpUseCase(private val repository: AuthRepository) {
+    suspend operator fun invoke(phoneNumber: String): Long = repository.requestPhoneOtp(phoneNumber)
+}
+
+class VerifyPhoneOtpUseCase(private val repository: AuthRepository) {
+    suspend operator fun invoke(
+        phoneNumber: String,
+        code: String,
+        rememberMe: Boolean,
+        name: String? = null,
+        device: AuthDevice = AuthDevice(),
+    ): AuthSession = repository.verifyPhoneOtp(phoneNumber, code, rememberMe, name, device)
 }
 
 class SelectWorkerProfileUseCase(

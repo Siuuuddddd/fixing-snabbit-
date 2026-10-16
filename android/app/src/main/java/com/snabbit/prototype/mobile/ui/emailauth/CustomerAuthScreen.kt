@@ -49,7 +49,7 @@ import com.snabbit.prototype.mobile.ui.theme.SnabbitSpacing
 @Composable
 fun CustomerAuthScreen(
     state: AuthUiState,
-    googleState: LoginUiState,
+    googleState: LoginUiState?,
     onSelectTab: (AuthTab) -> Unit,
     onLoginEmailChanged: (String) -> Unit,
     onLoginPasswordChanged: (String) -> Unit,
@@ -161,23 +161,25 @@ fun CustomerAuthScreen(
             if (state.isSubmitting) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             else Text(stringResource(if (state.tab == AuthTab.LOGIN) R.string.email_auth_login_action else R.string.email_auth_signup_action))
         }
-        Spacer(Modifier.height(SnabbitSpacing.large))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SnabbitSpacing.medium)) {
-            HorizontalDivider(Modifier.weight(1f)); Text(stringResource(R.string.email_auth_or)); HorizontalDivider(Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(SnabbitSpacing.medium))
-        Button(
-            onClick = onContinueWithGoogle,
-            enabled = googleState.isConfigured && !googleState.isLoading && !state.isSubmitting,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-        ) {
-            if (googleState.isLoading) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-            else Text(stringResource(R.string.continue_with_google))
-        }
-        googleState.error?.let { error ->
-            Spacer(Modifier.height(SnabbitSpacing.small))
-            Text(stringResource(error.googleMessageRes()), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
-            if (error == LoginError.NO_GOOGLE_ACCOUNT) TextButton(onClick = onAddGoogleAccount) { Text(stringResource(R.string.add_google_account)) }
+        if (googleState != null) {
+            Spacer(Modifier.height(SnabbitSpacing.large))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SnabbitSpacing.medium)) {
+                HorizontalDivider(Modifier.weight(1f)); Text(stringResource(R.string.email_auth_or)); HorizontalDivider(Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(SnabbitSpacing.medium))
+            Button(
+                onClick = onContinueWithGoogle,
+                enabled = googleState.isConfigured && !googleState.isLoading && !state.isSubmitting,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+            ) {
+                if (googleState.isLoading) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                else Text(stringResource(R.string.continue_with_google))
+            }
+            googleState.error?.let { error ->
+                Spacer(Modifier.height(SnabbitSpacing.small))
+                Text(stringResource(error.googleMessageRes()), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                if (error == LoginError.NO_GOOGLE_ACCOUNT) TextButton(onClick = onAddGoogleAccount) { Text(stringResource(R.string.add_google_account)) }
+            }
         }
     }
 }
