@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#fdf9f0">
+  <meta name="theme-color" content="#FDBDDE">
   <meta name="description" content="A field research and product strategy case study about the moments that make home services worth booking again.">
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Snabbit — Beyond the booking">
+  <meta property="og:title" content="Fixing Snabbit — Siddhesh">
   <meta property="og:description" content="Designing for the moments that make home services worth booking again.">
-  <title>Snabbit — Beyond the booking</title>
+  <title>Fixing Snabbit — Siddhesh</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.loom.com">
+  <link rel="preconnect" href="https://cdn.loom.com" crossorigin>
+  <link rel="preload" as="image" href="./assets/loom-poster.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="./assets/prototype/screen-01.png" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   <script src="./main.js" defer></script>
@@ -19,14 +23,22 @@
   <div class="note">
     <div class="note-chrome" aria-hidden="true">
       <div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
-      <div class="note-title-bar">Snabbit — Beyond the booking</div>
+      <div class="note-title-bar">Fixing Snabbit — Siddhesh</div>
     </div>
     <main class="note-body">
       <header class="hero" id="top">
-        <div class="note-date">Field Research + Product Strategy</div>
+        <div class="note-date">Customer Feedback + Product Refinement</div>
         <h1>Snabbit,<br>beyond the <em>booking</em></h1>
         <p class="subtitle">Designing for the moments that make home services worth booking again.</p>
       </header>
+
+      <div class="loom-frame">
+        <div class="loom-video">
+          <img class="loom-poster" src="./assets/loom-poster.jpg" alt="Preview of the Snabbit prototype walkthrough" width="1920" height="1440" fetchpriority="high">
+          <iframe src="https://www.loom.com/embed/301ed4fc642740b19b5bc93b68cd5cc7?hide_owner=true&amp;hide_share=true&amp;hide_title=true&amp;hideEmbedTopBar=true" title="Snabbit prototype walkthrough" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="eager" onload="this.dataset.loaded='true'"></iframe>
+          <button class="loom-play-button" type="button" aria-label="Play Snabbit prototype walkthrough"><span aria-hidden="true">▶</span></button>
+        </div>
+      </div>
 
       <section class="section" aria-labelledby="context-title">
         <div class="section-label">01 — Context</div>
@@ -39,48 +51,57 @@
       </section>
 
       <section class="section" aria-labelledby="research-title">
-        <div class="section-label">02 — Research / Insights</div>
+        <div class="section-label">02 — FIELD RESEARCH</div>
         <h2 id="research-title">What I kept hearing from people who need help regularly</h2>
-        <p class="section-intro">Four things kept coming up.</p>
-        <div class="findings-grid">
-          <article class="finding-card"><div class="number">Routine</div><div class="label">“Let me book the whole week at once”</div><div class="desc">If you need the shop cleaned every morning, booking it five times feels silly. You already know the days, the time, and probably which worker you want.</div></article>
-          <article class="finding-card"><div class="number">Quality</div><div class="label">“When my favourite isn’t free, the work drops”</div><div class="desc">A replacement may need every instruction again. The booking looks the same on screen, but the visit feels different.</div></article>
-          <article class="finding-card"><div class="number">Fit</div><div class="label">“The worker arrived, and then found out”</div><div class="desc">There may be pets inside, or non-vegetarian utensils the worker is not comfortable handling. Neither person had a chance to work that out beforehand.</div></article>
-          <article class="finding-card"><div class="number">Access</div><div class="label">“The OTP went to someone who wasn’t there”</div><div class="desc">When someone books for their mother or a colleague, the code can land on the booker’s phone while the worker waits at the door.</div></article>
-        </div>
-        <div class="insight-box"><div class="ititle">The pattern</div><div class="ibody">The tap to book is only the beginning. The visit works when the right worker arrives prepared, and the person at the door can let them start.</div></div>
+        <p>I kept seeing four breaks in the visit: booking again, trusting a replacement, sharing home details, and getting through the door.</p>
+        <div class="findings-grid"><article class="finding-card"><div class="number">Routine</div><div class="label">“Let me book the whole week at once”</div><div class="desc">A shop owner needs help every morning. Booking the same job five times takes time they could spend opening the shop.</div></article>
+          <article class="finding-card"><div class="number">Quality</div><div class="label">“When my favourite isn’t free, the work drops”</div><div class="desc">A familiar worker knows the home. A replacement may need every instruction again, and the customer cannot judge their work from a name and photo.</div></article>
+          <article class="finding-card"><div class="number">Fit</div><div class="label">“The worker arrived, and then found out”</div><div class="desc">Pets or non-vegetarian utensils come up at the door. The worker may be uncomfortable, and neither person had a chance to prepare.</div></article>
+          <article class="finding-card"><div class="number">Access</div><div class="label">“The OTP went to someone who wasn’t there”</div><div class="desc">A son books for his mother; a colleague books for the shop. The worker waits while the person at home calls the booker for the OTP.</div></article></div>
+        <div class="insight-box"><div class="ititle">The pattern</div><div class="ibody">Booking is only the beginning. The visit works when the right worker arrives prepared and can start.</div></div>
       </section>
 
       <section class="section" aria-labelledby="gap-title">
-        <div class="section-label">03 — The Gap</div>
+        <div class="section-label">03 — SOMETHING I NOTICED WHILE USING SNABBIT</div>
         <h2 id="gap-title">The booking is quick. The handoff at the door can still go wrong.</h2>
-        <div class="callout"><p><strong>One-off help:</strong> Someone needs a clean home today. Speed matters. The worker still needs to know what the home and job involve before arriving.</p></div>
-        <div class="callout callout-blue"><p><strong>Repeat help:</strong> A shop or office needs the same job done again tomorrow. They want to choose the days, know who is coming, and stop thinking about it.</p></div>
-        <p>In my family, my sister or I book for our mom. When the worker arrives, we are usually not home. The OTP comes to our phones, and if we miss her call, the worker waits. Booking took a few seconds. Starting the service took 10 minutes.</p>
-        <p>My neighbour had a different handoff problem. Her two dogs were leashed, but they barked and jumped at the door. The worker got scared. The app had never asked about pets, so the worker never knew.</p>
+        <p>Two small moments made this real for me.</p>
+        <p>First, I want to say thank you. Snabbit has really helped my mom with cooking and cleaning, and it’s just one tap away. But my mom isn’t comfortable with apps, so it’s always me or my sister who books for her. And when the worker arrives, we’re usually not home. The OTP comes to our phones, not hers. So she calls us, and we miss it because we’re in a meeting or the phone is on silent. The worker waits at the door, and sometimes my mom even tries the support line, which is harder for her than the app itself. Booking took a few seconds. Starting the service took 10 minutes.</p>
+        <p>The second thing came from my neighbour. She has two pet pitbulls, and they aren’t comfortable around strangers. When she booked Snabbit, the dogs were leashed, but they kept barking and jumping at the door. The worker got scared, did the bare minimum, and waited for the time to get over. Nobody did anything wrong. The app simply never asked about her pets, and the worker never knew.</p>
         <p>One problem is a code on the wrong phone. The other is a worker who did not know about the dogs. Both happen because a detail that matters at the door was missing earlier.</p>
+        <p>That changed how I thought about the problem. I wanted the person at home to receive the OTP, and the worker to know the conditions of the visit before arriving.</p>
+      </section>
+
+      <section class="section" aria-labelledby="people-title">
+        <div class="section-label">04 — WHAT PEOPLE ARE SAYING</div>
+        <h2 id="people-title">What customers say after the booking</h2>
+        <p>I also looked at what customers were saying in public. Their posts put words to the problems I had noticed: uncertain quality, late changes, and support that did not always resolve the issue.</p>
+        <div class="people-carousel">
+          <div class="carousel-viewport" id="people-carousel" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Public customer posts"><div class="carousel-track">
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-01.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 1"><img src="./assets/people-saying/post-01.png" alt="LinkedIn post about a late worker, cancellation charge and missing refund" loading="eager"></a><figcaption class="sr-only">Public post 1</figcaption></figure>
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-02.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 2"><img src="./assets/people-saying/post-02.png" alt="X post asking to book the same worker across multiple days" loading="eager"></a><figcaption class="sr-only">Public post 2</figcaption></figure>
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-03-bhagyashree.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 3"><img src="./assets/people-saying/post-03-bhagyashree.png" alt="LinkedIn post by Bhagyashree Saini about service quality and wanting the same worker again" loading="eager"></a><figcaption class="sr-only">Public post 3</figcaption></figure>
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-04.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 4"><img src="./assets/people-saying/post-04.png" alt="X post criticizing automated support replies" loading="eager"></a><figcaption class="sr-only">Public post 4</figcaption></figure>
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-05-arpita.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 5"><img src="./assets/people-saying/post-05-arpita.png" alt="LinkedIn post about a late worker, cancellation charge and missing refund" loading="eager"></a><figcaption class="sr-only">Public post 5</figcaption></figure>
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-06-deepika.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 6"><img src="./assets/people-saying/post-06-deepika.png" alt="LinkedIn comment by Deepika Singhal about inconsistent service quality and support" loading="eager"></a><figcaption class="sr-only">Public post 6</figcaption></figure>
+              <figure class="prototype-card post-card"><a class="post-open" href="./assets/people-saying/post-07-mansi.png" target="_blank" rel="noopener noreferrer" aria-label="Enlarge public post 7"><img src="./assets/people-saying/post-07-mansi.png" alt="LinkedIn comment by Mansi Agrawal about poor cleaning and worker conduct" loading="eager"></a><figcaption class="sr-only">Public post 7</figcaption></figure>
+          </div></div>
+          <div class="carousel-controls"><button class="carousel-button" id="people-prev" type="button" aria-label="Previous public post">←</button><div class="carousel-dots" id="people-dots" aria-label="Choose public post"></div><button class="carousel-button" id="people-next" type="button" aria-label="Next public post">→</button></div>
+          <p class="sr-only carousel-caption" id="people-caption" aria-live="polite"></p>
+        </div>
       </section>
 
       <section class="section" aria-labelledby="priorities-title">
-        <div class="section-label">04 — What I’d Do</div>
-        <h2 id="priorities-title">Four moments, three product priorities</h2>
-        <p class="section-intro">I built a prototype around the uncertainty before the worker reaches the door.</p>
-        <article class="strategy-block"><span class="stag">Priority 1 — Routine</span><h3>Pick the days. Pick the time. Pay once.</h3><p>A shop owner opening every morning already knows the job will be there tomorrow. I added Multi-day beside Today and Tomorrow: choose 2 to 10 days, set a duration and slot for each, then check out once.</p></article>
-        <article class="strategy-block blue"><span class="stag">Priority 2 — Quality and fit</span><h3>Your favourite first. A trained backup. No surprises at the door.</h3><p>The prototype groups workers into Expert, Veteran, and Standard tiers, then shows favourites if they are free. After a customer picks the service and time, a short sheet asks only relevant home questions. Worker cards show where preferences differ, and the customer can review each worker’s limits before choosing.</p><p>The tier rules and comfort limits use demo data. Workers would need to confirm these in a live service.</p></article>
-        <article class="strategy-block amber"><span class="stag">Priority 3 — Access</span><h3>Right person. Right phone. Right OTP.</h3><p>Checkout asks who will be at home. If the booker adds a name and number, the check-in code goes there. If they leave it blank, the app uses their own verified details.</p></article>
-      </section>
-
-      <section class="section" aria-labelledby="campaign-title">
-        <div class="section-label">05 — Campaign Ideas</div>
-        <h2 id="campaign-title">Some ideas I had</h2>
-        <p class="section-intro">If I were part of the team, this is what I’d want to work on.</p>
-        <article class="campaign-card"><div class="clabel">Idea 01</div><h3>Fire the auto-reply.</h3><p>Customers already explain what went wrong in public. I saw replies that apologised and asked for a phone number, but did not address the problem in the post. Give support room to say what happened, what happens next, and when the customer will hear back.</p></article>
-        <article class="campaign-card"><div class="clabel">Idea 02</div><h3>Ads can’t ring your doorbell. People can.</h3><p>A home service is personal. I would rather hear a neighbour say “I book her every week” than watch another perfect-looking ad. Let customers tell the story in their own words. Show a real worker and a real visit.</p></article>
-        <article class="campaign-card"><div class="clabel">Idea 03</div><h3>Give people a reason to come back.</h3><p>Show up every day with the moments people recognise: guests-arriving-in-an-hour panic, messy-house confessions, a sink nobody’s proud of. Repost real customers and reply like a friend. Keep serious support separate.</p></article>
+        <div class="section-label">04 — WHAT I FIXED</div>
+        <h2 id="priorities-title">Four moments I redesigned</h2>
+        <p>I built around four moments where a quick booking can still fail.</p>
+        <article class="strategy-block"><span class="stag">PRIORITY 1 — ROUTINE</span><h3>Pick the days. Pick the time. Pay once.</h3><p>“Let me book the whole week at once”</p><p>A shop owner knows tomorrow’s cleaning needs today. Repeating the same booking steals time before opening.</p><p class="doc-subhead">What I built</p><ol class="doc-list"><li>Added Multi-day beside Today and Tomorrow on Schedule.</li><li>Pick 2 to 10 days and each visit’s duration.</li><li>Choose a time slot for each day.</li><li>Pick each worker, ideally the same trusted person.</li><li>Pay once for all visits.</li></ol></article>
+        <article class="strategy-block"><span class="stag">PROBLEM 2 — QUALITY</span><h3>Your favourite first. A trained backup. Your call.</h3><p>When a trusted worker is unavailable, a name and photo cannot show the replacement’s skill. I wanted customers to see what they are choosing.</p><p class="doc-subhead">What I built</p><ol class="doc-list"><li>Three prototype tiers: Expert (9+ months), Veteran, Standard.</li><li>Show tier and price; validate training, experience, ratings before launch.</li><li>Snabbit+ is a 3-week pass for multi-day booking.</li><li>Save up to 3 rating-ranked favourites; show them first.</li><li>Then show tier-sorted workers; confirm similarly rated replacements.</li></ol></article>
+        <article class="strategy-block"><span class="stag">PROBLEM 3 — FIT</span><h3>Ask less. Match better. No surprises at the door.</h3><p>A worker may discover pets, non-veg utensils, or personal limits only at the door. That can end the visit before it starts.</p><p class="doc-subhead">What I built</p><ol class="doc-list"><li>After service and time, open “Check your home and visit details.”</li><li>Ask relevant tasks, pets, utensils, equipment, stairs, heavy lifting.</li><li>Compare answers with demo worker limits; workers would confirm theirs.</li><li>Mark matches; warn on differences without hiding those workers.</li><li>Let users review limits; repeat visit details at checkout.</li></ol></article>
+        <article class="strategy-block"><span class="stag">PROBLEM 4 — ACCESS</span><h3>Right person. Right phone. Right OTP.</h3><p>Someone books for a home or shop, but nobody there has the OTP. The worker waits while they try to reach the booker.</p><p class="doc-subhead">What I built</p><ol class="doc-list"><li>At checkout, ask “Who will be at home?”</li><li>Enter that person’s name and mobile number.</li><li>Blank fields use the booker’s verified details.</li><li>Send the check-in OTP to the person present.</li><li>Start service only after OTP entry.</li></ol></article>
       </section>
 
       <section class="section" aria-labelledby="prototype-title">
-        <div class="section-label">06 — The Prototype</div>
+        <div class="section-label">05 — THE PROTOTYPE</div>
         <h2 id="prototype-title">I built it around the moments before the doorbell.</h2>
         <p>Choose several days at once. See who is coming. Share the home details that matter. Send the OTP to the person who is actually there.</p>
         <div class="prototype-stage">
@@ -90,13 +111,13 @@
               <div class="phone-title">Snabbit prototype</div>
               <div class="carousel-viewport" id="prototype-carousel" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Prototype screens">
                 <div class="carousel-track">
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-01.png" alt="Multi-day schedule selector with several dates" loading="lazy"><figcaption>Multi-day schedule</figcaption></figure>
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-02.png" alt="Selecting the duration for several visits" loading="lazy"><figcaption>Choose visit duration</figcaption></figure>
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-03.png" alt="Choosing an available morning time slot" loading="lazy"><figcaption>Pick a time slot</figcaption></figure>
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-04.png" alt="Worker list showing favourites and tier labels" loading="lazy"><figcaption>Review workers</figcaption></figure>
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-05.png" alt="Bottom sheet asking for relevant home and visit details" loading="lazy"><figcaption>Share visit details</figcaption></figure>
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-06.png" alt="Worker cards marked with their preference fit" loading="lazy"><figcaption>Check the match</figcaption></figure>
-                  <figure class="prototype-card"><img src="./assets/prototype/screen-07.png" alt="Checkout with a section for the person who will be at home" loading="lazy"><figcaption>Send the OTP to the right person</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-01.png" alt="Multi-day schedule selector with several dates" loading="eager" fetchpriority="high"><figcaption>Multi-day schedule</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-02.png" alt="Selecting the duration for several visits" loading="eager"><figcaption>Choose visit duration</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-03.png" alt="Choosing an available morning time slot" loading="eager"><figcaption>Pick a time slot</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-04.png" alt="Worker list showing favourites and tier labels" loading="eager"><figcaption>Review workers</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-05.png" alt="Bottom sheet asking for relevant home and visit details" loading="eager"><figcaption>Share visit details</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-06.png" alt="Worker cards marked with their preference fit" loading="eager"><figcaption>Check the match</figcaption></figure>
+                  <figure class="prototype-card"><img src="./assets/prototype/screen-07.png" alt="Checkout with a section for the person who will be at home" loading="eager"><figcaption>Send the OTP to the right person</figcaption></figure>
                 </div>
               </div>
               <div class="phone-home" aria-hidden="true"></div>
@@ -105,6 +126,15 @@
           <div class="carousel-controls"><button class="carousel-button" id="carousel-prev" type="button" aria-label="Previous prototype screen">←</button><div class="carousel-dots" id="carousel-dots" aria-label="Choose prototype screen"></div><button class="carousel-button" id="carousel-next" type="button" aria-label="Next prototype screen">→</button></div>
           <p class="carousel-caption" id="carousel-caption" aria-live="polite"></p>
         </div>
+        <a class="github-link" href="https://github.com/Siuuuddddd/fixing-snabbit-" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.77.6-3.36-1.17-3.36-1.17-.45-1.14-1.1-1.45-1.1-1.45-.9-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.33 1.08 2.9.83.09-.64.35-1.08.64-1.33-2.21-.25-4.54-1.11-4.54-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.7c.85 0 1.71.11 2.51.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.56 4.94.36.31.68.91.68 1.84v2.59c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>View the code on GitHub</a>
+      </section>
+
+      <section class="section" aria-labelledby="campaign-title">
+        <div class="section-label">06 — CAMPAIGN IDEAS</div>
+        <h2 id="campaign-title">Some ideas I had</h2>
+        <p class="section-intro">If I were part of the team, this is what I’d want to work on.</p>
+        <article class="campaign-card"><div class="clabel">Idea 01</div><h3>Fire the auto-reply.</h3><p>Customers already explain what went wrong in public. I saw replies that apologised and asked for a phone number, but did not address the problem in the post. Give support room to say what happened, what happens next, and when the customer will hear back.</p></article>
+        <article class="campaign-card"><div class="clabel">Idea 02</div><h3>Ads can’t ring your doorbell. People can.</h3><p>A home service is personal. I would rather hear a neighbour say “I book her every week” than watch another perfect-looking ad. Let customers tell the story in their own words. Show a real worker and a real visit.</p></article>
       </section>
 
       <footer class="closing">
